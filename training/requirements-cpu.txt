@@ -1,0 +1,7 @@
+# Offline test dependencies only. This is not the GPU training environment.
+numpy
+Pillow
+aiohttp
+pytest
+torch
+scipy

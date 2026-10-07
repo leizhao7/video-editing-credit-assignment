@@ -1,0 +1,11 @@
+# Optional local client for explicit Modal preprocessing commands.
+# Install into your own environment. This is not a historical lockfile.
+modal
+
+# Remote image dependencies are declared in the four adapters, not installed
+# on the local client by this file:
+# shots: torch, numpy, transnetv2-pytorch, system ffmpeg
+# transcription: faster-whisper, numpy, nvidia-cublas-cu12,
+#                nvidia-cudnn-cu12==9.*, system ffmpeg
+# stems: demucs, torch, torchaudio, numpy, soundfile, system ffmpeg
+# Model weights are resolved at execution time and are not included here.

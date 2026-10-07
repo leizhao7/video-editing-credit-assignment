@@ -1,0 +1,8 @@
+# Direct third-party imports in the local construction code.
+# Historical dependency versions were not recoverable; these are not an experiment lockfile.
+numpy
+opencv-python
+librosa
+
+# Optional transcript verification used by cut_takes.py (loads small.en on explicit invocation).
+faster-whisper

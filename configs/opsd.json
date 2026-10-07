@@ -1,0 +1,22 @@
+{
+  "status": "recorded method summary; exact original answer recipe and complete runtime remain to be restored",
+  "objective": "forward KL",
+  "support": {
+    "teacher_top_k": 64,
+    "aggregate_tail_bucket": true
+  },
+  "teacher": "fixed initial checkpoint",
+  "loss_reduction": "token_mean",
+  "tasks_per_update": 16,
+  "rollouts_per_task": 1,
+  "optimizer_updates": 50,
+  "variants": [
+    "reference_answers",
+    "turn_suggestions"
+  ],
+  "source_recipe_sha256": {
+    "reference_answers_initial": "43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018",
+    "turn_suggestions_final_resume": "aa076cdab138da59f584e1fb3edc9fc485fca81e54b7b792bbccb39881df0cab"
+  },
+  "note": "Transport and admission repairs occurred during the turn-suggestion run; the final recipe is not represented as an unchanged step-1 snapshot."
+}

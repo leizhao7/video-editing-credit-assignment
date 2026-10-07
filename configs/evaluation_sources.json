@@ -1,0 +1,193 @@
+[
+  {
+    "path": "evaluation/s4e_judge.py",
+    "source_arm": "prm_fixed",
+    "sha256": "88dc4f0f93e210603443642b2bac7d8337666a26a15d2fb5aa7375b915b00a6d",
+    "modified": true,
+    "original_sha256": "51170a930f4720039f3738ad9432978c8594bc68d9c98103c5c72f11a9b6c44c",
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/grading_video.py",
+    "source_arm": "prm_fixed",
+    "sha256": "d5c29f962b40755445277dfed1b7b0b469923b95443f99ddb78db18b52c8d82e",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s4e_judge_ref.py",
+    "source_arm": "prm_fixed",
+    "sha256": "110437189cc709b1a993107e673f115c6d68fe90311d8a7d51867177d1297cf7",
+    "modified": true,
+    "original_sha256": "922c2c0ad24aeed18f1302aac4f35b8ff02745e78b12dde4f26abefcc64a598b",
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/s4e_evidence.py",
+    "source_arm": "prm_fixed",
+    "sha256": "6db2f868296106d34c5d90bfc0f7205d9f04cc598523e5b1e4c51535859efe92",
+    "modified": true,
+    "original_sha256": "484b52f2438c0a232fdea84049980d2e0f8e9dca5932214790d23fc58c57f246",
+    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Remove remaining corpus-specific black-frame detector example from docstring."
+  },
+  {
+    "path": "evaluation/rubrics_video.py",
+    "source_arm": "prm_fixed",
+    "sha256": "8ac6e88fc3d4f6ea045a98fbb3706147f8a86eb5f1715ce2501f9fcd3253d8f5",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s4e_rubrics.py",
+    "source_arm": "prm_fixed",
+    "sha256": "848b86c9fc96307b3656020f8e6effb54e6d283d5aeabbbf3d463e0f398ded70",
+    "modified": true,
+    "original_sha256": "e6637cfbd4ed68cda26daa05f6a2e31bbee23c4d1d40d23bca9b3471213f5b83",
+    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/repair_metadata.py",
+    "source_arm": "prm_fixed",
+    "sha256": "08def9d66504960375f48d62d5a62928d38b0453eaa57dba9394ba6306e6ff6c",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s4e_score.py",
+    "source_arm": "prm_fixed",
+    "sha256": "ee8140e7df7d8725aa26982ef054b80a9ba7319ce74da312be746ab244489edc",
+    "modified": true,
+    "original_sha256": "a2f45fcaeec7d057aa6cfde760bc69c3976f0de2c36f8e7885ab3c5889235901",
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection, suffix and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing. Valid weighted formula/defaults unchanged."
+  },
+  {
+    "path": "evaluation/grading_judge.py",
+    "source_arm": "prm_fixed",
+    "sha256": "1960f7771f24dfc581b2654ffc6624173e7cb202cf26521dcb885a2267fcf798",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s3_evidence.py",
+    "source_arm": "prm_fixed",
+    "sha256": "1e516cca90afcd371b43245bb3851bbfa9becbec9642de61e88f05e7192ab810",
+    "modified": true,
+    "original_sha256": "3555bc7720ed5e4319099a833b7f144c63dc7359fd02d5ef411696b2ff437b09",
+    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Judge-input explanatory text changed to remove corpus statistic; numeric calculations unchanged."
+  },
+  {
+    "path": "evaluation/s12_task.py",
+    "source_arm": "prm_fixed",
+    "sha256": "5a97f78381f69517f006e09916f096eae4928633e019e618c45cd6cf5e7190cc",
+    "modified": true,
+    "original_sha256": "3968514848182e003799bda397b05850f4e6fb9b04d8aa34404d28042ab65689",
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Reject unsuccessful, timed-out, malformed or out-of-range S1/S2 verifier results; preserve successful JSON and legacy numeric score output."
+  },
+  {
+    "path": "evaluation/s4e_ref_rubrics.py",
+    "source_arm": "prm_fixed",
+    "sha256": "35a16dada7faba7e2da975987bf10ec6fa51a23ec07e88f9bdcb1269fe02ef81",
+    "modified": false
+  },
+  {
+    "path": "evaluation/grading_contract.py",
+    "source_arm": "prm_fixed",
+    "sha256": "edc55b677a33403b8810d8c17401b81818a3957ce1324e37be8d9f62e9b2c157",
+    "modified": false
+  },
+  {
+    "path": "evaluation/submission_policy.py",
+    "source_arm": "prm_fixed",
+    "sha256": "1048244d86760c9d90c3ee207bf926623e10ca1ec466009cd47932cb0b07df37",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s3_judge_ref.py",
+    "source_arm": "prm_fixed",
+    "sha256": "4f0ee414006420d5c92a72a1a9bf371f879672da2986f9abc139651145505dad",
+    "modified": true,
+    "original_sha256": "a5d6eba33292edf3d9ab064ce2297e1346b7d425b44f10286d069098d19f87a4",
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/s3_judge.py",
+    "source_arm": "prm_fixed",
+    "sha256": "5da0e77a98a0fc0d7bdc86baa031cb0b504d5940b0bf370fc8aafb92312e18e4",
+    "modified": true,
+    "original_sha256": "e1368105c29ec65d23f81e9d9cf6f81e2292737f1e39319bf1d8c75c74197fe7",
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/grading_consistency.py",
+    "source_arm": "prm_fixed",
+    "sha256": "4d42317cc89f99ea5efdea9a97a7cef7cee472511e117533aac8c5fd660cd35e",
+    "modified": true,
+    "original_sha256": "0c22c42a3a0817142010815f2236154f37a8c7a8d1b4b6f1cacdb7ba8d755b3b",
+    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/grading_media.py",
+    "source_arm": "prm_fixed",
+    "sha256": "14c670bc22098d5393242e9e7d431f2a3d1bb9c4da9b2e73f1478f479ba51093",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s3_score.py",
+    "source_arm": "prm_fixed",
+    "sha256": "e6c1d58c5728cb0b6c69325e5aec06d1746e25676282d71a30ffabcd607c22eb",
+    "modified": true,
+    "original_sha256": "c268cac9a16eb8df48ee1fc4baf02e7469f1e320488914da666e7019dd43f5c3",
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing; check bounded verifier completion and finite [0,1] scores. Valid weighted formula/defaults unchanged."
+  },
+  {
+    "path": "evaluation/grade_s3.py",
+    "source_arm": "prm_fixed",
+    "sha256": "025d5b2b6f226f60b2328bcbbe4fe83b148771a7ce8167fa2f542d52c15867f1",
+    "modified": false
+  },
+  {
+    "path": "evaluation/s3_rubrics.py",
+    "source_arm": "prm_fixed",
+    "sha256": "59b3d69945765942a0ec1d8bf13ef524bf20685ca69ebb884c1c2ab165b8ab4c",
+    "modified": true,
+    "original_sha256": "fae73f37545119fc41b39425c50d40ee8f4da37711de836db52cf3d3b5239fba",
+    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+  },
+  {
+    "path": "evaluation/decay_overlay/grading_retry_rounds.py",
+    "source_arm": "prm_decay",
+    "sha256": "2f1bb62fbde97a38855573c18a754b6717be9c7c9f525c03d1818241c42caaf8",
+    "modified": false
+  },
+  {
+    "path": "evaluation/decay_overlay/smoke_v5.py",
+    "source_arm": "prm_decay",
+    "sha256": "a32af525f6b9d77bd9d2dafa3c7adc172525babd843ff2e64d6348b698f93baf",
+    "modified": false
+  },
+  {
+    "path": "evaluation/decay_overlay/grading_judge.py",
+    "source_arm": "prm_decay",
+    "sha256": "887d836691528daa1f747b846afca771de9f46a18cb1158445896a4efdf7eb5c",
+    "modified": false
+  },
+  {
+    "path": "evaluation/decay_overlay/grading_response_reuse.py",
+    "source_arm": "prm_decay",
+    "sha256": "b9e19604d3f7ccd76b8e58591a12d964397856cf6a53ad798dd6bc913418c2c2",
+    "modified": false
+  },
+  {
+    "path": "evaluation/decay_overlay/s12_task.py",
+    "source_arm": "prm_decay",
+    "sha256": "7ddb16a1578bc550bdf7a8ba0632be8f15b6780355b7a1fbeb2294b902cee203",
+    "modified": true,
+    "original_sha256": "35e6607b5e9c9142fff2b629840f89002317e3f242d865966d666818b6b0776a",
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Reject unsuccessful, timed-out, malformed or out-of-range S1/S2 verifier results; preserve successful JSON and legacy numeric score output."
+  },
+  {
+    "path": "evaluation/score_cli.py",
+    "source_arm": "public_release",
+    "source_type": "generated_public_helper",
+    "generated": true,
+    "sha256": "e3ad2cad7c30582f47d9d4405ccc85692ec5b4a7242b1c29d26a7a61997c2de6",
+    "modified": false,
+    "change": "New public shared CLI validation, bounded verifier parsing and atomic result-publication helper; not a recovered historical run source."
+  }
+]

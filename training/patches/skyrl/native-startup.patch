@@ -1,0 +1,28 @@
+--- a/skyrl/train/trainer.py
++++ b/skyrl/train/trainer.py
+@@ -796,7 +796,12 @@
+         if not cfg.trainer.placement.colocate_all:
+             refs = []
+             if ref_model is not None:
+-                refs.extend(ref_model.async_init_model(cfg.trainer.ref.model.path))
++                if cfg.trainer.placement.colocate_policy_ref:
++                    logger.info("Serial startup: initializing reference model before policy")
++                    ray.get(ref_model.async_init_model(cfg.trainer.ref.model.path))
++                    logger.info("Serial startup: reference initialization completed; starting policy")
++                else:
++                    refs.extend(ref_model.async_init_model(cfg.trainer.ref.model.path))
+             refs.extend(
+                 policy_model.async_init_model(
+                     cfg.trainer.policy.model.path,
+--- a/skyrl/backends/skyrl_train/distributed/fsdp_utils.py
++++ b/skyrl/backends/skyrl_train/distributed/fsdp_utils.py
+@@ -163,6 +163,9 @@
+     # that are excluded from state_dict.  On non-rank-0 meta-init these are
+     # still on the meta device with no data; rank 0 has the correct values.
+     _sync_non_persistent_buffers(model, {})
++    # Complete this communicator's device work before another colocated
++    # actor group is allowed to start its initialization collectives.
++    torch.cuda.synchronize()
+ 
+     if cpu_offload:
+         # Caller asked for CPU-resident params; the offload path is still

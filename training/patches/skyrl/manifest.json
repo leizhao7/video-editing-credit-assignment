@@ -1,0 +1,18 @@
+{
+  "upstream_commit": "59d4daedee24c7b1a79d857bbf322a6d195c3792",
+  "patch_sha256": "8b08d708f9eb219e4d883c52ade5d572293fa50f750fca2cb3604a67f5493f53",
+  "files": [
+    {
+      "path": "skyrl/train/trainer.py",
+      "before_sha256": "91ef7fde5c2915f2c7d15c0a9c90da782236f40c8ba13ec3333a13b4092563ff",
+      "after_sha256": "19738956b382070463e890a5b9382c2935a2d7ce67a5f954e88d69077f9adf76",
+      "base": "Previously qualified parent runtime; not assumed to equal pristine upstream checkout."
+    },
+    {
+      "path": "skyrl/backends/skyrl_train/distributed/fsdp_utils.py",
+      "before_sha256": "45da8215947879c606e078bccfc3c8e563b131561c8dcc1f687e8e46b17d841e",
+      "after_sha256": "b7f4c2ebd1e637f05e53f77d23e8e296263f36dc3d210860ffacb95a53169677",
+      "base": "Previously qualified parent runtime; not assumed to equal pristine upstream checkout."
+    }
+  ]
+}

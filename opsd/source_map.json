@@ -1,0 +1,531 @@
+{
+  "format": "opsd-public-source-map-v1",
+  "status": "portable_algorithm_and_cpu_test_draft_not_end_to_end_launcher",
+  "upstream_pins": {
+    "skyrl_commit": "59d4daedee24c7b1a79d857bbf322a6d195c3792",
+    "vllm_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
+    "opencode_commit": "d7a6e1daaf2271bcd0b611fbb27d4956806e475a",
+    "model_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "demonstrator_dependencies": {
+      "python": "3.12",
+      "httpx": "0.28.1",
+      "jsonschema": "4.23.0"
+    },
+    "training_dependency_versions": "Requires retrieval of actual frozen training image build/install manifest; not inferred from current workstation."
+  },
+  "historical_recipe_sha256": {
+    "reference_answers": "43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018",
+    "turn_suggestions_final": "aa076cdab138da59f584e1fb3edc9fc485fca81e54b7b792bbccb39881df0cab"
+  },
+  "files": [
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/__init__.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/__init__.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/__init__.py",
+      "source_sha256": "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9",
+      "public_sha256": "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/answers.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/answers.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/answers.py",
+      "source_sha256": "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8",
+      "public_sha256": "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/configuration.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/configuration.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/configuration.py",
+      "source_sha256": "1e7206197ea835c9db4bc114a53cbfd9378fd9ccc8087081e3c6c439037e1802",
+      "public_sha256": "1e7206197ea835c9db4bc114a53cbfd9378fd9ccc8087081e3c6c439037e1802",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/demonstration_gate.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/demonstration_gate.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/demonstration_gate.py",
+      "source_sha256": "f2c66d8efd6347076e12e770688fbed42f371c0d9eb7af54c4b6f2bb7d37f674",
+      "public_sha256": "f2c66d8efd6347076e12e770688fbed42f371c0d9eb7af54c4b6f2bb7d37f674",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/frozen_runtime.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/frozen_runtime.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/frozen_runtime.py",
+      "source_sha256": "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61",
+      "public_sha256": "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/generator.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/generator.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/generator.py",
+      "source_sha256": "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9",
+      "public_sha256": "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/install.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/install.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/install.py",
+      "source_sha256": "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc",
+      "public_sha256": "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/launch.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/launch.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/launch.py",
+      "source_sha256": "49f8dd6561521f2d3eeaa5973fcb05c2db568ae14711e88b2c223d6fe4f5a422",
+      "public_sha256": "e3bd0ada74fc5d1c3ade4212b6ed18282dbf0f7651853a8169d4801ee91d780f",
+      "unchanged": false,
+      "category": "recipe",
+      "changes": [
+        "Run-specific historical migration dispatch removed; matching-identity resume unchanged, mismatched identities fail closed."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/main_answer_opsd.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/main_answer_opsd.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/main_answer_opsd.py",
+      "source_sha256": "846fba6d125324c37167aca2bc55c202cd990b2788fed5f958cabff08bb3fb3c",
+      "public_sha256": "846fba6d125324c37167aca2bc55c202cd990b2788fed5f958cabff08bb3fb3c",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/objective.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/objective.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/objective.py",
+      "source_sha256": "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118",
+      "public_sha256": "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/supervisor.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/supervisor.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/supervisor.py",
+      "source_sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
+      "public_sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/teacher_inputs.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/teacher_inputs.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/teacher_inputs.py",
+      "source_sha256": "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440",
+      "public_sha256": "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/topk.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/topk.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/topk.py",
+      "source_sha256": "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99",
+      "public_sha256": "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/topk_install.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/topk_install.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/topk_install.py",
+      "source_sha256": "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a",
+      "public_sha256": "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/topk_trainer.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/topk_trainer.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/topk_trainer.py",
+      "source_sha256": "e7baa0828b5ddc2a3c76ba2b442281c74974dda3d64665a89661e3242097856c",
+      "public_sha256": "e7baa0828b5ddc2a3c76ba2b442281c74974dda3d64665a89661e3242097856c",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/topk_worker.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/topk_worker.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/topk_worker.py",
+      "source_sha256": "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400",
+      "public_sha256": "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/trainer.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/trainer.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/trainer.py",
+      "source_sha256": "34c10de9d8dbcda445bd72a133df13ecae4c1480d83cc0ba39bef00cacea8b13",
+      "public_sha256": "34c10de9d8dbcda445bd72a133df13ecae4c1480d83cc0ba39bef00cacea8b13",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/turn_demonstrations.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/turn_demonstrations.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/turn_demonstrations.py",
+      "source_sha256": "9b3f0ceb8bc489eafbb2c05658d5e3c7d261c25aacac2050e07395b46d4607b7",
+      "public_sha256": "de8efdaac648217f88ae82e69df1cdf9082b2f083e84761cfa182539c3b29a7c",
+      "unchanged": false,
+      "category": "recipe",
+      "changes": [
+        "Demonstrator application name is configurable; prompt, schema, model and algorithm unchanged."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/turn_teacher.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/turn_teacher.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/turn_teacher.py",
+      "source_sha256": "ae1667e4d073f14f86568c9303f4e56e3f8352aabf8631e58dbd45b245faa0a8",
+      "public_sha256": "ae1667e4d073f14f86568c9303f4e56e3f8352aabf8631e58dbd45b245faa0a8",
+      "unchanged": true,
+      "category": "recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_demo_output_repair.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_demo_output_repair.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_demo_output_repair.py",
+      "source_sha256": "7428ee6f44e39998e46bd3acf329451787d0acab31b6e368ff020bc40e44b287",
+      "public_sha256": "4b9033beaa15556f1f7e8c90ebd80aac6d5ea80b20be01b44d2c491039f4d922",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Historical JSON replay is opt-in only; no records copied."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_demo_transport_repair.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_demo_transport_repair.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_demo_transport_repair.py",
+      "source_sha256": "7557c8636adbd8bfc26cab7ad7452eb404d0af6ed78112302c00191b0113f44c",
+      "public_sha256": "7557c8636adbd8bfc26cab7ad7452eb404d0af6ed78112302c00191b0113f44c",
+      "unchanged": true,
+      "category": "recipe_test",
+      "changes": []
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_demonstration_gate.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_demonstration_gate.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_demonstration_gate.py",
+      "source_sha256": "55a7be020370b64ec1909f03566324071545522cbc08da6a31e652676941b0e1",
+      "public_sha256": "e62d52f64dff5d411f917dda1192dc3cb76ae269d109723ca03afe01c022b381",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_opsd.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_opsd.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_opsd.py",
+      "source_sha256": "03258ff98c7bba485d427782d61e37a3b6e7b66284c904b2b3c0c5c680bf24a0",
+      "public_sha256": "0ef648fd17f59982edfae8b837724661095f611a85258723f75bbed29f8787d8",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture.",
+        "Remove optional corpus-specific full-release audit and its hard-coded real split counts; retain synthetic algorithm tests."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_topk.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_topk.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_topk.py",
+      "source_sha256": "02b0701d9900e9a3a6e339736ee550c02d16c8efc70064cd86355ebf3547db59",
+      "public_sha256": "c4875b6f7943bd19cac80c19bc07ae4f4dadc4213e65c017a817d60c91037cc8",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture.",
+        "Personal fused-head path replaced by explicit OPSD_TEST_FUSED_CE_SOURCE fixture."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
+      "source_sha256": "f24ecb349e7a339c656c138c6f9b8216f225c30a3822fb1aaceabdd9153c978a",
+      "public_sha256": "daec399161d624950876319135c0d2523cb5b529c13aff6b38167309d8b5985c",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture."
+      ]
+    },
+    {
+      "public_relative_path": "examples/train/answer_self_distillation/tests/test_turn_teacher_trim.py",
+      "staging_relative_path": "examples/train/answer_self_distillation/tests/test_turn_teacher_trim.py",
+      "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_turn_teacher_trim.py",
+      "source_sha256": "637be40945a2f72d1c6ddd3d2c1a79a5538998e53fb0f8d1347bcbab12d715c1",
+      "public_sha256": "1d8c1379af3b97c9c519ad32939e74f4e05e05708fbade0c7b651b262a6257d2",
+      "unchanged": false,
+      "category": "recipe_test",
+      "changes": [
+        "Frozen production-code fixture is explicit and opt-in; source hash assertions preserved."
+      ]
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_resume_entrypoint.py",
+      "staging_relative_path": "adapters/frozen_v15/append_resume_entrypoint.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_resume_entrypoint.py",
+      "source_sha256": "f5d61ac2bf447e0901abbd3c4c2f0a045682878e7ee1026b2dddd8db6d9a12af",
+      "public_sha256": "f5d61ac2bf447e0901abbd3c4c2f0a045682878e7ee1026b2dddd8db6d9a12af",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_resume_launch.py",
+      "staging_relative_path": "adapters/frozen_v15/append_resume_launch.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_resume_launch.py",
+      "source_sha256": "faa55c27eb183a2b1f9bc36a7db025a37e98135cc46c906a527e366e662ee1b7",
+      "public_sha256": "faa55c27eb183a2b1f9bc36a7db025a37e98135cc46c906a527e366e662ee1b7",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_resume_preparation.py",
+      "staging_relative_path": "adapters/frozen_v15/append_resume_preparation.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_resume_preparation.py",
+      "source_sha256": "63dcb94fd85764adfb512859d389abede902e6bab2f1f380243ee6e9f7222460",
+      "public_sha256": "63dcb94fd85764adfb512859d389abede902e6bab2f1f380243ee6e9f7222460",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_resume_delivery.py",
+      "staging_relative_path": "adapters/frozen_v15/append_resume_delivery.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_resume_delivery.py",
+      "source_sha256": "b3a89cd0b05ee626e8ebcaa2d6ee75a776bf496ce4c6a68eb72249e8b80bcdcc",
+      "public_sha256": "b3a89cd0b05ee626e8ebcaa2d6ee75a776bf496ce4c6a68eb72249e8b80bcdcc",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_resume_checkpoint.py",
+      "staging_relative_path": "adapters/frozen_v15/append_resume_checkpoint.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_resume_checkpoint.py",
+      "source_sha256": "8bccb98c9825c687248a4ab2783fb98a4fabfaebd20a70934a2a3921b92f4f8f",
+      "public_sha256": "8bccb98c9825c687248a4ab2783fb98a4fabfaebd20a70934a2a3921b92f4f8f",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/append_refusal_boundary.py",
+      "staging_relative_path": "adapters/frozen_v15/append_refusal_boundary.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/append_refusal_boundary.py",
+      "source_sha256": "629bf8d6023ae3cf7b69d9aa87921e377c7570a5bda31c28694292ce109c21a1",
+      "public_sha256": "629bf8d6023ae3cf7b69d9aa87921e377c7570a5bda31c28694292ce109c21a1",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "adapters/frozen_v15/fd_recovery_regression.py",
+      "staging_relative_path": "adapters/frozen_v15/fd_recovery_regression.py",
+      "source_relative_path": "append_v13_fd_recovery_20260909/fd_recovery_regression.py",
+      "source_sha256": "657b118146c10710974712d854899d8221047d581241e99f2d648114361f8ede",
+      "public_sha256": "657b118146c10710974712d854899d8221047d581241e99f2d648114361f8ede",
+      "unchanged": true,
+      "category": "adapter",
+      "changes": []
+    },
+    {
+      "public_relative_path": "runtime/opsd_demo_quota.py",
+      "staging_relative_path": "runtime/opsd_demo_quota.py",
+      "source_relative_path": "opsd_demo_quota.py",
+      "source_sha256": "8d4fabf834c8f31d0239c101297aefd6b91c365c9728a6f593d70f96c8b208b2",
+      "public_sha256": "678020050a7487970c8850db3c1ee394095efe70f1e64d9e9c53524975d42f9d",
+      "unchanged": false,
+      "category": "service_core",
+      "changes": [
+        "Quota application name configurable; admission arithmetic unchanged."
+      ]
+    },
+    {
+      "public_relative_path": "runtime/opsd_demo_retry_after.py",
+      "staging_relative_path": "runtime/opsd_demo_retry_after.py",
+      "source_relative_path": "opsd_demo_retry_after.py",
+      "source_sha256": "44ce9f77084dd3e901cac914ae77665023d11d0c3094ea77c51d8f2a23500f2f",
+      "public_sha256": "44ce9f77084dd3e901cac914ae77665023d11d0c3094ea77c51d8f2a23500f2f",
+      "unchanged": true,
+      "category": "service_core",
+      "changes": []
+    },
+    {
+      "public_relative_path": "runtime/opsd_demo_admitted_request.py",
+      "staging_relative_path": "runtime/opsd_demo_admitted_request.py",
+      "source_relative_path": "opsd_demo_admitted_request.py",
+      "source_sha256": "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4",
+      "public_sha256": "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4",
+      "unchanged": true,
+      "category": "service_core",
+      "changes": []
+    },
+    {
+      "public_relative_path": "tests/support/test_opsd_demo_quota.py",
+      "staging_relative_path": "tests/support/test_opsd_demo_quota.py",
+      "source_relative_path": "test_opsd_demo_quota.py",
+      "source_sha256": "4c1efcd7ca1141c19786b13551b0ab08877a0590f128ea9b6a996c70370ba9b9",
+      "public_sha256": "4c1efcd7ca1141c19786b13551b0ab08877a0590f128ea9b6a996c70370ba9b9",
+      "unchanged": true,
+      "category": "support_test",
+      "changes": []
+    },
+    {
+      "public_relative_path": "tests/support/test_opsd_demo_retry_after.py",
+      "staging_relative_path": "tests/support/test_opsd_demo_retry_after.py",
+      "source_relative_path": "test_opsd_demo_retry_after.py",
+      "source_sha256": "8c8dc2a5400519d6438714a6018d7444ac2d62ede42ba06c7603e561dc307c7c",
+      "public_sha256": "8c8dc2a5400519d6438714a6018d7444ac2d62ede42ba06c7603e561dc307c7c",
+      "unchanged": true,
+      "category": "support_test",
+      "changes": []
+    },
+    {
+      "public_relative_path": "tests/support/test_opsd_demo_admitted_request.py",
+      "staging_relative_path": "tests/support/test_opsd_demo_admitted_request.py",
+      "source_relative_path": "test_opsd_demo_admitted_request.py",
+      "source_sha256": "23fcdd377b9de5f6c9609f30baf795474f97cdaca5a9651e77d1598c768d8319",
+      "public_sha256": "23fcdd377b9de5f6c9609f30baf795474f97cdaca5a9651e77d1598c768d8319",
+      "unchanged": true,
+      "category": "support_test",
+      "changes": []
+    }
+  ],
+  "excluded": [
+    {
+      "staging_relative_path": "examples/train/answer_self_distillation/deployment.py",
+      "source_sha256": "6a8da4faa65693f1edeae490486bff377b4c3ffd37a5d3ca52b740683fe0adb8",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "runtime/opsd_recipe_lineage.py",
+      "source_sha256": "07cf1488dde4766c3118bac58b9603f037dfe511c404773cfacf1ba3f9553996",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "runtime/opsd_transport_lineage.py",
+      "source_sha256": "fc9b70b6c9d8d980b0fc8e96ed2dc4f36ed73fe325c2fd979c9809fe845d798e",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "runtime/opsd_admission_lineage.py",
+      "source_sha256": "6256e536c8ce1276ca87fd7cc4cf09b3176d1f28b85b1432e038f3396f79e1ab",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "runtime/opsd_canonical_metrics.py",
+      "source_sha256": "53785d31fec672b312abfad3ecaf0b4087b797828e87470270268c5c3ea7bebc",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "tests/support/test_opsd_recipe_lineage.py",
+      "source_sha256": "e9edee974ba0d894d73babd42b4b4460d088df38e993637dce0c7a1fdfe11793",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "tests/support/test_opsd_transport_lineage.py",
+      "source_sha256": "a90f5adb24d7a5f825dc96a5064731c4282335d6aafcccb796d1f7d7e18f55a9",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "tests/support/test_opsd_admission_lineage.py",
+      "source_sha256": "732065b5c30e06de88de471c696a58b2222b937dd390480d8687ab99c41235bd",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    },
+    {
+      "staging_relative_path": "tests/support/test_opsd_canonical_metrics.py",
+      "source_sha256": "7ca2710f2512fc967c5c925f5474efe364ba4459e5f393970fa0f7d4996db5e9",
+      "reason": "Historical deployment or run-bound migration support; omitted from portable draft."
+    }
+  ],
+  "generated_files": [
+    {
+      "path": "examples/train/answer_self_distillation/tests/source_fixtures.py",
+      "sha256": "fad665008fcda01b73409f574283676ea5951b6a8f43f2d3b48315d2906f80d4",
+      "purpose": "Explicit opt-in source fixture paths"
+    },
+    {
+      "path": "tests/test_paper_top64.py",
+      "sha256": "88e91432fc1ba9b16e0fb1072f10bd414708b4f13a74965e3a1f9fbe4e977247",
+      "purpose": "Independent K=64/65-class forward-KL dense reference"
+    },
+    {
+      "path": "tests/run_cpu.py",
+      "sha256": "b57f1bcb7946f817efda544922187343227fed6ada5d58a277b5790879379086",
+      "purpose": "Reviewed synthetic CPU test runner"
+    },
+    {
+      "path": "README.md",
+      "sha256": "cb0d154f4e8aa3afba45c2f775a50bed864822ba46b92cba535339fa37fa892f",
+      "purpose": "Draft scope and documentation link"
+    }
+  ],
+  "algorithm_core_unchanged": [
+    "examples/train/answer_self_distillation/__init__.py",
+    "examples/train/answer_self_distillation/answers.py",
+    "examples/train/answer_self_distillation/configuration.py",
+    "examples/train/answer_self_distillation/demonstration_gate.py",
+    "examples/train/answer_self_distillation/frozen_runtime.py",
+    "examples/train/answer_self_distillation/generator.py",
+    "examples/train/answer_self_distillation/install.py",
+    "examples/train/answer_self_distillation/main_answer_opsd.py",
+    "examples/train/answer_self_distillation/objective.py",
+    "examples/train/answer_self_distillation/supervisor.py",
+    "examples/train/answer_self_distillation/teacher_inputs.py",
+    "examples/train/answer_self_distillation/topk.py",
+    "examples/train/answer_self_distillation/topk_install.py",
+    "examples/train/answer_self_distillation/topk_trainer.py",
+    "examples/train/answer_self_distillation/topk_worker.py",
+    "examples/train/answer_self_distillation/trainer.py",
+    "examples/train/answer_self_distillation/turn_teacher.py"
+  ],
+  "training_execution_verified": false,
+  "notes": [
+    "The staging hash snapshot was not changed.",
+    "No historical dataset, credentials, private image launcher, or run receipts are included.",
+    "Public recipe has a new hash because deployment.py is excluded and application config/checkpoint migration dispatch differ; never relabel this as the historical run hash."
+  ],
+  "public_recipe_sha256": "6c4f3b21dfe775e7731bdba0f713df5571401a2ee11900bfce7d78ed72ec3651",
+  "documentation": {
+    "path": "../docs/opsd.md",
+    "sha256": "c86bb46d0bbdad0ed00716f7ea691ec8a299d76ba3be8a3efd5f70e153a550c6"
+  }
+}

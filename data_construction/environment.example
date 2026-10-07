@@ -1,0 +1,24 @@
+# Private input/output directory. Default when unset: ./data/private
+VIDEO_EDITING_DATA_ROOT=./data/private
+# Only needed when explicitly invoking LLM annotation; no model is selected by default.
+VIDEO_EDITING_ANNOTATION_CLI=claude
+VIDEO_EDITING_ANNOTATION_MODEL=
+# Optional user-owned MCP configuration for the S4 annotation CLI.
+VIDEO_EDITING_MCP_CONFIG=
+# Bundled adapters default to data_construction/modal; override only when needed.
+VIDEO_EDITING_MODAL_DIR=
+# Required for explicit cloud stages: an existing volume in your own Modal account.
+VIDEO_EDITING_MODAL_VOLUME=
+# Only used by build_s3.py --export-resolve.
+VIDEO_EDITING_RESOLVE_MCP_ROOT=
+# LEGACY, disabled by default; these writers are not part of the release.
+# Do not set these to reproduce the paper's official scoring.
+VIDEO_EDITING_LEGACY_RUBRIC_WRITER_S2=
+VIDEO_EDITING_LEGACY_RUBRIC_WRITER_S3=
+# Bundled Modal adapters use these neutral app names unless overridden.
+VIDEO_EDITING_SHOTS_APP=video-editing-shots
+VIDEO_EDITING_TRANSCRIBE_APP=video-editing-transcribe
+VIDEO_EDITING_STEMS_APP=video-editing-stems
+VIDEO_EDITING_FILM_TRANSCRIBE_APP=video-editing-film-transcribe
+# Historical GPU class retained; no GPU is allocated by importing the scripts.
+VIDEO_EDITING_PREPROCESS_GPU=A10G

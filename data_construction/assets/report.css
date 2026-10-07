@@ -1,0 +1,30 @@
+*{box-sizing:border-box}
+body{margin:0;background:#0e0f11;color:#e6e7ea;font:13px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+header{position:sticky;top:0;z-index:20;background:#16171a;border-bottom:1px solid #272930;padding:12px 18px}
+h1{margin:0 0 5px;font-size:16px;font-weight:600}
+.s{color:#989ea6;font-size:12px} .s b{color:#e6e7ea}
+.f{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.f button{background:#22242a;color:#c6cad1;border:1px solid #33363d;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px}
+.f button.on{background:#2f6df6;border-color:#2f6df6;color:#fff}
+.grid{padding:14px 18px 50px;display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:12px}
+.c{background:#17181c;border:1px solid #262930;border-radius:8px;overflow:hidden}
+.hd{display:flex;align-items:baseline;gap:8px;padding:6px 10px;background:#1b1d22;border-bottom:1px solid #262930}
+.hd .n{font-weight:600;font-variant-numeric:tabular-nums} .hd .tt{color:#7d838b;font-size:11px;font-variant-numeric:tabular-nums}
+.pair{position:relative;background:#262930;cursor:pointer;min-height:60px}
+.pair .st{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.pair img{width:100%;display:block;background:#000}
+.pair video{width:100%;display:block;background:#000}
+.lb{position:absolute;top:4px;font-size:10px;background:rgba(0,0,0,.72);padding:1px 6px;border-radius:3px;color:#c6cad1;pointer-events:none}
+.lb.l{left:4px} .lb.r{right:4px}
+.play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.75);
+ color:#dfe3e8;padding:5px 12px;border-radius:5px;font-size:11px;pointer-events:none}
+.pair:hover .play{background:#2f6df6;color:#fff}
+.mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,90,90,.6);pointer-events:none}
+.tags{padding:7px 10px;display:flex;gap:5px;flex-wrap:wrap}
+.t{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.t.tr{background:#1e2c3d;color:#8fbdf0} .t.tc{background:#2a2438;color:#c1a5e6} .t.tc.nv{background:#3b2f14;color:#e6bf76}
+.t.sp{background:#16302a;color:#79cfa5} .t.sp.h{background:#232529;color:#8b9199}
+.t.mu{background:#3a1f2a;color:#e59ab0}
+.line{padding:0 10px 7px;color:#8e949c;font-size:11px;font-style:italic}
+.note{padding:0 10px 9px;color:#b9bec6;font-size:12px}
+.t.pc{background:#1d3b2a;color:#7fe0a8;border-color:#2c5c40}
