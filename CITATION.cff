@@ -1,6 +1,7 @@
 cff-version: "1.2.0"
 message: "If you use this software, please cite it using the metadata in this file."
 type: software
+license: MIT
 title: "When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing"
 authors:
   - given-names: Lei

@@ -17,6 +17,8 @@ Additional experiments used Qwen3.6-35B-A3B with outcome-only GRPO and fixed-wei
 
 ## Training and evaluation conventions
 
+The following settings describe the main Qwen3.5-9B experiments.
+
 - Reward-based training uses 16 tasks per update, 8 rollouts per task, seed 42, and 50 optimizer updates. OPSD uses one rollout per task.
 - Training losses use token-mean reduction over valid assistant tokens.
 - The fixed process-reward coefficient is 0.5. The decayed condition branches from the fixed-PRM checkpoint at update 20 and reduces the coefficient cubically to zero over updates 20–30, using the consumer optimizer's global step. The coefficient remains zero afterward.
@@ -39,4 +41,4 @@ The [README](../README.md) opens with **Figure 1 from the paper**, rendered with
 
 The source figure is `teaser-editable-v6.pdf` (SHA-256: `0178cea1dcc1514c48fb13ce5dbdb36d46bf398cbc27f3853387584a8d51af5d`). It was rendered with Poppler at 2,600 pixels wide, preserving its aspect ratio. Only this reviewed PNG is permitted by the release check; its exact path and SHA-256 are pinned in [`check_release.py`](../scripts/check_release.py), and its bytes are also tracked in the source manifest.
 
-The separate [`learning-signals.svg`](assets/learning-signals.svg) is a hand-authored conceptual diagram of feedback granularity. It contains no film frames or measured results. The earlier [`editing-tasks.svg`](assets/editing-tasks.svg) is retained as an editable conceptual alternative.
+The earlier [`editing-tasks.svg`](assets/editing-tasks.svg) is retained as an editable conceptual alternative; it contains no film frames or measured results. The paper figure, including its third-party film imagery, is not covered by the project's code license.

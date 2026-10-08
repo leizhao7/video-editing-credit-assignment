@@ -7,7 +7,7 @@
 
 <sup>1</sup> University of Pennsylvania &nbsp;&nbsp; <sup>2</sup> Philo Labs
 
-[Overview](#overview) · [Findings](#what-we-learn) · [Quick start](#quick-start) · [Documentation](#documentation) · [Citation](#citation)
+[Overview](#overview) · [Findings](#what-we-learn) · [Quick start](#quick-start) · [Documentation](#documentation) · [Citation](#citation) · [License](#license)
 
 </div>
 
@@ -42,17 +42,13 @@ Using our framework, we generated **2,352 video-editing tasks from 49 films**. F
 
 ## What we learn
 
-- **When it helps.** In our experiments, decaying process rewards provides the largest benefit on Fine Cut. Outcome-only GRPO remains competitive on the three shorter-horizon task types. Task demands, scoring criteria, and horizon vary together, so this comparison does not isolate a causal effect of horizon.
+The main **Qwen3.5-9B** experiments show three patterns:
+
+- **When it helps.** Decaying process rewards provides the largest benefit on Fine Cut. Outcome-only GRPO remains competitive on the three shorter-horizon task types. Task demands, scoring criteria, and horizon vary together, so this comparison does not isolate a causal effect of horizon.
 - **When it hurts.** With a fixed process-reward weight, judge-preferred intermediate behaviors can increase while task completion and outcome scores decline. Reducing that weight to zero mitigates this pattern in our GRPO+PRM experiments.
 - **Dense feedback is not sufficient.** OPSD is sensitive to the teacher's privileged information. Teacher–student disagreement and gradient statistics reveal contrasting failure patterns; effective remedies remain an open question.
 
 These process-reward findings concern **LLM-judged turn-level rewards in our GRPO+PRM setup**. They do not establish the behavior of untested methods such as GiGPO or Turn-PPO. The full experimental context and implementation limits are summarized in the [experiment notes](docs/experiment_notes.md).
-
-<p align="center">
-  <img src="docs/assets/learning-signals.svg" width="100%" alt="Three learning signals compared on editing trajectories: outcome-only GRPO uses a final task score; GRPO plus PRM adds judgments of intermediate turns; OPSD matches a frozen teacher token by token, with reference answers or turn suggestions visible only to the teacher.">
-</p>
-
-*The learning-signals diagram above is a conceptual schematic, not an experimental plot.*
 
 ## Quick start
 
@@ -90,7 +86,7 @@ training/            Fixed-PRM source, separate decay overlay, and CPU tests
 opsd/                Forward-KL recipe, teacher-input code, and adapters
 evaluation/          Outcome graders and a separate decay overlay
 configs/             Recorded settings, dependency pins, and source hashes
-docs/                Component guides, paper figure, and SVG schematics
+docs/                Component guides and paper figure
 scripts/             Dependency-free source verification
 tests/               Synthetic tests for release tools
 ```
@@ -109,6 +105,10 @@ Author and software metadata are available in [`CITATION.cff`](CITATION.cff). A 
 
 Part of this work was completed while Lei Zhao was an intern at Philo Labs. For questions, contact [Lei Zhao](mailto:leizhao7@upenn.edu), [Zongheng Cao](mailto:tom@philolabs.ai), or [Xinyu Hu](mailto:christine@philolabs.ai).
 
-## Acknowledgments and licensing
+## Acknowledgments
 
-The implementation builds on OpenCode, SkyRL, vLLM, and Qwen3.5-9B. Exact identities are recorded in [`configs/dependency_pins.json`](configs/dependency_pins.json); local modifications must be considered alongside those pins. Retain the included upstream notices when reusing their code. The license for this project's own code remains to be finalized.
+The implementation builds on OpenCode, SkyRL, vLLM, and Qwen3.5-9B. Exact identities are recorded in [`configs/dependency_pins.json`](configs/dependency_pins.json); local modifications must be considered alongside those pins.
+
+## License
+
+Project-authored code is licensed under the [MIT License](LICENSE). Third-party components retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). The paper figure, external media, and model weights are not covered by this code license.
