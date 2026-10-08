@@ -19,8 +19,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "137632039a64a85c3bc9f363c44e33564d80b363ff02194af7404635918701fd",
-      "bytes": 9169
+      "sha256": "e1ce4d0d3082739e0589b85b0b34d0db912b2448abb81acab6fd85249a78be08",
+      "bytes": 9167
     },
     {
       "path": "configs/dependency_pins.json",
@@ -309,8 +309,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "eafccf5a6daf707825df05cd1ced1de7d3d8448f59dcf4ea38c3be1ff4ce0789",
-      "bytes": 4494
+      "sha256": "a14855247618216ef1ed9cdee12fbf610e70509fa8a1d4e380d8a811a6382de7",
+      "bytes": 4837
     },
     {
       "path": "docs/opsd.md",
