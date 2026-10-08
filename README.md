@@ -1,6 +1,6 @@
 <div align="center">
 
-# When Fine-Grained Credit Assignment Helps and Hurts
+# When Fine-Grained Credit Assignment<br>Helps and Hurts
 ### Multimodal Agentic Reinforcement Learning through Video Editing
 
 **[Lei Zhao](mailto:leizhao7@upenn.edu)<sup>1</sup> · [Zongheng Cao](mailto:tom@philolabs.ai)<sup>2</sup> · [Xinyu Hu](mailto:christine@philolabs.ai)<sup>2</sup>**
