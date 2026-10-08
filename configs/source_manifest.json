@@ -19,8 +19,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "e1ce4d0d3082739e0589b85b0b34d0db912b2448abb81acab6fd85249a78be08",
-      "bytes": 9167
+      "sha256": "69adc159dcd7ff0a03353564cf11438732608b230dbbd5822d5b532720b43401",
+      "bytes": 9219
     },
     {
       "path": "configs/dependency_pins.json",

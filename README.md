@@ -27,11 +27,11 @@ We build a **scalable pipeline for generating video-editing tasks** from real fi
 
 **Multimodal agentic RL.** Our experiments build on **SkyRL** for training, **vLLM** for generation, and an **OpenCode-based agent harness** for multi-turn visual inspection and video-editing tool use.
 
-With **Qwen3.5-9B**, the paper compares **outcome-only GRPO**, **GRPO+PRM (fixed λ)**, **GRPO+PRM (decayed λ)**, and **on-policy self-distillation (OPSD)** with either reference answers or turn suggestions as teacher-only information. We also ran **outcome-only GRPO** and **GRPO+PRM (fixed λ)** with **Qwen3.6-35B-A3B** in additional experiments. [Training framework](docs/training.md) · [OPSD implementation](docs/opsd.md)
+With **Qwen3.5-9B**, the paper compares **outcome-only GRPO**, **GRPO+PRM**, and **on-policy self-distillation (OPSD)** with either reference answers or turn suggestions as teacher-only information. We also ran **outcome-only GRPO** and **GRPO+PRM** with **Qwen3.6-35B-A3B** in additional experiments. [Training framework](docs/training.md) · [OPSD implementation](docs/opsd.md)
 
-**From real media to editing tasks.** The pipeline aligns trailer shots with source-film footage, divides trailers into narrative chunks, and generates editorial briefs. Each chunk yields four task types by varying the supplied media and required editing operation. These tasks are **constructed independently**: one task's output is not used to initialize the next.
+**Scalable data generation.** We develop a **data generation framework** that aligns trailer shots with source-film footage, divides trailers into narrative chunks, and generates editorial briefs. Each chunk yields four task types by varying the supplied media and required editing operation. These tasks are **constructed independently**: one task's output is not used to initialize the next.
 
-In the paper, this process produced **2,352 tasks from 49 films**; filtering and sampling yielded 797 tasks for training and evaluation. Training on these tasks improved video-editing performance on held-out films. [Explore the task-generation pipeline →](docs/data_construction.md)
+Using our framework, we generated **2,352 video-editing tasks from 49 films**. Filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between the two splits. Training on these tasks improved video-editing performance on held-out films. [Explore the task-generation pipeline →](docs/data_construction.md)
 
 | Task | Editing decision |
 | :--- | :--- |
