@@ -258,5 +258,64 @@ class ReleaseCheckTests(TemporaryTree):
         self.assertTrue(check_release.check_tree(self.root).errors)
 
 
+class DocumentationImageTests(TemporaryTree):
+    def setUp(self):
+        super().setUp()
+        put(self.root, 'sample.py', b'answer = 42\n')
+        self.rows = [{'path': 'sample.py', 'sha256': digest(b'answer = 42\n'), 'bytes': 12}]
+        self.save_manifest()
+        self.name = 'docs/assets/paper-teaser.png'
+        self.image = b'\x89PNG\r\n\x1a\nsynthetic fixture'
+        patcher = patch.object(check_release, 'APPROVED_DOCUMENTATION_IMAGES',
+                               {self.name: digest(self.image)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def save_manifest(self):
+        put(self.root, 'configs/source_manifest.json', json.dumps({'files': self.rows}).encode())
+
+    def add_image(self, name=None, data=None):
+        name = self.name if name is None else name
+        data = self.image if data is None else data
+        put(self.root, name, data)
+        self.rows.append({'path': name, 'sha256': digest(data), 'bytes': len(data)})
+        self.save_manifest()
+
+    def test_reviewed_image_passes_and_replacement_fails_with_updated_manifest(self):
+        self.add_image()
+        result = check_release.check_tree(self.root)
+        self.assertEqual(result.errors, [])
+        self.assertEqual(result.verified, 2)
+        changed = self.image + b'changed'
+        put(self.root, self.name, changed)
+        self.rows[-1].update(sha256=digest(changed), bytes=len(changed))
+        self.save_manifest()
+        self.assertTrue(any('differs from the reviewed figure' in e
+                            for e in check_release.check_tree(self.root).errors))
+
+    def test_same_image_at_another_path_remains_forbidden(self):
+        self.add_image('docs/assets/another.png')
+        self.assertTrue(any('another.png: generated/private artifact type' in e
+                            for e in check_release.check_tree(self.root).errors))
+
+    def test_reviewed_image_still_requires_manifest_coverage(self):
+        put(self.root, self.name, self.image)
+        self.assertTrue(any(self.name + ': not listed' in e
+                            for e in check_release.check_tree(self.root).errors))
+        (self.root / 'configs/source_manifest.json').unlink()
+        self.assertTrue(any('source manifest missing' in e
+                            for e in check_release.check_tree(self.root).errors))
+
+    def test_reviewed_path_cannot_be_a_symlink(self):
+        self.add_image('fixture.txt', self.image)
+        path = self.root / self.name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(self.root / 'fixture.txt')
+        self.rows.append({'path': self.name, 'sha256': digest(self.image), 'bytes': len(self.image)})
+        self.save_manifest()
+        self.assertTrue(any(self.name + ': symlink' in e
+                            for e in check_release.check_tree(self.root).errors))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-07",
-  "scope": "Source-only release-draft identities; historical source hashes remain separate. No runtime data or verification reports are included.",
+  "scope": "Release-draft source and documentation identities, including the reviewed paper figure; historical source hashes remain separate. No runtime data or verification reports are included.",
   "files": [
     {
       "path": ".env.example",
@@ -19,8 +19,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "f3a543cdd84109468c118140066ade69119c9a23e8767539f331561ad08bb63b",
-      "bytes": 8107
+      "sha256": "246e12e20f6caace0d0acd48d2b404122c9982e951ad61ec5d177a0bfdc87baa",
+      "bytes": 8563
     },
     {
       "path": "configs/dependency_pins.json",
@@ -293,6 +293,11 @@
       "bytes": 7035
     },
     {
+      "path": "docs/assets/paper-teaser.png",
+      "sha256": "9377e1b3bb536b1bdf251bc77e6907ab8eeece37cac70c47c14e5b763f6cd680",
+      "bytes": 817753
+    },
+    {
       "path": "docs/data_construction.md",
       "sha256": "26290c448c332ce14b035ca6a38e17ee7078c714e3b7fa45eaafe2eb21ad160e",
       "bytes": 16989
@@ -304,8 +309,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "baa65f6dedfda5c982187aaf5df46563fb956e9d17fc8f19abe73992d2990a87",
-      "bytes": 3179
+      "sha256": "eafccf5a6daf707825df05cd1ced1de7d3d8448f59dcf4ea38c3be1ff4ce0789",
+      "bytes": 4494
     },
     {
       "path": "docs/opsd.md",
@@ -314,8 +319,8 @@
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "6a78252173dfe91cbfe1ca719d550b5c6d65c4c30a891d33bc7303f07f115d9c",
-      "bytes": 3849
+      "sha256": "636b292c98f308205d8e35cffe61bfcc5bc9ca1d8a9952afec4fa0fe66b097b8",
+      "bytes": 4069
     },
     {
       "path": "docs/training.md",
@@ -689,13 +694,13 @@
     },
     {
       "path": "scripts/check_release.py",
-      "sha256": "55b54c61c6af97c1e1a35607f84addfccaac217e05d0112dc23c00aeb8c2e2ce",
-      "bytes": 7612
+      "sha256": "08aa2b1de6410d8823abc890d68f305250e0c93bcbcdc71f62bb46e255090ff3",
+      "bytes": 8453
     },
     {
       "path": "tests/test_release_tools.py",
-      "sha256": "9e408f6cabd7f20ba42eb7aec90e4580947c05734e12da9208b4bdb7e2f70c93",
-      "bytes": 11298
+      "sha256": "dbea208a0704c5f0c1d2db3674b39764e1d7d8315a9536978f3dbb768388bacb",
+      "bytes": 14157
     },
     {
       "path": "training/README.md",

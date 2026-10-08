@@ -29,4 +29,12 @@ The reward-hacking observation applies to the tested GRPO+PRM setup with LLM-jud
 
 ## Illustrations
 
-The two [README](../README.md) diagrams are hand-authored SVG source files under [`assets/`](assets/). They explain task decisions and feedback granularity. They are not screenshots, model outputs, sample task packages, or measured reward curves. No media assets are embedded or fetched from external sources.
+The [README](../README.md) opens with **Figure 1 from the paper**, rendered without content changes as [`paper-teaser.png`](assets/paper-teaser.png). It contains illustrative film thumbnails and aggregate experimental results, not a distributable task package or the underlying media and result files.
+
+- Panel (a) shows independent task schematics ordered by base-policy horizon. Turns and scores are task-type averages, not example-specific results; evaluation metrics average four repetitions. Fine Cut keeps picture and timing fixed.
+- Panel (b) reports final score differences from outcome-only GRPO.
+- Panel (c) shows fixed-weight process and outcome rewards, with decayed-weight outcome rewards available from update 21. Faint lines connect recorded observations; thick lines show centered five-observation means. The aligned strip shows fixed and cubic-decay weights λ, with the update 20–30 decay window shaded.
+
+The source figure is `teaser-editable-v6.pdf` (SHA-256: `0178cea1dcc1514c48fb13ce5dbdb36d46bf398cbc27f3853387584a8d51af5d`). It was rendered with Poppler at 2,600 pixels wide, preserving its aspect ratio. Only this reviewed PNG is permitted by the release check; its exact path and SHA-256 are pinned in [`check_release.py`](../scripts/check_release.py), and its bytes are also tracked in the source manifest.
+
+The separate [`learning-signals.svg`](assets/learning-signals.svg) is a hand-authored conceptual diagram of feedback granularity. It contains no film frames or measured results. The earlier [`editing-tasks.svg`](assets/editing-tasks.svg) is retained as an editable conceptual alternative.

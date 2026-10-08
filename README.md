@@ -14,8 +14,10 @@
 **When does feedback on intermediate actions help an editing agent—and when does it hurt task completion?** We study trajectory-, turn-, and token-level learning signals across four movie-trailer editing tasks that combine visual inspection, reasoning, and tool use.
 
 <p align="center">
-  <img src="docs/assets/editing-tasks.svg" width="100%" alt="Four independent editing tasks: Content Selection chooses shots, Narrative Sequencing orders them, Rough Cut sets clip boundaries, and Fine Cut coordinates dialogue, music, and transitions while keeping picture and timing fixed.">
+  <a href="docs/assets/paper-teaser.png"><img src="docs/assets/paper-teaser.png" width="100%" alt="Paper Figure 1: four editing tasks ordered by base-policy interaction horizon; score differences from outcome-only GRPO; and process/outcome reward curves with the fixed and decayed process-reward weights."></a>
 </p>
+
+**Figure 1 · When process rewards help and hurt.** (a) Independent editing tasks, ordered by base-policy horizon; turns and base scores are task-type averages. (b) Final score differences from outcome-only GRPO. (c) Training rewards and the process-reward weight λ; shading marks the decay window over updates 20–30. [View full resolution](docs/assets/paper-teaser.png) · [Figure details](docs/experiment_notes.md#illustrations)
 
 > **Repository status:** This is a research source snapshot in release preparation. Local source checks and selected CPU tests are available; a complete GPU training build and end-to-end reproduction have not yet been verified. [What is included and what remains →](docs/release_status.md)
 
@@ -44,7 +46,7 @@ These process-reward findings concern **LLM-judged turn-level rewards in our GRP
   <img src="docs/assets/learning-signals.svg" width="100%" alt="Three learning signals compared on editing trajectories: outcome-only GRPO uses a final task score; GRPO plus PRM adds judgments of intermediate turns; OPSD matches a frozen teacher token by token, with reference answers or turn suggestions visible only to the teacher.">
 </p>
 
-*Conceptual schematics, not experimental plots. Both illustrations use hand-authored vectors and contain no film frames or task instances.*
+*The learning-signals diagram above is a conceptual schematic, not an experimental plot.*
 
 ## Quick start
 
@@ -82,7 +84,7 @@ training/            Fixed-PRM source, separate decay overlay, and CPU tests
 opsd/                Forward-KL recipe, teacher-input code, and adapters
 evaluation/          Outcome graders and a separate decay overlay
 configs/             Recorded settings, dependency pins, and source hashes
-docs/                Component guides and editable SVG illustrations
+docs/                Component guides, paper figure, and SVG schematics
 scripts/             Dependency-free source verification
 tests/               Synthetic tests for release tools
 ```
@@ -91,7 +93,7 @@ tests/               Synthetic tests for release tools
 
 ## Data and reproducibility
 
-We intend to release **code and the data-construction workflow**, not the dataset. This repository contains no film media, generated task instances, reference answers, cached trajectories, model checkpoints, or benchmark result files. The documentation illustrations are synthetic schematics.
+We intend to release **code and the data-construction workflow**, not the dataset. The README includes the paper's Figure 1, with illustrative film thumbnails and aggregate results. Underlying film media, generated task instances, reference answers, cached trajectories, model checkpoints, and raw benchmark result files are not distributed.
 
 To construct new tasks, supply media you are authorized to process and set `VIDEO_EDITING_DATA_ROOT` to a private directory outside this checkout. Paths and optional cloud resources are described in [`data_construction/environment.example`](data_construction/environment.example). Rebuilding tasks from different media will not reproduce the original dataset or numerical results exactly.
 

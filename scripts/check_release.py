@@ -38,6 +38,10 @@ APPROVED_METADATA_PATHS = {
     'training/third_party/OpenCode/package.json',
     'training/third_party/OpenCode/packages/opencode/package.json',
 }
+# Reviewed paper artwork only; other images remain excluded from the release.
+APPROVED_DOCUMENTATION_IMAGES = {
+    'docs/assets/paper-teaser.png': '9377e1b3bb536b1bdf251bc77e6907ab8eeece37cac70c47c14e5b763f6cd680',
+}
 
 
 @dataclass
@@ -127,7 +131,20 @@ def check_tree(root):
             continue
         checked += 1
         checked_paths.add(rel.as_posix())
-        if set(rel.parts) & FORBIDDEN_DIRS or path.suffix.lower() in FORBIDDEN_SUFFIXES:
+        if set(rel.parts) & FORBIDDEN_DIRS:
+            errors.append(f'{rel}: generated/private artifact type')
+            continue
+        if rel.as_posix() in APPROVED_DOCUMENTATION_IMAGES:
+            try:
+                data = path.read_bytes()
+            except OSError:
+                errors.append(f'{rel}: cannot read documentation image')
+                continue
+            if (not data.startswith(b'\x89PNG\r\n\x1a\n') or
+                    hashlib.sha256(data).hexdigest() != APPROVED_DOCUMENTATION_IMAGES[rel.as_posix()]):
+                errors.append(f'{rel}: documentation image differs from the reviewed figure')
+            continue
+        if path.suffix.lower() in FORBIDDEN_SUFFIXES:
             errors.append(f'{rel}: generated/private artifact type')
             continue
         if path.name.startswith('.env') and path.name != '.env.example':
