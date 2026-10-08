@@ -11,7 +11,9 @@
 
 </div>
 
-**When does feedback on intermediate actions help an editing agent—and when does it hurt task completion?** We study trajectory-, turn-, and token-level learning signals across four movie-trailer editing tasks that combine visual inspection, reasoning, and tool use.
+We build a **scalable pipeline for generating video-editing tasks** from real films and their released trailers. The tasks reflect real editing workflows and support training and evaluation of multimodal agents.
+
+**When does feedback on intermediate actions help—and when does it hurt task completion?** Using these tasks, we compare trajectory-, turn-, and token-level learning signals for agents that combine visual inspection, reasoning, and tool use.
 
 <p align="center">
   <a href="docs/assets/paper-teaser.png"><img src="docs/assets/paper-teaser.png" width="100%" alt="Paper Figure 1: four editing tasks ordered by base-policy interaction horizon; score differences from outcome-only GRPO; and process/outcome reward curves with the fixed and decayed process-reward weights."></a>
@@ -23,7 +25,9 @@
 
 ## Overview
 
-The task types reflect different decisions in a real editing workflow. They are **constructed independently**: one task's output is not used to initialize the next.
+**From real media to editing tasks.** The pipeline aligns trailer shots with source-film footage, divides trailers into narrative chunks, and generates editorial briefs. Each chunk yields four task types by varying the supplied media and required editing operation. These tasks are **constructed independently**: one task's output is not used to initialize the next.
+
+In the paper, this process produced **2,352 tasks from 49 films**; filtering and sampling yielded 797 tasks for training and evaluation. Training on these tasks improved video-editing performance on held-out films. [Explore the task-generation pipeline →](docs/data_construction.md)
 
 | Task | Editing decision |
 | :--- | :--- |
@@ -66,6 +70,7 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 
 | I want to… | Guide | Source |
 | :--- | :--- | :--- |
+| Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |
 | Understand outcome grading and aggregation | [Evaluation](docs/evaluation.md) | [`evaluation/`](evaluation/) |
@@ -76,6 +81,7 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 <summary><strong>Repository map</strong></summary>
 
 ```text
+data_construction/   Task-generation pipeline, adapters, and generic prompts
 training/            Fixed-PRM source, separate decay overlay, and CPU tests
 opsd/                Forward-KL recipe, teacher-input code, and adapters
 evaluation/          Outcome graders and a separate decay overlay

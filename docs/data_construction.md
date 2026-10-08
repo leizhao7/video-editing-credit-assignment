@@ -1,6 +1,8 @@
-# Data construction release draft
+# Video-editing task generation pipeline
 
-This guide describes generic construction utilities and prompt templates. The dataset, source films, reference edits, clips, task instances, answer JSON, transcripts, film lists, audit decisions, and model outputs are not distributed. Supply your own private media and keep every generated artifact outside the code tree.
+The pipeline is designed to scale task construction across films and their released trailers: align source and reference footage, extract narrative chunks, generate editorial briefs, and assemble four types of editing tasks. The underlying video and audio come from real media; AI models generate the textual task descriptions. This guide describes the construction utilities and prompt templates.
+
+The dataset, source films, reference edits, clips, task instances, answer JSON, transcripts, film lists, audit decisions, and model outputs are not distributed. Supply your own private media and keep every generated artifact outside the code tree.
 
 The code preserves the matching, trimming, selection, and task-assembly calculations while separating code paths from private data paths. Corpus-specific examples and measurements have been removed from comments and documentation. Three generated descriptions/warnings were rewritten to remove historical corpus statistics. Release adaptations also validate configuration and paths, propagate subprocess failures, and clean up temporary resources; normal processing parameters and successful output schemas are preserved. It has not been validated end to end on new media or cloud infrastructure. Historical environment versions and final dataset selection are not reconstructed. Data-construction provenance maps and release-audit results are kept outside the public code package.
 
