@@ -6,9 +6,13 @@ authors:
   - given-names: Lei
     family-names: Zhao
     email: leizhao7@upenn.edu
+    affiliation: University of Pennsylvania
   - given-names: Zongheng
     family-names: Cao
     email: tom@philolabs.ai
+    affiliation: Philo Labs
   - given-names: Xinyu
     family-names: Hu
     email: christine@philolabs.ai
+    affiliation: Philo Labs
+repository-code: "https://github.com/leizhao7/video-editing-credit-assignment"

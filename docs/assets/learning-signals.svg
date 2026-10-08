@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="450" viewBox="0 0 1200 450" role="img" aria-labelledby="title description">
+  <title id="title">Learning signals across an editing trajectory</title>
+  <desc id="description">Outcome-only GRPO uses a final task score to supervise a trajectory. GRPO plus PRM adds scores for intermediate turns. OPSD matches student tokens to a frozen teacher, with reference answers or turn suggestions visible only to the teacher. This is a conceptual diagram, without experimental results or task instances.</desc>
+  <defs>
+    <marker id="arrow-neutral" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#8995a4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#4078b5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#d46b42" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="450" rx="18" fill="#ffffff"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#172c43">
+    <text x="30" y="45" font-size="27" font-weight="700">Learning signals across an editing trajectory</text>
+    <path d="M30 63H1170" stroke="#e4e9ed" stroke-width="1.5"/>
+
+    <!-- One trajectory-level outcome score. -->
+    <rect x="24" y="80" width="1152" height="88" rx="12" fill="#f5f8f9"/>
+    <rect x="24" y="96" width="4" height="56" rx="2" fill="#138b83"/>
+    <text x="44" y="118" font-size="21" font-weight="700">Outcome-only GRPO</text>
+    <text x="44" y="145" font-size="19" fill="#5b6978">Trajectory-level</text>
+    <path d="M288 96V152" stroke="#dfe6ea"/>
+    <g fill="#ffffff" stroke="#c8d2dc" stroke-width="1.5">
+      <rect x="322" y="101" width="106" height="34" rx="7"/>
+      <rect x="472" y="101" width="106" height="34" rx="7"/>
+      <rect x="622" y="101" width="106" height="34" rx="7"/>
+    </g>
+    <g font-size="19" text-anchor="middle">
+      <text x="375" y="125">Turn</text>
+      <text x="525" y="125">Turn</text>
+      <text x="675" y="125">Turn</text>
+    </g>
+    <g fill="none" stroke="#8995a4" stroke-width="2" marker-end="url(#arrow-neutral)">
+      <path d="M435 118H463"/>
+      <path d="M585 118H613"/>
+      <path d="M736 118H862"/>
+    </g>
+    <rect x="872" y="101" width="242" height="34" rx="7" fill="#e4f2ef" stroke="#138b83" stroke-width="1.5"/>
+    <text x="993" y="125" font-size="20" font-weight="700" text-anchor="middle" fill="#117b74">Final task score</text>
+    <text x="322" y="158" font-size="18" fill="#5b6978">One final score supervises the trajectory.</text>
+
+    <!-- Intermediate process scores supplement the same outcome signal. -->
+    <rect x="24" y="180" width="1152" height="96" rx="12" fill="#f5f8fb"/>
+    <rect x="24" y="197" width="4" height="62" rx="2" fill="#4078b5"/>
+    <text x="44" y="221" font-size="21" font-weight="700">GRPO + PRM</text>
+    <text x="44" y="248" font-size="19" fill="#5b6978">Turn-level + outcome</text>
+    <path d="M288 197V259" stroke="#dfe6ea"/>
+    <g fill="#e8f0fa" stroke="#adc4df" stroke-width="1.2">
+      <rect x="322" y="193" width="106" height="26" rx="6"/>
+      <rect x="472" y="193" width="106" height="26" rx="6"/>
+      <rect x="622" y="193" width="106" height="26" rx="6"/>
+    </g>
+    <g font-size="18" text-anchor="middle" fill="#356aa3">
+      <text x="375" y="212">Turn score</text>
+      <text x="525" y="212">Turn score</text>
+      <text x="675" y="212">Turn score</text>
+    </g>
+    <g fill="none" stroke="#4078b5" stroke-width="1.8" marker-end="url(#arrow-blue)">
+      <path d="M375 222V233"/>
+      <path d="M525 222V233"/>
+      <path d="M675 222V233"/>
+    </g>
+    <g fill="#ffffff" stroke="#c8d2dc" stroke-width="1.5">
+      <rect x="322" y="238" width="106" height="28" rx="7"/>
+      <rect x="472" y="238" width="106" height="28" rx="7"/>
+      <rect x="622" y="238" width="106" height="28" rx="7"/>
+    </g>
+    <g font-size="19" text-anchor="middle">
+      <text x="375" y="259">Turn</text>
+      <text x="525" y="259">Turn</text>
+      <text x="675" y="259">Turn</text>
+    </g>
+    <g fill="none" stroke="#8995a4" stroke-width="2" marker-end="url(#arrow-neutral)">
+      <path d="M435 252H463"/>
+      <path d="M585 252H613"/>
+      <path d="M736 252H862"/>
+    </g>
+    <rect x="872" y="235" width="242" height="34" rx="7" fill="#e4f2ef" stroke="#138b83" stroke-width="1.5"/>
+    <text x="993" y="259" font-size="20" font-weight="700" text-anchor="middle" fill="#117b74">Final task score</text>
+
+    <!-- Privileged information reaches only the frozen teacher. -->
+    <rect x="24" y="288" width="1152" height="140" rx="12" fill="#faf7f4"/>
+    <rect x="24" y="313" width="4" height="90" rx="2" fill="#d46b42"/>
+    <text x="44" y="345" font-size="22" font-weight="700">OPSD</text>
+    <text x="44" y="373" font-size="19" fill="#5b6978">Token-level</text>
+    <path d="M288 307V409" stroke="#e7e0da"/>
+    <rect x="314" y="303" width="408" height="57" rx="8" fill="#fffaf5" stroke="#e0b29c" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="330" y="325" font-size="18" font-weight="700" fill="#a74e2c">Teacher-only information</text>
+    <text x="330" y="348" font-size="18">Reference answers OR turn suggestions</text>
+    <path d="M730 332H775" fill="none" stroke="#d46b42" stroke-width="2" marker-end="url(#arrow-orange)"/>
+    <rect x="786" y="313" width="328" height="40" rx="8" fill="#ffffff" stroke="#d46b42" stroke-width="1.5"/>
+    <text x="950" y="340" font-size="21" font-weight="700" text-anchor="middle">Frozen teacher</text>
+    <path d="M950 360V379" fill="none" stroke="#d46b42" stroke-width="2" marker-end="url(#arrow-orange)"/>
+    <rect x="314" y="382" width="408" height="34" rx="8" fill="#ffffff" stroke="#c8d2dc" stroke-width="1.5"/>
+    <text x="330" y="406" font-size="20">Student rollout</text>
+    <g fill="#edf1f5" stroke="#a3b1c0" stroke-width="1.2">
+      <rect x="489" y="390" width="27" height="18" rx="4"/>
+      <rect x="525" y="390" width="27" height="18" rx="4"/>
+      <rect x="561" y="390" width="27" height="18" rx="4"/>
+      <rect x="597" y="390" width="27" height="18" rx="4"/>
+    </g>
+    <text x="637" y="405" font-size="20" fill="#647487">…</text>
+    <path d="M730 399H775" fill="none" stroke="#8995a4" stroke-width="2" marker-end="url(#arrow-neutral)"/>
+    <rect x="786" y="383" width="328" height="34" rx="8" fill="#faeade" stroke="#d46b42" stroke-width="1.5"/>
+    <text x="950" y="407" font-size="20" font-weight="700" text-anchor="middle" fill="#a74e2c">Token-level matching</text>
+  </g>
+</svg>

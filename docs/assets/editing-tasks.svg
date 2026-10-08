@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="458" viewBox="0 0 1200 458" role="img" aria-labelledby="title desc">
+  <title id="title">Four tasks, different editing demands</title>
+  <desc id="desc">Independent schematic tasks: Content Selection selects shots; Narrative Sequencing orders them; Rough Cut trims boundaries; Fine Cut coordinates dialogue, music and transitions over fixed picture and timing. Shapes are illustrative, not film frames or task data.</desc>
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M 24 0 L 0 0 0 24" fill="none" stroke="#e8edf1" stroke-width="0.6"/></pattern>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7" fill="none" stroke="#8998a6" stroke-width="1.4"/></marker>
+  </defs>
+  <rect width="1200" height="458" rx="18" fill="#f4f7f9"/>
+  <rect width="1200" height="458" rx="18" fill="url(#grid)"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#173347">
+    <text x="30" y="48" font-size="29" font-weight="700">Four tasks. Different editing demands.</text>
+    <text x="30" y="79" font-size="19" fill="#5e7181">Visual inspection, reasoning, and tool use in movie-trailer editing</text>
+
+    <g transform="translate(28 104)">
+      <rect width="270" height="319" rx="13" fill="#ffffff" stroke="#dce5eb"/>
+      <path d="M14 0 H256 Q270 0 270 14 V6 H0 V14 Q0 0 14 0" fill="#138b83"/>
+      <text x="20" y="43" font-size="27" font-weight="700" fill="#107b74">CS</text>
+      <text x="20" y="73" font-size="20" font-weight="600">Content Selection</text>
+      <g transform="translate(20 105)">
+        <rect width="68" height="54" rx="6" fill="#ddf2ed" stroke="#138b83" stroke-width="2.5"/>
+        <path d="M8 41 L25 22 L37 33 L46 19 L60 41Z" fill="#6db8a1"/>
+        <circle cx="52" cy="14" r="5" fill="#e6b55b"/>
+        <rect x="81" width="68" height="54" rx="6" fill="#edf1f4"/>
+        <path d="M92 41 L108 17 L120 36 L136 24 L141 41Z" fill="#c1ccd6"/>
+        <rect x="162" width="68" height="54" rx="6" fill="#e6eef8" stroke="#138b83" stroke-width="2.5"/>
+        <path d="M170 42 L185 25 L201 34 L215 20 L224 42Z" fill="#88a8cf"/>
+        <rect y="69" width="68" height="54" rx="6" fill="#edf1f4"/>
+        <path d="M8 110 L22 97 L40 103 L56 89 L61 110Z" fill="#c1ccd6"/>
+        <rect x="81" y="69" width="68" height="54" rx="6" fill="#faf0dd" stroke="#138b83" stroke-width="2.5"/>
+        <path d="M89 111 L104 88 L119 103 L130 93 L142 111Z" fill="#d8b16b"/>
+        <rect x="162" y="69" width="68" height="54" rx="6" fill="#edf1f4"/>
+        <path d="M170 111 L184 99 L196 106 L211 86 L223 111Z" fill="#c1ccd6"/>
+        <g fill="#138b83"><circle cx="60" cy="6" r="10"/><circle cx="222" cy="6" r="10"/><circle cx="141" cy="75" r="10"/></g>
+        <g fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"><path d="M55 6 L59 10 L65 2"/><path d="M217 6 L221 10 L227 2"/><path d="M136 75 L140 79 L146 71"/></g>
+      </g>
+      <text x="20" y="300" font-size="19" font-weight="600">Choose relevant shots</text>
+    </g>
+
+    <g transform="translate(319 104)">
+      <rect width="270" height="319" rx="13" fill="#ffffff" stroke="#dce5eb"/>
+      <path d="M14 0 H256 Q270 0 270 14 V6 H0 V14 Q0 0 14 0" fill="#4078b5"/>
+      <text x="20" y="43" font-size="27" font-weight="700" fill="#356ba3">NS</text>
+      <text x="20" y="73" font-size="20" font-weight="600">Narrative Sequencing</text>
+      <g transform="translate(20 111)" font-size="24" font-weight="600" text-anchor="middle">
+        <rect width="68" height="48" rx="6" fill="#faf0dd"/><text x="34" y="32" fill="#93671f">B</text>
+        <rect x="81" width="68" height="48" rx="6" fill="#ddf2ed"/><text x="115" y="32" fill="#107b74">C</text>
+        <rect x="162" width="68" height="48" rx="6" fill="#e6eef8"/><text x="196" y="32" fill="#356ba3">A</text>
+        <path d="M115 60 V83" fill="none" stroke="#8998a6" stroke-width="2" marker-end="url(#arrow)"/>
+        <rect y="101" width="68" height="48" rx="6" fill="#e6eef8"/><text x="34" y="133" fill="#356ba3">A</text>
+        <rect x="81" y="101" width="68" height="48" rx="6" fill="#faf0dd"/><text x="115" y="133" fill="#93671f">B</text>
+        <rect x="162" y="101" width="68" height="48" rx="6" fill="#ddf2ed"/><text x="196" y="133" fill="#107b74">C</text>
+      </g>
+      <text x="20" y="300" font-size="19" font-weight="600">Find a coherent order</text>
+    </g>
+
+    <g transform="translate(610 104)">
+      <rect width="270" height="319" rx="13" fill="#ffffff" stroke="#dce5eb"/>
+      <path d="M14 0 H256 Q270 0 270 14 V6 H0 V14 Q0 0 14 0" fill="#8571b1"/>
+      <text x="20" y="43" font-size="27" font-weight="700" fill="#725c9c">RC</text>
+      <text x="20" y="73" font-size="20" font-weight="600">Rough Cut</text>
+      <g transform="translate(20 105)">
+        <text x="51" y="18" font-size="18" fill="#725c9c">in</text>
+        <text x="171" y="18" font-size="18" fill="#725c9c">out</text>
+        <rect y="37" width="230" height="43" rx="5" fill="#edf1f4"/>
+        <rect x="56" y="37" width="130" height="43" fill="#b8a6d7"/>
+        <path d="M56 30 V88 M186 30 V88" stroke="#725c9c" stroke-width="3"/>
+        <path d="M120 100 V122" fill="none" stroke="#8998a6" stroke-width="2" marker-end="url(#arrow)"/>
+        <rect x="56" y="140" width="130" height="23" rx="4" fill="#b8a6d7"/>
+      </g>
+      <text x="20" y="300" font-size="19" font-weight="600">Set clip boundaries</text>
+    </g>
+
+    <g transform="translate(901 104)">
+      <rect width="270" height="319" rx="13" fill="#ffffff" stroke="#dce5eb"/>
+      <path d="M14 0 H256 Q270 0 270 14 V6 H0 V14 Q0 0 14 0" fill="#d46b42"/>
+      <text x="20" y="43" font-size="27" font-weight="700" fill="#bc5932">FC</text>
+      <text x="20" y="73" font-size="20" font-weight="600">Fine Cut</text>
+      <g transform="translate(20 110)">
+        <text y="14" font-size="18" fill="#657b8c">Fixed picture</text>
+        <g fill="#c5d2de"><rect y="27" width="71" height="27" rx="3"/><rect x="76" y="27" width="64" height="27" rx="3"/><rect x="145" y="27" width="85" height="27" rx="3"/></g>
+        <text y="83" font-size="18" fill="#725c9c">Dialogue</text>
+        <path d="M96 78 L101 78 L105 68 L110 86 L115 65 L120 89 L125 70 L130 78 L139 78 L143 68 L148 85 L153 74 L158 79 L169 79 L174 66 L179 87 L184 72 L189 79 L213 79" fill="none" stroke="#8571b1" stroke-width="2.5" stroke-linejoin="round"/>
+        <text y="121" font-size="18" fill="#107b74">Music</text>
+        <rect x="79" y="105" width="151" height="19" rx="4" fill="#bfe3d8"/>
+        <path d="M87 119 L108 109 L192 109 L222 119" fill="none" stroke="#138b83" stroke-width="2"/>
+        <path d="M71 22 V60 M140 22 V60" stroke="#d46b42" stroke-width="2"/>
+      </g>
+      <text x="20" y="300" font-size="19" font-weight="600">Mix sound &amp; transitions</text>
+    </g>
+  </g>
+</svg>

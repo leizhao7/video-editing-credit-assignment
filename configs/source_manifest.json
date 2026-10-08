@@ -14,13 +14,13 @@
     },
     {
       "path": "CITATION.cff",
-      "sha256": "e07373a23ca3b9f40486f779f9ecc2f54af4364709f94d70a2a8b8a38b916018",
-      "bytes": 484
+      "sha256": "4b014d7f21d13a6f9584460a875007a8468281384cd3eefef5a35089dd1004ef",
+      "bytes": 663
     },
     {
       "path": "README.md",
-      "sha256": "827be3335b06b439b10ec55855e0f72649bd46c01b8678adf755be17d5ec8fa1",
-      "bytes": 5124
+      "sha256": "a2c766688c9ac2f0f882e96b3d664e9bfe36599172bf33940a417b35bfefaa7b",
+      "bytes": 8104
     },
     {
       "path": "configs/dependency_pins.json",
@@ -283,6 +283,16 @@
       "bytes": 5330
     },
     {
+      "path": "docs/assets/editing-tasks.svg",
+      "sha256": "bad2938bd05ae57afddb30a7c78696fe54d89cba5c122e9fcce8e041c02e1aa0",
+      "bytes": 6919
+    },
+    {
+      "path": "docs/assets/learning-signals.svg",
+      "sha256": "a03440e698c65bbc7dbf121bbb511312169c00eec0ad171f82cc4964c230ac2a",
+      "bytes": 7035
+    },
+    {
       "path": "docs/data_construction.md",
       "sha256": "26290c448c332ce14b035ca6a38e17ee7078c714e3b7fa45eaafe2eb21ad160e",
       "bytes": 16989
@@ -293,14 +303,19 @@
       "bytes": 4001
     },
     {
+      "path": "docs/experiment_notes.md",
+      "sha256": "baa65f6dedfda5c982187aaf5df46563fb956e9d17fc8f19abe73992d2990a87",
+      "bytes": 3179
+    },
+    {
       "path": "docs/opsd.md",
       "sha256": "c86bb46d0bbdad0ed00716f7ea691ec8a299d76ba3be8a3efd5f70e153a550c6",
       "bytes": 7826
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "768a30a94f38eb781336ed58570624c97c0f341e2194dfdb2209acf214cb52e2",
-      "bytes": 3714
+      "sha256": "6a78252173dfe91cbfe1ca719d550b5c6d65c4c30a891d33bc7303f07f115d9c",
+      "bytes": 3849
     },
     {
       "path": "docs/training.md",
