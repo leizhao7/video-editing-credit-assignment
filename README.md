@@ -25,14 +25,12 @@
 
 The task types reflect different decisions in a real editing workflow. They are **constructed independently**: one task's output is not used to initialize the next.
 
-| Task | Editing decision | Internal stage |
-| :--- | :--- | :--- |
-| **CS** · Content Selection | Select relevant shots from a candidate pool. | `s_1` |
-| **NS** · Narrative Sequencing | Arrange selected shots into a coherent sequence. | `s_2` |
-| **RC** · Rough Cut | Set each clip's in- and out-points within a fixed sequence. | `s_3` |
-| **FC** · Fine Cut | Select and trim dialogue, place music, choose transitions, and render the result. Picture and timing stay fixed. | `s_4e` |
-
-The earlier `s_4` construction stage is an intermediate representation, not the paper's Fine Cut task. See the [construction guide](docs/data_construction.md) for task interfaces and prerequisites.
+| Task | Editing decision |
+| :--- | :--- |
+| **CS** · Content Selection | Select relevant shots from a candidate pool. |
+| **NS** · Narrative Sequencing | Arrange selected shots into a coherent sequence. |
+| **RC** · Rough Cut | Set each clip's in- and out-points within a fixed sequence. |
+| **FC** · Fine Cut | Select and trim dialogue, place music, choose transitions, and render the result. Picture and timing stay fixed. |
 
 ## What we learn
 
@@ -68,7 +66,6 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 
 | I want to… | Guide | Source |
 | :--- | :--- | :--- |
-| Construct editing tasks from my own authorized media | [Data construction](docs/data_construction.md) | [`data_construction/`](data_construction/) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |
 | Understand outcome grading and aggregation | [Evaluation](docs/evaluation.md) | [`evaluation/`](evaluation/) |
@@ -79,7 +76,6 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 <summary><strong>Repository map</strong></summary>
 
 ```text
-data_construction/   Task-building utilities, adapters, and generic prompts
 training/            Fixed-PRM source, separate decay overlay, and CPU tests
 opsd/                Forward-KL recipe, teacher-input code, and adapters
 evaluation/          Outcome graders and a separate decay overlay
@@ -93,9 +89,7 @@ tests/               Synthetic tests for release tools
 
 ## Data and reproducibility
 
-We intend to release **code and the data-construction workflow**, not the dataset. The README includes the paper's Figure 1, with illustrative film thumbnails and aggregate results. Underlying film media, generated task instances, reference answers, cached trajectories, model checkpoints, and raw benchmark result files are not distributed.
-
-To construct new tasks, supply media you are authorized to process and set `VIDEO_EDITING_DATA_ROOT` to a private directory outside this checkout. Paths and optional cloud resources are described in [`data_construction/environment.example`](data_construction/environment.example). Rebuilding tasks from different media will not reproduce the original dataset or numerical results exactly.
+The dataset is not distributed. The README includes the paper's Figure 1, with illustrative film thumbnails and aggregate results. Underlying film media, generated task instances, reference answers, cached trajectories, model checkpoints, and raw benchmark result files are not distributed.
 
 The paper's four evaluation repetitions are **not four independent training seeds**. Recorded configurations and upstream commit IDs also do not reconstruct the original modified training environment. The missing environment builds, launch services, reference-answer OPSD snapshot, and final filtering/sampling procedure are tracked in [release status](docs/release_status.md).
 

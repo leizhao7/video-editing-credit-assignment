@@ -45,7 +45,7 @@ For a public build, restore the matching `append_agent_rl`, `opencode_rl`, and `
 
 A new public CLI should take model, prepared-task, private-catalog, run-output, and checkpoint paths from user configuration, construct fresh source-bound identities, and select the two paper presets explicitly. Optimizer, sampling, microbatch, staleness, tool, and validation settings must be recovered from the recorded configuration; they must not be guessed from later experiments. The exact CUDA/PyTorch/Ray training dependency manifest is still missing. Keep upstream license/notice files when assembling the full build.
 
-The data-construction code and private-catalog builder may be released without the original dataset. Users must prepare their own authorized media and generated task artifacts. This supports reuse of the workflow; exact score replication still requires the original evaluation data, which is not distributed.
+Users must prepare their own authorized media and task artifacts. Exact score replication requires the original evaluation data, which is not distributed.
 
 ## Selected CPU verification
 

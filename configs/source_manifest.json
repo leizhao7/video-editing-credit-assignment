@@ -19,8 +19,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "246e12e20f6caace0d0acd48d2b404122c9982e951ad61ec5d177a0bfdc87baa",
-      "bytes": 8563
+      "sha256": "566d8d4939a394d32c30e082017184b1fc50a89422d115f07afa3f56d5a95fab",
+      "bytes": 7639
     },
     {
       "path": "configs/dependency_pins.json",
@@ -299,8 +299,8 @@
     },
     {
       "path": "docs/data_construction.md",
-      "sha256": "26290c448c332ce14b035ca6a38e17ee7078c714e3b7fa45eaafe2eb21ad160e",
-      "bytes": 16989
+      "sha256": "b4654bfce444c60d1f2391e3c2332950acfbe58f2d2950e9d77fd003f74f00e5",
+      "bytes": 16981
     },
     {
       "path": "docs/evaluation.md",
@@ -314,13 +314,13 @@
     },
     {
       "path": "docs/opsd.md",
-      "sha256": "c86bb46d0bbdad0ed00716f7ea691ec8a299d76ba3be8a3efd5f70e153a550c6",
-      "bytes": 7826
+      "sha256": "46bcb8fbe3720ec93d0dcc3153bced4fe0d8497ea3fd4fa85fbdfd57b3c52ef9",
+      "bytes": 7672
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "636b292c98f308205d8e35cffe61bfcc5bc9ca1d8a9952afec4fa0fe66b097b8",
-      "bytes": 4069
+      "sha256": "33d183c8ee577f278cdedd4956841dbdd9a2b89687ad638511376d9d70edb8a7",
+      "bytes": 3737
     },
     {
       "path": "docs/training.md",
