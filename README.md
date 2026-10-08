@@ -25,6 +25,8 @@ We build a **scalable pipeline for generating video-editing tasks** from real fi
 
 ## Overview
 
+**Multimodal agentic RL with Qwen3.5.** We adapt **SkyRL** for training **Qwen3.5-9B** agents, using **vLLM** for generation and an **OpenCode-based agent harness** for multi-turn visual inspection and video-editing tool use. In the paper, we run **outcome-only GRPO**, **GRPO+PRM (fixed λ)**, **GRPO+PRM (decayed λ)**, and **on-policy self-distillation (OPSD)** with either reference answers or turn suggestions as teacher-only information. These experiments compare trajectory-, turn-, and token-level learning signals in the same editing environment. [Training framework](docs/training.md) · [OPSD implementation](docs/opsd.md)
+
 **From real media to editing tasks.** The pipeline aligns trailer shots with source-film footage, divides trailers into narrative chunks, and generates editorial briefs. Each chunk yields four task types by varying the supplied media and required editing operation. These tasks are **constructed independently**: one task's output is not used to initialize the next.
 
 In the paper, this process produced **2,352 tasks from 49 films**; filtering and sampling yielded 797 tasks for training and evaluation. Training on these tasks improved video-editing performance on held-out films. [Explore the task-generation pipeline →](docs/data_construction.md)
