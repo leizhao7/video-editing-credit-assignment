@@ -7,7 +7,7 @@
 
 <sup>1</sup> University of Pennsylvania &nbsp;&nbsp; <sup>2</sup> Philo Labs
 
-[Overview](#overview) · [Findings](#what-we-learn) · [Quick start](#quick-start) · [Documentation](#documentation) · [Citation](#citation) · [License](#license)
+[Overview](#overview) · [Findings](#what-we-learn) · [Quick start](#quick-start) · [Agent setup](#set-up-an-annotation-agent) · [Documentation](#documentation) · [Citation](#citation) · [License](#license)
 
 </div>
 
@@ -66,10 +66,29 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 
 **Next:** choose a component below. Its guide describes dependencies, supported checks, and the remaining runtime requirements.
 
+### Set up an annotation agent
+
+Task generation supports **Claude Code, Codex CLI, and OpenCode 1.x**. Pick the CLI you already use, install it, and sign in with its own login command. The setup wizard asks for your backend, an available model, and a private data directory:
+
+```sh
+python3 data_construction/setup_agent.py
+```
+
+It checks the CLI version and saves a separate configuration for each backend outside the repository. Copy the `source` command it prints to activate that configuration, then its check command to verify file reading, image viewing, and JSON output. The check makes a small real model call; setup alone does not.
+
+Switch between saved configurations with one command, for example:
+
+```sh
+source ~/.config/video-editing-credit-assignment/codex.env
+```
+
+**[Installation, login, model selection, and troubleshooting →](docs/agent_setup.md)**
+
 ## Documentation
 
 | I want to… | Guide | Source |
 | :--- | :--- | :--- |
+| Set up or switch an annotation agent | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
 | Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |

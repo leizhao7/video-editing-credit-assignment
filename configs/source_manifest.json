@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "00363be061d510e2854107ca9288b1a23d329434b7c21f533d6de00e977eaa5e",
-      "bytes": 8947
+      "sha256": "d9504c67063a26c50f3d227593849e190053d63ecccd15f90fdab04fa93108f3",
+      "bytes": 9995
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -64,8 +64,8 @@
     },
     {
       "path": "data_construction/README.md",
-      "sha256": "6c4add3c1f671110b3108d9a73cd54a3fb8cd04d72b4e0698743cf2e51e78540",
-      "bytes": 1559
+      "sha256": "82835735d0cd614c3f0f6adad6f037a67e24a3c679ddd9a919ad84aaf9c2bd48",
+      "bytes": 1821
     },
     {
       "path": "data_construction/__init__.py",
@@ -283,6 +283,11 @@
       "bytes": 17973
     },
     {
+      "path": "data_construction/setup_agent.py",
+      "sha256": "9c680b2b3f1b855928dafdb23be3da5a47caf3f7da2a37e6848d6bc4b0aac74b",
+      "bytes": 8199
+    },
+    {
       "path": "data_construction/shot_luma.py",
       "sha256": "67c4d51be20fc202acccf8ec16bb25054a29b250a87c627f6a9b6686b11b4c7b",
       "bytes": 4141
@@ -303,6 +308,11 @@
       "bytes": 18221
     },
     {
+      "path": "data_construction/tests/test_setup_agent.py",
+      "sha256": "eb740f1759f69fb6676b9acd731a663d145a431e400e3fe3528676fbe8e4a094",
+      "bytes": 9799
+    },
+    {
       "path": "data_construction/translate_script.py",
       "sha256": "90ce3db5495c327f29c8d507d24655db9b59f6d2eb385f3423227b680a74db60",
       "bytes": 5873
@@ -311,6 +321,11 @@
       "path": "data_construction/verify_matches.py",
       "sha256": "96c8bb9f3d2754316ff6cbe5c3e66789cd1545cf90dda8e1ef70cfa33a7819c3",
       "bytes": 5330
+    },
+    {
+      "path": "docs/agent_setup.md",
+      "sha256": "e99b077aa61b124227081b2d7697a536f746ca2bb0d77b6afd27b6310dc8ed6d",
+      "bytes": 7062
     },
     {
       "path": "docs/assets/editing-tasks.svg",
@@ -324,8 +339,8 @@
     },
     {
       "path": "docs/data_construction.md",
-      "sha256": "4a29af39223fd4251809e5c7688dff6136b4d1ea4a4eea3a28499b49c708379a",
-      "bytes": 22837
+      "sha256": "40d441dfa8303140bb882310327bfaaef355bcb7c05e967700e55576a23a76a5",
+      "bytes": 23125
     },
     {
       "path": "docs/evaluation.md",

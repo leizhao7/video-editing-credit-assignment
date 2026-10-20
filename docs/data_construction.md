@@ -107,6 +107,8 @@ The image recipes currently use unpinned TransNetV2/PyTorch, faster-whisper/CTra
 
 ## Annotation CLI configuration
 
+For first-time configuration, follow [Agent setup](agent_setup.md) or run `python3 data_construction/setup_agent.py`. It generates a backend-specific profile outside the repository and prints the command to activate it. The environment variables below remain available for manual setup.
+
 `run_script_queue.py`, `run_s4_queue.py`, and `translate_script.py` share these settings. Authentication and provider credentials stay in the selected CLI's native configuration.
 
 | Variable | Meaning |
