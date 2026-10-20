@@ -209,7 +209,7 @@ def test_remote_batch_reports_empty_or_failed_jobs(load):
 
 def test_local_cli_rejects_missing_or_conflicting_action(load):
     module = load('modal_film_transcribe')
-    for args in ([], ['--upload', '--fetch'], ['--extract', '-j', '0']):
+    for args in ([], ['--upload', '--fetch', '--all'], ['--extract', '--all', '-j', '0']):
         with pytest.raises(SystemExit) as error: module._local_main(args)
         assert error.value.code == 2
 
@@ -222,7 +222,7 @@ def test_local_fetch_propagates_failure(load, monkeypatch, tmp_path):
         assert kwargs['check'] is True
         raise subprocess.CalledProcessError(1, command)
     monkeypatch.setattr(subprocess, 'run', fail)
-    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--fetch'])
+    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--fetch', '--film', 'synthetic'])
 
 
 @pytest.mark.parametrize('boundaries', [[], [10, 30]])
@@ -282,7 +282,7 @@ def test_local_extract_preserves_previous_output_when_probe_or_encoder_fails(loa
     module = load('modal_film_transcribe'); monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
     exports = tmp_path / 'exports/synthetic'; exports.mkdir(parents=True)
     sources = tmp_path / 'sources'; sources.mkdir(); (sources / 'input.mp4').touch()
-    (exports / 'probe.json').write_text(json.dumps({'slug':'synthetic', 'dir':str(sources)}))
+    (exports / 'probe.json').write_text(json.dumps({'slug':'synthetic', 'dir':str(sources), 'source':'input.mp4'}))
     cache = tmp_path / 'exports/_film_audio'; cache.mkdir()
     previous = cache / 'synthetic.opus'; previous.write_bytes(b'previous-small-output')
     calls = []
@@ -295,19 +295,138 @@ def test_local_extract_preserves_previous_output_when_probe_or_encoder_fails(loa
         assert command[command.index('-b:a')+1] == '24k'
         raise subprocess.CalledProcessError(1, command)
     monkeypatch.setattr(subprocess, 'run', run)
-    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--extract'])
+    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--extract', '--film', 'synthetic'])
     assert len(calls) == 2 and previous.read_bytes() == b'previous-small-output'
     assert not list(cache.glob('.extract-*'))
     def bad_probe(command, **kwargs): raise subprocess.CalledProcessError(1, command)
     monkeypatch.setattr(subprocess, 'run', bad_probe)
-    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--extract'])
+    with pytest.raises(subprocess.CalledProcessError): module._local_main(['--extract', '--film', 'synthetic'])
     assert previous.read_bytes() == b'previous-small-output'
 
 
 @pytest.mark.parametrize('action', ['--extract', '--upload', '--fetch'])
 def test_local_empty_input_does_not_report_success(load, monkeypatch, tmp_path, action):
     module = load('modal_film_transcribe'); monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
-    with pytest.raises(RuntimeError, match='No '): module._local_main([action])
+    with pytest.raises(RuntimeError, match='No '): module._local_main([action, '--all'])
+
+
+@pytest.mark.parametrize('action', ['--extract', '--upload', '--fetch'])
+@pytest.mark.parametrize('target', [[], ['--film', 'sample', '--all'], ['--film', '../sample'], ['--film', '']])
+def test_local_actions_require_one_safe_explicit_target(load, action, target):
+    with pytest.raises(SystemExit) as error:
+        load('modal_film_transcribe')._local_main([action, *target])
+    assert error.value.code == 2
+
+
+def test_local_extract_uses_exact_probe_source_and_exact_film(load, monkeypatch, tmp_path):
+    module = load('modal_film_transcribe')
+    monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
+    sources = tmp_path / 'user inputs'; sources.mkdir()
+    raw = tmp_path / 'external raw input.mov'; raw.write_bytes(b'private-source-placeholder')
+    source = sources / 'Z raw source.mov'; source.symlink_to(raw)
+    for name in ['_proxy.mp4', 'A_TRAILER.mp4', 'unrelated.mkv']:
+        (sources / name).touch()
+    target = tmp_path / 'exports/sample'; target.mkdir(parents=True)
+    (target / 'probe.json').write_text(json.dumps({'slug': 'sample', 'dir': str(sources), 'source': source.name}))
+    other = tmp_path / 'exports/sample-sequel'; other.mkdir()
+    (other / 'probe.json').write_text('invalid unrelated metadata')
+    commands = []
+    def run(command, **kwargs):
+        commands.append(command)
+        assert kwargs['check'] is True
+        if command[0] == 'ffprobe':
+            assert command[-1] == str(source)
+            return NS(stdout=json.dumps({'streams': [{'tags': {'language': 'eng'}}]}))
+        assert command[command.index('-i') + 1] == str(source)
+        assert command[command.index('-map') + 1] == '0:a:0'
+        for flag, value in [('-ac', '1'), ('-ar', '16000'), ('-c:a', 'libopus'), ('-b:a', '24k')]:
+            assert command[command.index(flag) + 1] == value
+        Path(command[-1]).write_bytes(b'synthetic-extracted-audio')
+        return NS(returncode=0)
+    monkeypatch.setattr(subprocess, 'run', run)
+    assert module._local_main(['--extract', '--film', 'sample']) == 0
+    assert len(commands) == 2
+    assert (tmp_path / 'exports/_film_audio/sample.opus').read_bytes() == b'synthetic-extracted-audio'
+    assert not (tmp_path / 'exports/_film_audio/sample-sequel.opus').exists()
+
+
+@pytest.mark.parametrize('source', [None, '', '..', '../raw.mp4', '/raw.mp4', 'nested\\raw.mp4', 'missing.mp4'])
+def test_local_source_never_falls_back_to_another_video(load, tmp_path, source):
+    module = load('modal_film_transcribe')
+    (tmp_path / 'available-source.mp4').touch()
+    with pytest.raises((ValueError, FileNotFoundError)):
+        module._probe_source({'source': source, 'dir': str(tmp_path)})
+
+
+@pytest.mark.parametrize('action', ['--extract', '--fetch'])
+def test_local_batch_rejects_colliding_probe_slug_before_any_command(load, monkeypatch, tmp_path, action):
+    module = load('modal_film_transcribe')
+    monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
+    (tmp_path / 'raw.mp4').touch()
+    for slug in ['sample', 'sample-sequel']:
+        target = tmp_path / 'exports' / slug; target.mkdir(parents=True)
+        (target / 'probe.json').write_text(json.dumps({'slug': 'sample', 'dir': str(tmp_path), 'source': 'raw.mp4'}))
+    # The fixture rejects all media and service commands, including partial batch work.
+    with pytest.raises(ValueError, match='export directory'):
+        module._local_main([action, '--all'])
+
+
+@pytest.mark.parametrize('action', ['--upload', '--fetch'])
+def test_local_transfer_selects_exact_slug_or_explicit_all(load, monkeypatch, tmp_path, action):
+    module = load('modal_film_transcribe')
+    monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
+    cache = tmp_path / 'exports/_film_audio'; cache.mkdir(parents=True)
+    for slug in ['sample', 'sample-sequel']:
+        (cache / f'{slug}.opus').touch()
+        target = tmp_path / 'exports' / slug; target.mkdir()
+        (target / 'probe.json').write_text(json.dumps({'slug': slug}))
+    commands = []
+    monkeypatch.setattr(subprocess, 'run', lambda command, **kwargs: commands.append(command))
+    assert module._local_main([action, '--film', 'sample']) == 0
+    assert len(commands) == 1
+    if action == '--upload':
+        assert commands[0][-1] == '/sample/source_audio.opus'
+    else:
+        assert commands[0][-2] == '/sample/source_transcript.json'
+    commands.clear()
+    assert module._local_main([action, '--all']) == 0
+    assert len(commands) == 2
+
+
+@pytest.mark.parametrize('action', ['--extract', '--upload', '--fetch'])
+def test_unknown_exact_local_film_fails_before_any_command(load, monkeypatch, tmp_path, action):
+    module = load('modal_film_transcribe')
+    monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(tmp_path))
+    with pytest.raises(FileNotFoundError):
+        module._local_main([action, '--film', 'missing'])
+
+
+def test_local_generated_output_symlink_cannot_escape_root(load, monkeypatch, tmp_path):
+    module = load('modal_film_transcribe')
+    root = tmp_path / 'private'; root.mkdir()
+    outside = tmp_path / 'outside'; outside.mkdir()
+    exports = root / 'exports'; exports.mkdir()
+    (exports / 'sample').symlink_to(outside, target_is_directory=True)
+    monkeypatch.setenv('VIDEO_EDITING_DATA_ROOT', str(root))
+    with pytest.raises(ValueError, match='escapes'):
+        module._local_main(['--fetch', '--film', 'sample'])
+    (exports / '_film_audio').symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ValueError, match='escapes'):
+        module._local_main(['--upload', '--all'])
+
+
+def test_remote_only_selects_exact_slug_and_rejects_no_match(load):
+    module = load('modal_film_transcribe')
+    module.list_ready = NS(remote=lambda: ['sample', 'sample-sequel'])
+    jobs_seen = []
+    def starmap(jobs):
+        jobs_seen.extend(jobs)
+        return [{'slug': slug, 'ok': True} for slug, _ in jobs]
+    module.transcribe = NS(starmap=starmap)
+    module.main(only='sample')
+    assert jobs_seen == [('sample', 'large-v3')]
+    with pytest.raises(RuntimeError, match='No source'):
+        module.main(only='sam')
 
 
 @pytest.mark.parametrize('fps', ['23.976', '30000/1001', '1/1000', '120'])

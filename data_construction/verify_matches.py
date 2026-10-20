@@ -88,11 +88,18 @@ def main():
 
 
     jobs = []
-    for f in sorted(glob.glob(f"{ROOT}/exports/*/p2_refined.csv")):
+    matches = sorted(glob.glob(f"{ROOT}/exports/*/p2_refined.csv"))
+    if not matches:
+        raise SystemExit("No p2_refined.csv found. Complete pipeline preprocessing, then run "
+                         "python data_construction/run_script_queue.py --film <slug> --prep-only.")
+    for f in matches:
         slug = f.split("/")[-2]
+        inputs = f"{ROOT}/edit/task_{slug}/stages/script_inputs.json"
+        if not os.path.isfile(inputs):
+            raise SystemExit(f"Missing {inputs}. Run python data_construction/run_script_queue.py "
+                             f"--film {slug} --prep-only before verify_matches.py.")
         pb = json.load(open(f"{ROOT}/exports/{slug}/probe.json"))
-        inp = {s["id"]: s for s in json.load(
-            open(f"{ROOT}/edit/task_{slug}/stages/script_inputs.json"))["shots"]}
+        inp = {s["id"]: s for s in json.load(open(inputs))["shots"]}
         gold, src = f"{pb['dir']}/{pb['golden']}", f"{pb['dir']}/{pb['source']}"
         gcrop, scrop = pb.get("crop_expr") or "", pb.get("src_crop_expr", "")
         for r in csv.DictReader(open(f)):
@@ -102,6 +109,10 @@ def main():
                 continue
             jobs.append((slug, r["golden_id"], gold, src, gcrop, scrop,
                          sh["start_s"], sh["dur_s"], float(v)))
+
+    if not jobs:
+        raise SystemExit("No eligible source matches to compare. Check p2_refined.csv and script_inputs.json; "
+                         "no match-confidence evidence was produced.")
 
     print(f"  {len(jobs)} 个有匹配的镜头，{A.workers} 路并发", flush=True)
     out = {}
@@ -114,6 +125,9 @@ def main():
 
     vals = sorted(v for v in out.values() if v is not None)
     print(f"\n  写出 {A.out}")
+    if not vals:
+        raise SystemExit("No measurable comparisons: frames could not be decoded or were too flat for correlation. "
+                         f"Saved {len(out)} null measurements to {A.out}; no match-confidence evidence is available.")
     print(f"  可测的 {len(vals)} 个: 中位 {vals[len(vals)//2]:.3f}  "
           f"10% {vals[len(vals)//10]:.3f}  最低 {vals[0]:.3f}")
     for thr in (0.5, 0.6, 0.7):

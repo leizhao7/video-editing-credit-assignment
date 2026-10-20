@@ -6,14 +6,16 @@ The dataset, source films, reference edits, clips, task instances, answer JSON, 
 
 The code preserves the matching, trimming, selection, and task-assembly calculations while separating code paths from private data paths. Corpus-specific examples and measurements have been removed from comments and documentation. Three generated descriptions/warnings were rewritten to remove historical corpus statistics. Release adaptations also validate configuration and paths, propagate subprocess failures, and clean up temporary resources; normal processing parameters and successful output schemas are preserved. It has not been validated end to end on new media or cloud infrastructure. Historical environment versions and final dataset selection are not reconstructed. Data-construction provenance maps and release-audit results are kept outside the public code package.
 
+For a first run, follow the [one-film walkthrough](one_film.md), including the separate source-dialogue preparation for FC.
+
 ## Setup and private layout
 
-Use Python 3.10 or newer and install `data_construction/requirements.txt` in your own environment. These are direct import dependencies, not the historical experiment lockfile. Install `ffmpeg` and `ffprobe` separately; `card_text.py` also needs Tesseract with English language data. The optional `cut_takes.py` transcript check loads faster-whisper `small.en` on explicit invocation and may require the model weights to be available in its normal cache. The inherited proxy stage uses macOS VideoToolbox; an equivalent Linux encoder configuration has not been verified. Explicit cloud stages use the bundled adapters under `data_construction/modal/`, a configured Modal CLI, and an explicitly supplied user-owned volume. Install `data_construction/requirements-modal.txt` for the local CLI dependency; the adapters declare their GPU image dependencies separately. Explicit annotation stages use a separately installed and authenticated Claude, Codex, or OpenCode 1.x CLI, configured as described below.
+Use Python 3.10 or newer and install `data_construction/requirements.txt` in your own environment. These are direct import dependencies, not the historical experiment lockfile. Install `ffmpeg` and `ffprobe` separately; `card_text.py` also needs Tesseract with English language data. The optional `cut_takes.py` transcript check loads faster-whisper `small.en` on explicit invocation and may require the model weights to be available in its normal cache. The proxy stage defaults to VideoToolbox on macOS and `libx264` elsewhere. `VIDEO_EDITING_PROXY_ENCODER=libx264` also selects software encoding on macOS. Both preserve cropping, output width, bitrate, and the full-duration check; the Linux platform branch is covered by tests, while full-film runtime qualification is recorded separately. Explicit cloud stages use the bundled adapters under `data_construction/modal/`, a configured Modal CLI, and an explicitly supplied user-owned volume. Install `data_construction/requirements-modal.txt` for the local CLI dependency; the adapters declare their GPU image dependencies separately. Explicit annotation stages use a separately installed and authenticated Claude, Codex, or OpenCode 1.x CLI, configured as described below.
 
 All construction artifacts resolve under `VIDEO_EDITING_DATA_ROOT`, defaulting to `data/private` under the current working directory. Code and bundled resources resolve beside their Python files. Set this variable before invoking any script; the scripts do not read an `.env` file automatically. Configuration names are listed in `data_construction/environment.example`; no credentials are provided or embedded.
 
 ```sh
-export VIDEO_EDITING_DATA_ROOT="$PWD/data/private"
+export VIDEO_EDITING_DATA_ROOT="$HOME/video-editing-data"
 python data_construction/pipeline.py --help
 python data_construction/run_script_queue.py --help
 ```
@@ -54,7 +56,7 @@ Whitespace-only optional environment settings use their documented defaults. Wor
 | Measured audio/continuity | `audio_cuts.py`, `picture_cont.py` | Timed transcript, music stem, and media → per-boundary measurements. |
 | Shot/beat/chunk annotation | `run_script_queue.py` | Measured facts and reference → `stages/script_inputs.json` and `stages/script.json`; validates coverage and required fields. |
 | Optional language completion | `translate_script.py` | Adds English text fields without intentionally changing existing annotation fields. Invokes an external model explicitly. |
-| CS assembly | `build_s1_tasks.py` | Annotations and private quality evidence → CS candidate/target materials and verifier metadata. |
+| CS assembly | `build_s1_tasks.py` | Annotations and measured inputs → CS candidate/target materials and verifier metadata. Final quality approval requires separate review evidence. |
 | NS/RC assembly | `build_s23_tasks.py` | Same measured/annotated inputs → NS and RC task directories. |
 | FC annotation | `run_s4_queue.py` | Locked units/cuts plus measured audio/continuity → `stages/s4_cuts.json`; also prepares continuity and a report. |
 | FC intermediate | `build_s4_tasks.py` | Uses `s4_cuts.json` and the existing per-chunk tasks to create historical `s_4` inputs. |
@@ -80,20 +82,20 @@ Set `VIDEO_EDITING_MODAL_VOLUME` to an existing volume in your own account befor
 
 The first three adapters retain the pipeline's function names and CLI arguments. Their output names include `golden_clips/manifest.csv`, `source_clips/manifest.csv`, `golden_transcript.json`, and `golden_stems/music.wav` on the volume; the fetch stage places these under the private exports root, including `source_manifest.csv` and `stems/music.wav`. A transcript contains `segments` with `start`, `end`, `text`, and `words`; each word uses `s`, `e`, `w`, and probability `p`. Source-film transcription emits the same word schema as `source_transcript.json`.
 
-The optional source-film path is separate from the main pipeline:
+Source-film transcription is separate from the main pipeline. Complete this path before assembling FC dialogue candidates:
 
 ```sh
 # These commands create/process private artifacts and explicitly invoke cloud work.
 export VIDEO_EDITING_MODAL_VOLUME='<your-existing-volume>'
-python data_construction/modal/modal_film_transcribe.py --extract
-python data_construction/modal/modal_film_transcribe.py --upload
+python data_construction/modal/modal_film_transcribe.py --extract --film '<slug>'
+python data_construction/modal/modal_film_transcribe.py --upload --film '<slug>'
 modal run data_construction/modal/modal_film_transcribe.py::main --only '<slug>'
-python data_construction/modal/modal_film_transcribe.py --fetch
+python data_construction/modal/modal_film_transcribe.py --fetch --film '<slug>'
 python data_construction/locate_lines.py --film '<slug>'
 python data_construction/cut_takes.py --film '<slug>'
 ```
 
-The local extraction/upload/fetch helpers enumerate private inputs; the remote `--only` filter limits the transcription call. Inspect the private root first. The historical extraction helpers reuse existing outputs based on file-size checks, so use separate roots or remove stale generated artifacts when inputs or settings change.
+Local extraction/upload/fetch require an exact `--film` slug or explicit `--all`; remote `--only` also matches an exact slug. Source audio is selected from the file recorded by `probe.py`, including when that input is a symlink. The historical extraction helpers reuse existing outputs based on file-size checks, so use separate roots or remove stale generated artifacts when inputs or settings change.
 
 The adapters reject failed decoders, empty video and incomplete frames, validate shot exports and stem outputs, and publish JSON metadata atomically. Single-shot export avoids passing an empty segment list to FFmpeg. Empty transcripts remain valid. Local action conflicts and failed batch items produce a nonzero exit status. These branches are tested with temporary synthetic inputs and mocked subprocesses, models and Modal definitions:
 
@@ -162,9 +164,10 @@ These checks validate CLI interoperability, not annotation quality or complete v
 After preprocessing, a typical explicit sequence is:
 
 ```sh
+python data_construction/run_script_queue.py --film '<slug>' --prep-only
 python data_construction/shot_luma.py --all
 python data_construction/verify_matches.py --all
-python data_construction/run_script_queue.py --film '<slug>' --prep-only
+python data_construction/card_text.py --film '<slug>'
 # Set VIDEO_EDITING_ANNOTATION_MODEL before these annotation calls:
 python data_construction/run_script_queue.py --film '<slug>'
 python data_construction/translate_script.py --film '<slug>'
@@ -172,10 +175,11 @@ python data_construction/build_s1_tasks.py --film '<slug>'
 python data_construction/build_s23_tasks.py --film '<slug>'
 python data_construction/run_s4_queue.py --film '<slug>'
 python data_construction/build_s4_tasks.py --film '<slug>'
+# Complete source-film transcription, locate_lines.py, and cut_takes.py above first.
 python data_construction/build_s4_editorial.py --film '<slug>'
 ```
 
-`shot_luma.py` and `verify_matches.py` inspect all supplied exports under the private root; unlike per-film builders they support `--all`, not `--film`. Some CS protections require additional private review evidence described below. This sequence documents the dependency order, not a claim that an arbitrary input passes every quality gate. The inherited scripts can replace generated files; keep experiments in separate private roots.
+`shot_luma.py` and `verify_matches.py` inspect all supplied exports under the private root; unlike per-film builders they support `--all`, not `--film`. The inspection helpers require the `script_inputs.json` produced by `--prep-only`. Some CS protections require additional private review evidence described below. This sequence documents the dependency order, not a claim that an arbitrary input passes every quality gate. The inherited scripts can replace generated files; keep experiments in separate private roots.
 
 `build_s3.py` produces unit metadata/media without an editor connection. Exporting a Resolve project is separately opt-in with `--export-resolve` and `VIDEO_EDITING_RESOLVE_MCP_ROOT`; that external integration is not bundled. The two queue prompts under `data_construction/prompts/` are release rewrites. Their field contracts were checked against the inherited validators. They intentionally omit real annotations and corpus-derived vocabulary. The original heuristics (including chunk size and S4 vocabulary-diversity checks) remain, so a passing JSON file still needs human review.
 
@@ -185,7 +189,13 @@ Queue failures now propagate to the command's exit status. Annotation stderr goe
 PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s data_construction/tests
 ```
 
-These dependency-free tests use temporary synthetic metadata and local child processes, without invoking an annotation provider or processing media.
+These tests use temporary synthetic metadata and local child processes, without invoking an annotation provider. The proxy test also encodes a short synthetic video when FFmpeg/FFprobe are available; this is separate from the full-film check.
+
+## Alignment quality limitation
+
+The inherited temporal scoring in `p2_match.py` (color fallback) and `p2_refine.py` uses `C[o:o+k, np.arange(k)].mean()`. NumPy selects a `k` by `k` submatrix here, so the score averages all cross-frame pairs in the window rather than corresponding frames at one offset. A unit-normalized synthetic example can make this score prefer a static average frame over an exact ordered sequence. This affects refinement offsets and may affect fallback matches; it does not establish the impact on the paper's recorded data or results.
+
+The numerical scoring and acceptance thresholds are retained in this release. A paired-frame correction needs validation of the resulting offsets and the existing score thresholds before being adopted for dataset construction. Inspect matched frames and confidence evidence on new media; successful execution does not certify alignment accuracy.
 
 ## Scoring and reconstruction limits
 

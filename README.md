@@ -66,6 +66,8 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 
 **Next:** choose a component below. Its guide describes dependencies, supported checks, and the remaining runtime requirements.
 
+To try task generation on your own media, follow **[one film from setup to candidate tasks](docs/one_film.md)**. It covers local dependencies, Modal, annotation, dialogue preparation, and output inspection.
+
 ### Set up an annotation agent
 
 Task generation supports **Claude Code, Codex CLI, and OpenCode 1.x**. Pick the CLI you already use, install it, and sign in with its own login command. The setup wizard asks for your backend, an available model, and a private data directory:
@@ -89,6 +91,7 @@ source ~/.config/video-editing-credit-assignment/codex.env
 | I want to… | Guide | Source |
 | :--- | :--- | :--- |
 | Set up or switch an annotation agent | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
+| Generate candidate tasks from one film | [One-film walkthrough](docs/one_film.md) | [`pipeline.py`](data_construction/pipeline.py) |
 | Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |

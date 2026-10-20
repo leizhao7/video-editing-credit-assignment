@@ -65,7 +65,7 @@ vol = (modal.Volume.from_name(VOLUME_NAME, create_if_missing=False)
 # faster-whisper needs the CUDA runtime libs that debian_slim does not carry
 image = (modal.Image.debian_slim(python_version="3.11")
          .apt_install("ffmpeg")
-         .pip_install("faster-whisper", "numpy",
+         .pip_install("faster-whisper==1.2.1", "av>=11,<19", "numpy",
                       "nvidia-cublas-cu12", "nvidia-cudnn-cu12==9.*")
          .env({"VIDEO_EDITING_MODAL_VOLUME": VOLUME_NAME, "LD_LIBRARY_PATH": "/usr/local/lib/python3.11/site-packages/nvidia/"
                                   "cublas/lib:/usr/local/lib/python3.11/site-packages/"

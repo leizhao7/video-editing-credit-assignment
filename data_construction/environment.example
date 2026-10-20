@@ -14,6 +14,9 @@ VIDEO_EDITING_ANNOTATION_EFFORT=
 VIDEO_EDITING_MCP_CONFIG=
 # Bundled adapters default to data_construction/modal; override only when needed.
 VIDEO_EDITING_MODAL_DIR=
+# Proxy encoder: blank uses h264_videotoolbox on macOS, libx264 elsewhere.
+# Set libx264 explicitly for software encoding on macOS.
+VIDEO_EDITING_PROXY_ENCODER=
 # Required for explicit cloud stages: an existing volume in your own Modal account.
 VIDEO_EDITING_MODAL_VOLUME=
 # Only used by build_s3.py --export-resolve.

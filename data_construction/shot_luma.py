@@ -70,13 +70,27 @@ def main():
 
     def main():
         jobs = []
-        for p in sorted(glob.glob(f"{ROOT}/edit/task_*/stages/script_inputs.json")):
+        inputs = sorted(glob.glob(f"{ROOT}/edit/task_*/stages/script_inputs.json"))
+        for probe in sorted(glob.glob(f"{ROOT}/exports/*/probe.json")):
+            slug = os.path.basename(os.path.dirname(probe))
+            required = f"{ROOT}/edit/task_{slug}/stages/script_inputs.json"
+            if not os.path.isfile(required):
+                raise SystemExit(f"Missing {required}. Run python data_construction/run_script_queue.py "
+                                 f"--film {slug} --prep-only before shot_luma.py.")
+        if not inputs:
+            raise SystemExit("No script_inputs.json found. Complete preprocessing, then run "
+                             "python data_construction/run_script_queue.py --film <slug> --prep-only.")
+        for p in inputs:
             slug = p.split("/")[-3][5:]
             pb = json.load(open(f"{ROOT}/exports/{slug}/probe.json"))
             src = f"{pb['dir']}/{pb['golden']}"
             crop = pb.get("crop_expr") or ""
             for s in json.load(open(p))["shots"]:
                 jobs.append((slug, s["id"], src, s["start_s"], s["dur_s"], crop))
+
+        if not jobs:
+            raise SystemExit("No shots to measure in script_inputs.json. Check preprocessing and rerun "
+                             "python data_construction/run_script_queue.py --film <slug> --prep-only.")
 
         print(f"  {len(jobs)} 个预告片镜头，{A.workers} 路并发", flush=True)
         out = {}
@@ -90,6 +104,9 @@ def main():
         vals = [v for v in out.values() if v]
         dark = [v for v in vals if featureless(v)]
         print(f"\n  写出 {A.out}")
+        if not vals:
+            raise SystemExit("No measurable shot frames: all frame extractions failed or returned invalid data. "
+                             f"Saved {len(out)} null measurements to {A.out}; no luminance evidence is available.")
         print(f"  可测 {len(vals)} 个，无内容 {len(dark)} 个 ({100*len(dark)/len(vals):.1f}%)")
         print(f"  测不了的 {sum(1 for v in out.values() if not v)} 个")
 

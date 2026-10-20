@@ -10,6 +10,81 @@ if __name__ == "__main__":
         print('Usage: python data_construction/build_s4_tasks.py [options]\n\n  --film\n  --chunk\n  --all\n  --handle\n  --pad  音乐段两端各多留几秒\n  --keep-plain  保留一刀都不用动的段落——创作题里那是克制力测试\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
+
+def _media_duration(path, kind):
+    """Return duration only for nonempty, probe-readable media of the expected kind."""
+    import json, math, subprocess
+    from pathlib import Path
+    path = Path(path)
+    try:
+        if not path.is_file() or path.stat().st_size == 0:
+            return None
+        result = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
+                                 "format=duration:stream=codec_type", "-of", "json", str(path)],
+                                capture_output=True, text=True, timeout=30)
+        if result.returncode:
+            return None
+        info = json.loads(result.stdout)
+        duration = float(info["format"]["duration"])
+        if math.isfinite(duration) and duration > 0 and any(
+                stream.get("codec_type") == kind for stream in info["streams"]):
+            return duration
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def _require_media(path, kind):
+    duration = _media_duration(path, kind)
+    if duration is None:
+        raise RuntimeError(f"Missing or unreadable {kind} media: {path}")
+    return duration
+
+
+def _write_media(command, output, kind):
+    """Do not leave a failed conversion as a reusable cached media file."""
+    import subprocess
+    from pathlib import Path
+    output = Path(output)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(f"Media conversion failed ({result.returncode}): {output}")
+        _require_media(output, kind)
+    except Exception:
+        output.unlink(missing_ok=True)
+        raise
+
+
+def _invalidate_task(directory):
+    """A rebuilding task is incomplete until both publication files are rewritten."""
+    from pathlib import Path
+    for relative in ("task.json", "initial_state/manifest.json"):
+        (Path(directory) / relative).unlink(missing_ok=True)
+
+
+def _task_media_ready(directory, manifest):
+    from pathlib import Path
+    base = (Path(directory) / "initial_state").resolve()
+    try:
+        def valid(relative, kind):
+            path = (base / relative).resolve()
+            return base in path.parents and _media_duration(path, kind) is not None
+        shots = manifest["shots"]
+        if not isinstance(shots, list) or not shots:
+            return False
+        for shot in shots:
+            if shot.get("origin") != "to_build" and not valid(f"shots/{shot['id']}.mp4", "video"):
+                return False
+            if shot.get("handle") and not valid(shot["handle"]["file"], "audio"):
+                return False
+        if not valid(manifest["music"]["file"], "audio"):
+            return False
+        return all(valid(line["file"], "audio") for line in manifest.get("dialogue", []))
+    except (OSError, KeyError, TypeError, AttributeError):
+        return False
+
+
 def main():
     try:
         from .release_config import (CODE_ROOT, DATA_ROOT, require_target,
@@ -125,7 +200,7 @@ def main():
     }
 
 
-    def build(slug, chunk, film_name):
+    def _build(slug, chunk, film_name):
         src3 = f"{TT}/{slug}/s_3/{chunk}"
         dst = f"{TT}/{slug}/s_4/{chunk}"
         if not os.path.isdir(src3):
@@ -143,6 +218,8 @@ def main():
         for d in ("initial_state", "verifier", "output"):
             os.makedirs(f"{dst}/{d}", exist_ok=True)
         open(f"{dst}/output/.gitkeep", "w").close()
+        mus = f"{ROOT}/exports/{slug}/stems/music.wav"
+        mus_dur = _require_media(mus, "audio")
 
         pb = json.load(open(f"{ROOT}/exports/{slug}/probe.json"))
         GOLD = f"{pb['dir']}/{pb['golden']}"
@@ -184,12 +261,11 @@ def main():
             if head + tail < 0.25:
                 return None
             out = f"{dst}/initial_state/handles/{pid}.m4a"
-            if not os.path.exists(out):
-                if sh(["ffmpeg", "-v", "error", "-ss", f"{t - head:.4f}",
-                       "-t", f"{head + dur + tail:.4f}", "-i", SRC,
-                       "-vn", "-ac", "2", "-ar", "48000",
-                       "-c:a", "aac", "-b:a", "128k", "-y", out]).returncode:
-                    return None
+            if _media_duration(out, "audio") is None:
+                _write_media(["ffmpeg", "-v", "error", "-ss", f"{t - head:.4f}",
+                              "-t", f"{head + dur + tail:.4f}", "-i", SRC,
+                              "-vn", "-ac", "2", "-ar", "48000",
+                              "-c:a", "aac", "-b:a", "128k", "-y", out], out, "audio")
             return {"file": f"handles/{pid}.m4a", "head_s": round(head, 3),
                     "tail_s": round(tail, 3), "picture_in_s": round(head, 3)}
         span = order_units[lo_i:hi_i + 1]
@@ -213,13 +289,17 @@ def main():
                 h = handle_for(uid, pid, c["dur_s"])
                 if h:
                     rec["handle"] = h
-                if not os.path.exists(out):
+                if _media_duration(out, "video") is None:
+                    if os.path.lexists(out):
+                        os.remove(out)
                     # cut(), not a hand-rolled ffmpeg line. Both paths here have to produce
                     # media that is identical in every property but the picture, and the
                     # only place that is guaranteed is the function the other stages use.
                     if not cut(f"{src3}/initial_state/clips/{c['clip']}.mp4",
                                c["in_s"], c["dur_s"], "", out):
-                        return None
+                        if os.path.exists(out):
+                            os.remove(out)
+                        raise RuntimeError(f"S4 shot conversion failed: {out}")
             else:
                 # Cards use a uniform silent track. Trailer-only footage has no matched production track,
                 # so its finished audio is retained and adjacent audio decisions are marked unscored.
@@ -231,30 +311,30 @@ def main():
                 # Use the shared cut() normalization so encoding details do not identify the source route.
 
 
-                if not os.path.exists(out):
+                if _media_duration(out, "video") is None:
+                    if os.path.lexists(out):
+                        os.remove(out)
                     # CROP carries a trailing comma and falls back to a computed expression
                     # when crop_expr is absent; cut() wants the bare filter. Passing only
                     # crop_expr would silently drop the crop on every film that has none.
                     if not cut(GOLD, pos[uid], u["dur"], CROP.rstrip(","), out, mute=mute):
-                        return None
+                        if os.path.exists(out):
+                            os.remove(out)
+                        raise RuntimeError(f"S4 shot conversion failed: {out}")
             shots.append(rec)
 
         # Pad the music segment without exposing its reference start.
         # Record the actual padding after clamping to the start of the media.
         
         
-        mus = f"{ROOT}/exports/{slug}/stems/music.wav"
         mout = f"{dst}/initial_state/music.wav"
         head_pad = min(A.pad, t0)
-        mus_dur = 0.0
-        if os.path.exists(mus):
-            r = sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                    "-of", "csv=p=0", mus]).stdout.strip()
-            mus_dur = float(r) if r else 0.0
         tail_pad = min(A.pad, max(0.0, mus_dur - t1)) if mus_dur else A.pad
-        if os.path.exists(mus) and not os.path.exists(mout):
-            sh(["ffmpeg", "-v", "error", "-ss", f"{max(0, t0 - A.pad):.3f}",
-                "-t", f"{(t1 - t0) + 2 * A.pad:.3f}", "-i", mus, "-y", mout])
+        if _media_duration(mout, "audio") is None:
+            _write_media(["ffmpeg", "-v", "error", "-ss", f"{max(0, t0 - A.pad):.3f}",
+                          "-t", f"{(t1 - t0) + 2 * A.pad:.3f}", "-i", mus, "-y", mout], mout, "audio")
+        if not _task_media_ready(dst, {"shots": shots, "music": {"file": "music.wav"}}):
+            raise RuntimeError(f"Incomplete S4 media: {dst}")
 
         tags = tags_for(rows)
         n = len(rows)
@@ -394,21 +474,6 @@ def main():
     You are not re-cutting the shots. You are deciding how the {n} joins between them are
     handled.
     """)
-        json.dump({"taskId": f"{slug}_s4_{chunk}", "n_shots": len(shots), "n_cuts": n,
-                   "shots": shots,
-                   "music": {"file": "music.wav",
-                             "head_pad_s": round(head_pad, 3),
-                             "tail_pad_s": round(tail_pad, 3),
-                             "note": "Head and tail padding as given above (a stretch "
-                                     "near the head of the trailer gets less head room). "
-                                     "Not aligned to 0."}},
-                  open(f"{dst}/initial_state/manifest.json", "w"), ensure_ascii=False, indent=1)
-
-        json.dump({"id": f"{slug}_s4_{chunk}", "seed": "fine_cut", "stage": "s4/fine_cut",
-                   "film": slug, "chunk": chunk, "beat": key3.get("beat"),
-                   "deliverables": ["output/treatments.json"]},
-                  open(f"{dst}/task.json", "w"), ensure_ascii=False, indent=1)
-
         fps = key3["fps"]
         ans = {"task": f"{slug}_s4_{chunk}", "fps": fps, "n_cuts": n,
                "tol": {"audio_offset_s": 0.35, "picture_param_s": 0.20},
@@ -450,7 +515,38 @@ def main():
                    "answer_hash": hashlib.sha1(
                        json.dumps(ans, sort_keys=True).encode()).hexdigest()[:16]},
                   open(f"{dst}/verifier/build.json", "w"))
+
+        # Publish only after all media, prompts, and verifier artifacts succeeded.
+        with open(f"{dst}/initial_state/manifest.json", "w") as stream:
+            json.dump({"taskId": f"{slug}_s4_{chunk}", "n_shots": len(shots), "n_cuts": n,
+                       "shots": shots,
+                       "music": {"file": "music.wav",
+                                 "head_pad_s": round(head_pad, 3),
+                                 "tail_pad_s": round(tail_pad, 3),
+                                 "note": "Head and tail padding as given above (a stretch "
+                                         "near the head of the trailer gets less head room). "
+                                         "Not aligned to 0."}},
+                      stream, ensure_ascii=False, indent=1)
+        with open(f"{dst}/task.json", "w") as stream:
+            json.dump({"id": f"{slug}_s4_{chunk}", "seed": "fine_cut", "stage": "s4/fine_cut",
+                       "film": slug, "chunk": chunk, "beat": key3.get("beat"),
+                       "deliverables": ["output/treatments.json"]},
+                      stream, ensure_ascii=False, indent=1)
         return n
+
+
+    def build(slug, chunk, film_name):
+        dst = f"{TT}/{slug}/s_4/{chunk}"
+        _invalidate_task(dst)
+        completed = False
+        try:
+            result = _build(slug, chunk, film_name)
+            completed = True
+            return result
+        finally:
+            if not completed:
+                # This also removes either marker after a partial publication failure.
+                _invalidate_task(dst)
 
 
     films = sorted(os.listdir(TT)) if A.all else ([A.film] if A.film else [])

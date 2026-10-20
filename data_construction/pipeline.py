@@ -21,6 +21,8 @@ except ImportError:  # Direct script invocation.
 
 import argparse, contextlib, json, math, os, re, shutil, subprocess, sys, threading, time
 import unicodedata
+import traceback
+from contextvars import ContextVar
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
@@ -40,6 +42,7 @@ SCRATCH = str(Path(DATA_ROOT) / ".scratch")
 MODAL = None          # resolved at runtime: the dir holding modal_*.py
 STAGES = ["probe", "proxy", "upload", "shots", "fetch", "p2", "cards",
           "audio", "s3", "cutlist", "acuts", "report"]
+_STAGE_LOG = ContextVar("pipeline_stage_log", default=None)
 
 
 def slugify(name):
@@ -48,9 +51,87 @@ def slugify(name):
     return s[:20] or "film"
 
 
+@contextlib.contextmanager
+def _stage_logging(path):
+    """Append attempts in the configured private root; keep concurrent films separate."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as log:
+        log.write(f"\n=== attempt {time.strftime('%Y-%m-%d %H:%M:%S %z')} ===\n")
+        log.flush()
+        token = _STAGE_LOG.set((log, threading.Lock()))
+        try:
+            yield
+        except BaseException:
+            traceback.print_exc(file=log)
+            raise
+        finally:
+            _STAGE_LOG.reset(token)
+
+
 def sh(cmd, **kw):
-    return subprocess.run(cmd, shell=isinstance(cmd, str), capture_output=True,
-                          text=True, **kw)
+    logging = _STAGE_LOG.get()
+    if logging is None:
+        return subprocess.run(cmd, shell=isinstance(cmd, str), capture_output=True,
+                              text=True, **kw)
+    log, lock = logging
+    timeout, check, input_text = kw.pop("timeout", None), kw.pop("check", False), kw.pop("input", None)
+    if input_text is not None:
+        if "stdin" in kw:
+            raise ValueError("stdin and input arguments may not both be used")
+        kw["stdin"] = subprocess.PIPE
+    # Log only the executable label, never command arguments or the environment.
+    executable = "shell subprocess" if isinstance(cmd, str) else Path(cmd[0]).name
+    with lock:
+        log.write(f"\n--- {executable} ---\n")
+        log.flush()
+    output = {"stdout": [], "stderr": []}
+    errors = []
+
+    def read_stream(stream, channel):
+        try:
+            for chunk in iter(stream.readline, ""):
+                output[channel].append(chunk)
+                try:
+                    with lock:
+                        log.write(f"[{channel}] {chunk}")
+                        log.flush()
+                except OSError as error:
+                    errors.append(error)  # Keep draining pipes even if the log disk fails.
+        except Exception as error:
+            errors.append(error)
+        finally:
+            stream.close()
+
+    with subprocess.Popen(cmd, shell=isinstance(cmd, str), stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, text=True, **kw) as process:
+        readers = [threading.Thread(target=read_stream, args=(getattr(process, channel), channel))
+                   for channel in output]
+        for reader in readers:
+            reader.start()
+        try:
+            if input_text is not None:
+                try:
+                    process.stdin.write(input_text)
+                    process.stdin.close()
+                except BrokenPipeError:
+                    pass
+            process.wait(timeout=timeout)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            for reader in readers:
+                reader.join()
+    if errors:
+        raise RuntimeError("Could not capture complete subprocess output in the stage log") from errors[0]
+    result = subprocess.CompletedProcess(cmd, process.returncode, "".join(output["stdout"]),
+                                         "".join(output["stderr"]))
+    with lock:
+        log.write(f"\n--- exit {result.returncode} ---\n")
+        log.flush()
+    if check:
+        result.check_returncode()
+    return result
 
 
 def sh_checked(cmd):
@@ -58,6 +139,21 @@ def sh_checked(cmd):
     if result.returncode:
         raise RuntimeError(f"Command failed ({result.returncode}): {(result.stderr or result.stdout or '')[-500:]}")
     return result
+
+
+def _proxy_encoder():
+    """Choose one supported encoder; an override is a name, never shell flags.
+
+    VIDEO_EDITING_PROXY_ENCODER=libx264 also enables software encoding on macOS.
+    Hardware failures remain visible rather than silently changing the encoder.
+    """
+    default = "h264_videotoolbox" if sys.platform == "darwin" else "libx264"
+    encoder = env_text("VIDEO_EDITING_PROXY_ENCODER", default)
+    if encoder not in {"h264_videotoolbox", "libx264"}:
+        raise ValueError("VIDEO_EDITING_PROXY_ENCODER must be h264_videotoolbox or libx264")
+    if encoder == "h264_videotoolbox" and sys.platform != "darwin":
+        raise ValueError("h264_videotoolbox requires macOS; select VIDEO_EDITING_PROXY_ENCODER=libx264")
+    return encoder
 
 
 class Film:
@@ -98,15 +194,15 @@ class Film:
         out = f"{self.dir}/_proxy.mp4"
         # Write a temporary proxy and rename it only after duration validation,
         # so the final path does not expose a partial encode.
-
-
         if not _proxy_complete(self):
+            encoder = _proxy_encoder()
+            decoder = ["-hwaccel", "videotoolbox"] if encoder == "h264_videotoolbox" else []
             tmp = f"{self.dir}/_proxy.part.mp4"
             vf = ((p.get("src_crop_expr", "") + ",") if p.get("src_crop_expr") else "") \
                  + "scale=960:-2"
-            r = sh(["ffmpeg", "-y", "-v", "error", "-hwaccel", "videotoolbox",
+            r = sh(["ffmpeg", "-y", "-v", "error", *decoder,
                     "-i", f"{self.dir}/{p['source']}", "-map", "0:v:0",
-                    "-vf", vf, "-c:v", "h264_videotoolbox",
+                    "-vf", vf, "-c:v", encoder,
                     "-b:v", "1800k", "-an", tmp])
             if r.returncode:
                 if os.path.exists(tmp): os.remove(tmp)
@@ -424,12 +520,17 @@ def _run(f, stages):
         if f.done(s):
             continue
         t0 = time.time()
+        log_path = Path(f.E) / "logs" / f"{s}.log"
         try:
-            msg = getattr(f, s)()
+            with _stage_logging(log_path):
+                print(f"[{f.slug}] {s:<8} 开始  log: {log_path}", flush=True)
+                msg = getattr(f, s)()
             print(f"[{f.slug}] {s:<8} {time.time()-t0:6.0f}s  {msg}", flush=True)
         except Exception as e:
-            print(f"[{f.slug}] {s:<8} 失败: {str(e)[:300]}", flush=True)
-            f.state[s] = {"ok": False, "err": str(e)[:500], "at": time.strftime("%F %T")}
+            message = str(e).strip()
+            print(f"[{f.slug}] {s:<8} 失败: {message[-1500:]}\n完整日志: {log_path}", flush=True)
+            f.state[s] = {"ok": False, "err": message[-2000:], "log": str(log_path),
+                          "at": time.strftime("%F %T")}
             json.dump(f.state, open(f.sf, "w"), ensure_ascii=False, indent=1)
             return False
     return True

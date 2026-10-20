@@ -10,13 +10,44 @@ if __name__ == "__main__":
         print("Usage: python data_construction/build_s4_editorial.py [options]\n\n  --film\n  --all\n  --music-pad  音乐窗口两端各留几秒。宽一点，让'从哪进来'仍是决定\n  --distractors  干扰台词条数 = 本段用到的条数 × 这个倍数\n  --force  重建已存在的题（output/ 里的作业会保留）\n  --keep-transitions  Keep black/fade transition units; removed by default to avoid embedding answers in input media.\n  --explore  探索版：不告诉他 take 里说了什么，自己听。产物落到 s_4x/\n  --stage  输出到哪个阶段目录，默认按 --explore 决定\n  -h, --help  Show this static help without loading optional dependencies.\n")
         raise SystemExit(0)
 
+
+def _complete_task(directory, task_id, explore=False):
+    import json
+    from pathlib import Path
+    try:
+        from .build_s4_tasks import _task_media_ready
+    except ImportError:
+        from build_s4_tasks import _task_media_ready
+    root = Path(directory)
+    try:
+        task = json.loads((root / "task.json").read_text())
+        manifest = json.loads((root / "initial_state/manifest.json").read_text())
+        answer = json.loads((root / "verifier/answer.json").read_text())
+        seed = json.loads((root / "verifier/_rubric_seed.json").read_text())
+        metadata = json.loads((root / "verifier/task_meta.json").read_text())
+        if explore:
+            json.loads((root / "verifier/takes_content.json").read_text())
+        return (task["id"] == manifest["taskId"] == answer["task"] == seed["task"] == task_id
+                and task["stage"] == metadata["stage"]
+                and task["deliverables"] == ["output/edit.json", "output/preview.mp4"]
+                and manifest["n_joins"] == len(manifest["joins"]) == answer["n_joins"]
+                and bool((root / "task_prompt.md").read_text().strip())
+                and (root / "output").is_dir() and _task_media_ready(root, manifest))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return False
+
+
 def main():
     try:
         from .release_config import (CODE_ROOT, DATA_ROOT, require_target,
             require_annotation_model, cloud_volume, run_legacy_rubric_hook)
+        from .build_s4_tasks import (_media_duration, _require_media, _write_media,
+                                     _invalidate_task, _task_media_ready)
     except ImportError:  # Direct script invocation.
         from release_config import (CODE_ROOT, DATA_ROOT, require_target,
             require_annotation_model, cloud_volume, run_legacy_rubric_hook)
+        from build_s4_tasks import (_media_duration, _require_media, _write_media,
+                                    _invalidate_task, _task_media_ready)
 
     import argparse, glob, json, os, random, re, shutil, subprocess, sys, zlib
 
@@ -76,10 +107,12 @@ def main():
         This heuristic does not remove every type of visual transition."""
         r = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vf", "scale=32:18",
                             "-pix_fmt", "gray", "-f", "rawvideo", "-"], capture_output=True)
+        if r.returncode:
+            raise RuntimeError(f"Cannot inspect transition media: {path}")
         import numpy as np
         a = np.frombuffer(r.stdout, dtype=np.uint8)
         if a.size < 18 * 32:
-            return False
+            raise RuntimeError(f"No decodable frames for transition inspection: {path}")
         fr = a[: (a.size // (18 * 32)) * 18 * 32].reshape(-1, 18 * 32).mean(axis=1)
         return bool(fr.min() < 8)
 
@@ -87,10 +120,29 @@ def main():
     def build(slug, chunk):
         src4 = f"{TT}/{slug}/s_4/{chunk}"
         dst = f"{TT}/{slug}/{A.stage or ('s_4x' if A.explore else 's_4e')}/{chunk}"
+        tid = f"{slug}_s4e_{chunk}"
         if not os.path.isdir(src4):
             return None
-        if os.path.isdir(dst) and not A.force:
+        lo_p = f"{ROOT}/exports/{slug}/takes.json"
+        if not os.path.isfile(lo_p):
+            _invalidate_task(dst)
+            raise RuntimeError("Missing takes.json: run source transcription, locate_lines.py, "
+                               "then cut_takes.py before FC editorial assembly")
+        try:
+            with open(lo_p) as stream:
+                takes = json.load(stream)
+            tk = takes["takes"]
+            if (not isinstance(tk, list) or type(takes.get("n_takes")) is not int
+                    or takes["n_takes"] != len(tk) or takes.get("film", slug) != slug):
+                raise ValueError("takes.json has inconsistent film/count metadata")
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            _invalidate_task(dst)
+            raise RuntimeError(f"Invalid take preparation metadata: {lo_p}") from exc
+        if not tk:
+            print(f"  Warning: {slug} takes.json contains zero takes; this task has no dialogue pool.", flush=True)
+        if not A.force and _complete_task(dst, tid, A.explore):
             return "skip"
+        _invalidate_task(dst)
         # Preserve existing submitted output while rebuilding the surrounding task files.
         
         keep = {}
@@ -133,6 +185,8 @@ def main():
                   "verifier", "output"):
             os.makedirs(f"{dst}/{d}", exist_ok=True)
         open(f"{dst}/output/.gitkeep", "w").close()
+        mus = f"{ROOT}/exports/{slug}/stems/music.wav"
+        music_duration = _require_media(mus, "audio")
 
         # Reuse picture and production sound from S4, but mute trailer-only media.
         # Its finished mix could otherwise reveal music alignment by direct correlation.
@@ -140,12 +194,15 @@ def main():
 
         for s in shots_all:
             p = f"{src4}/initial_state/shots/{s['id']}.mp4"
-            if os.path.exists(p):
+            if s.get("origin") != "to_build":
                 q = f"{dst}/initial_state/shots/{s['id']}.mp4"
-                if not os.path.exists(q):
+                if _media_duration(q, "video") is None:
+                    _require_media(p, "video")
+                    if os.path.lexists(q):
+                        os.remove(q)
                     if s.get("origin") == "trailer":
-                        sh(["ffmpeg", "-v", "error", "-i", p, "-c:v", "copy", "-an",
-                            "-y", q])
+                        _write_media(["ffmpeg", "-v", "error", "-i", p, "-c:v", "copy", "-an",
+                                      "-y", q], q, "video")
                     else:
                         os.link(p, q) if os.stat(p).st_dev == os.stat(f"{dst}/initial_state/shots").st_dev \
                             else shutil.copy(p, q)
@@ -153,13 +210,15 @@ def main():
             if h:
                 p = f"{src4}/initial_state/{h}"
                 q = f"{dst}/initial_state/{h}"
-                if os.path.exists(p) and not os.path.exists(q):
+                if _media_duration(q, "audio") is None:
+                    _require_media(p, "audio")
+                    if os.path.lexists(q):
+                        os.remove(q)
                     os.link(p, q) if os.stat(p).st_dev == os.stat(f"{dst}/initial_state/handles").st_dev \
                         else shutil.copy(p, q)
 
         # Widen the music window so choosing its entry point remains an editing decision.
         
-        mus = f"{ROOT}/exports/{slug}/stems/music.wav"
         # 每题的头部余量随机，且不写进 manifest —— 固定值等于把对齐答案直接给出去
         random.seed(zlib.crc32(f"music/{slug}/{chunk}".encode()))
         # Record the actual clamped head padding used by ffmpeg, not merely the requested padding.
@@ -168,49 +227,36 @@ def main():
         want_head = random.uniform(A.music_pad * 0.5, A.music_pad * 1.5)
         cut_from = max(0.0, t0 - want_head)
         head_pad = t0 - cut_from
-        tail_pad = A.music_pad
-        if os.path.exists(mus):
-            r = sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                    "-of", "csv=p=0", mus]).stdout.strip()
-            if r:
-                tail_pad = min(A.music_pad, max(0.0, float(r) - t1))
-            mo = f"{dst}/initial_state/music.wav"
-            if not os.path.exists(mo):
-                sh(["ffmpeg", "-v", "error", "-ss", f"{cut_from:.3f}",
-                    "-t", f"{head_pad + (t1 - t0) + tail_pad:.3f}", "-i", mus, "-y", mo])
+        tail_pad = min(A.music_pad, max(0.0, music_duration - t1))
+        mo = f"{dst}/initial_state/music.wav"
+        if _media_duration(mo, "audio") is None:
+            _write_media(["ffmpeg", "-v", "error", "-ss", f"{cut_from:.3f}",
+                          "-t", f"{head_pad + (t1 - t0) + tail_pad:.3f}", "-i", mus, "-y", mo], mo, "audio")
 
         # ---- 对白池：本段用到的 + 干扰项
-        lo_p = f"{ROOT}/exports/{slug}/takes.json"
-        used, pool = [], []
-        if os.path.exists(lo_p):
-            tk = json.load(open(lo_p))["takes"]
-            used = [x for x in tk if x["trailer_e"] > t0 and x["trailer_s"] < t1]
-            rest = [x for x in tk if x not in used]
-            random.seed(zlib.crc32(f"{slug}/{chunk}".encode()))
-            # Keep at least three dialogue distractors even when no dialogue is used in the reference,
-            # so choosing to add no dialogue remains a meaningful option.
-            
-            
-            n_d = max(3, int(len(used) * A.distractors + 0.5))
-            pool = used + random.sample(rest, min(n_d, len(rest)))
-            # Reshuffle if all correct dialogue choices appear first; list position must not reveal them.
-            
-            gold_ids = {id(x) for x in used}
-            for _ in range(20):
-                random.shuffle(pool)
-                gi = [i for i, x in enumerate(pool) if id(x) in gold_ids]
-                if not gi or max(gi) >= len(used):
-                    break
+        used = [x for x in tk if x["trailer_e"] > t0 and x["trailer_s"] < t1]
+        rest = [x for x in tk if x not in used]
+        random.seed(zlib.crc32(f"{slug}/{chunk}".encode()))
+        # Keep at least three dialogue distractors even when no dialogue is used in the reference,
+        # so choosing to add no dialogue remains a meaningful option.
+        n_d = max(3, int(len(used) * A.distractors + 0.5))
+        pool = used + random.sample(rest, min(n_d, len(rest)))
+        # Reshuffle if all correct dialogue choices appear first; list position must not reveal them.
+        gold_ids = {id(x) for x in used}
+        for _ in range(20):
+            random.shuffle(pool)
+            gi = [i for i, x in enumerate(pool) if id(x) in gold_ids]
+            if not gi or max(gi) >= len(used):
+                break
 
         lines = []
         for i, x in enumerate(pool, 1):
             did = f"d{i:02d}"
             p = f"{ROOT}/exports/{slug}/{x['file']}"
             q = f"{dst}/initial_state/takes/{did}.m4a"
-            if os.path.exists(p) and not os.path.exists(q):
+            if _media_duration(q, "audio") is None:
+                _require_media(p, "audio")
                 shutil.copy(p, q)
-            if not os.path.exists(q):
-                continue
             lines.append({"id": did, "file": f"takes/{did}.m4a",
                           # 文件里实际有人说话的每一段。只给定位窗口的话 agent 摸不清
                           # 余量里还有什么，用了反而被判违规。
@@ -233,6 +279,10 @@ def main():
             joins.append({"join": i + 1, "t_s": round(t, 3), "frame": round(t * fps, 1),
                           "leaving": a["id"], "arriving": b["id"],
                           "leaving_origin": a.get("origin"), "arriving_origin": b.get("origin")})
+
+        if not _task_media_ready(dst, {"shots": shots_all, "dialogue": lines,
+                                       "music": {"file": "music.wav"}}):
+            raise RuntimeError(f"Incomplete editorial media: {dst}")
 
         json.dump({"taskId": f"{slug}_s4e_{chunk}", "fps": round(fps, 6),
                    "n_shots": len(shots_all), "n_joins": len(joins),
@@ -348,6 +398,9 @@ def main():
                                  for l in lines]},
                       open(f"{dst}/verifier/takes_content.json", "w"),
                       ensure_ascii=False, indent=1)
+
+        write_prompt(dst, slug, chunk, shots_all, joins, lines, head_pad, tail_pad,
+                     key4, beat=beat, dropped=dropped)
 
         for fn, blob in keep.items():
             q = f"{dst}/output/{fn}"
@@ -507,7 +560,7 @@ def main():
 
         json.dump({"id": f"{slug}_s4e_{chunk}", "seed": "editorial_fine_cut",
                    "stage": "s4e/editorial_fine_cut", "film": slug, "chunk": chunk,
-                   "beat": beat, "deliverables": ["output/edit.json"]},
+                   "beat": beat, "deliverables": ["output/edit.json", "output/preview.mp4"]},
                   open(f"{dst}/task.json", "w"), ensure_ascii=False, indent=1)
 
 
