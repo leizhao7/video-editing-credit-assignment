@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-07",
+  "date": "2026-10-20",
   "scope": "Release-draft source and documentation identities, including the reviewed paper figure; historical source hashes remain separate. No runtime data or verification reports are included.",
   "files": [
     {
@@ -64,13 +64,18 @@
     },
     {
       "path": "data_construction/README.md",
-      "sha256": "424f9accdc73eaf02ee313c28b6a93686872ee7ed380924415159afd761f2179",
-      "bytes": 860
+      "sha256": "6c4add3c1f671110b3108d9a73cd54a3fb8cd04d72b4e0698743cf2e51e78540",
+      "bytes": 1559
     },
     {
       "path": "data_construction/__init__.py",
       "sha256": "7a847ed09ba0be88f603d578c915255e942903317dd9021a65c5b2c351f4dad9",
       "bytes": 73
+    },
+    {
+      "path": "data_construction/annotation_backend.py",
+      "sha256": "5447b9f73a8087ad824a4ab303dc1300bc8c54d9189dfd5b476bec7878992186",
+      "bytes": 6690
     },
     {
       "path": "data_construction/assets/report.css",
@@ -128,6 +133,11 @@
       "bytes": 4765
     },
     {
+      "path": "data_construction/check_annotation_cli.py",
+      "sha256": "7575315f06aa2fa15b67fd30ea9808b459a445912e714ca0cbfdcc9874569fd2",
+      "bytes": 9781
+    },
+    {
       "path": "data_construction/classify_cards.py",
       "sha256": "2cd996a86fc7580acfd02407c9d5c0a1f0393071fc0c1a8319ddf0ae977e6213",
       "bytes": 4411
@@ -139,8 +149,8 @@
     },
     {
       "path": "data_construction/environment.example",
-      "sha256": "918af4b5525e43d07024f66cfaf3bfc57a8db703f521da6a4d9aec026db1c556",
-      "bytes": 1258
+      "sha256": "6372c2cc0a4cedec2fa499b0e441aa95cf20205ab4a1702207690e32baf8e907",
+      "bytes": 1674
     },
     {
       "path": "data_construction/grade_s1.py",
@@ -224,8 +234,8 @@
     },
     {
       "path": "data_construction/release_config.py",
-      "sha256": "7000b6be063b03965ebcccf41a77f16d869ed5995b90c909f8d483d76c05562b",
-      "bytes": 5684
+      "sha256": "d94409af979bf3dec18c6c6ed364b7cccf1896ac405ca2d389be51b5e14a04a4",
+      "bytes": 6032
     },
     {
       "path": "data_construction/requirements-modal.txt",
@@ -239,13 +249,13 @@
     },
     {
       "path": "data_construction/run_s4_queue.py",
-      "sha256": "53fe76741d9196c035379ad3c31e63367f93223a1709bf332ac08030eec1a783",
-      "bytes": 17118
+      "sha256": "966cbda44f6370130f3de3ec5cf11122f4867f540529e533a2181f13a7fe68e5",
+      "bytes": 16331
     },
     {
       "path": "data_construction/run_script_queue.py",
-      "sha256": "6ddb542c3d4367acffd128b4119bdb3c95d8d6b0a3c5e38d211d0ae9a4940154",
-      "bytes": 17366
+      "sha256": "f82d45256a79d1d5ab83b3ec39280bd94b28924063a2179b876c4a4bb36393ce",
+      "bytes": 16939
     },
     {
       "path": "data_construction/s1_card_classification.py",
@@ -278,14 +288,24 @@
       "bytes": 4141
     },
     {
+      "path": "data_construction/tests/test_annotation_backends.py",
+      "sha256": "7aeffe5b07d3e723b3e10435eb10479320e3bb260eca5b76d97841a20bc776fa",
+      "bytes": 12616
+    },
+    {
+      "path": "data_construction/tests/test_check_annotation_cli.py",
+      "sha256": "e8715ad2e766bfa8dea2fcbb733bef69353f18ebf98dc37eca771414b0bfc6f3",
+      "bytes": 7016
+    },
+    {
       "path": "data_construction/tests/test_runtime_boundaries.py",
-      "sha256": "2f86948b91deeb81b65275f5202519aac2c776ef86830f1ac7331c00c42bbe64",
-      "bytes": 14301
+      "sha256": "7f0e58a9c21cdbc036f0274c45e71ace111e721facbe285742db8467e227e2d5",
+      "bytes": 18221
     },
     {
       "path": "data_construction/translate_script.py",
-      "sha256": "53db6ceb9a84f11acfa8f83967634e5f09b24878156afeb64c2f463f3e1110a5",
-      "bytes": 5485
+      "sha256": "90ce3db5495c327f29c8d507d24655db9b59f6d2eb385f3423227b680a74db60",
+      "bytes": 5873
     },
     {
       "path": "data_construction/verify_matches.py",
@@ -304,8 +324,8 @@
     },
     {
       "path": "docs/data_construction.md",
-      "sha256": "4a3137fb69e72486ea83205453066ae7fc9ad5b3b50642dac5cd4b6038404434",
-      "bytes": 17313
+      "sha256": "4a29af39223fd4251809e5c7688dff6136b4d1ea4a4eea3a28499b49c708379a",
+      "bytes": 22837
     },
     {
       "path": "docs/evaluation.md",

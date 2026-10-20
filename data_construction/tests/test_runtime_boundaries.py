@@ -31,7 +31,7 @@ class RuntimeBoundaries(unittest.TestCase):
         for module in (pipeline, script_queue, s4_queue, translation):
             self.stack.enter_context(mock.patch.object(module, "ROOT", str(self.root)))
         self.stack.enter_context(mock.patch.object(pipeline, "SRC", str(self.root / "sources")))
-        self.stack.enter_context(mock.patch.dict(os.environ, {"VIDEO_EDITING_ANNOTATION_MODEL": "test-model"}))
+        self.stack.enter_context(mock.patch.dict(os.environ, {"VIDEO_EDITING_ANNOTATION_MODEL": "test-model", "VIDEO_EDITING_ANNOTATION_BACKEND": "claude", "VIDEO_EDITING_MCP_CONFIG": "", "VIDEO_EDITING_ANNOTATION_EFFORT": ""}))
         self.stack.enter_context(redirect_stdout(io.StringIO()))
         self.stack.enter_context(redirect_stderr(io.StringIO()))
 
@@ -52,7 +52,7 @@ class RuntimeBoundaries(unittest.TestCase):
         @contextmanager
         def process(*args, **kwargs):
             (task / "stages" / output).write_text("{}")
-            yield mock.Mock(stdout=io.StringIO(""), poll=lambda: returncode,
+            yield mock.Mock(stdout=io.StringIO(json.dumps({"type": "result", "is_error": False}) + "\n"), poll=lambda: returncode,
                             wait=lambda: returncode, pid=0)
         return process
 
@@ -146,7 +146,7 @@ class RuntimeBoundaries(unittest.TestCase):
 
     def test_audio_download_failure_does_not_mark_success(self):
         film = pipeline.Film("Sample Name")
-        results = [subprocess.CompletedProcess([], 0, "", "") for _ in range(2)]
+        results = [subprocess.CompletedProcess([], 0, json.dumps({"type": "result", "is_error": False}), "") for _ in range(2)]
         results.append(subprocess.CompletedProcess([], 2, "", "download failed"))
         with mock.patch.object(pipeline, "cloud_volume", return_value="test-volume"), \
              mock.patch.object(pipeline, "sh", side_effect=results), self.assertRaises(RuntimeError):
@@ -194,6 +194,58 @@ class RuntimeBoundaries(unittest.TestCase):
             ok, _, _ = s4_queue._once("sample", "Sample", str(task), 0, 0)
         self.assertFalse(ok)
         self.assertFalse(json.loads(state.read_text())["s4"]["ok"])
+
+    def test_cli_failure_event_cannot_pass_even_with_zero_exit_and_valid_file(self):
+        failures = {
+            "claude": {"type": "result", "is_error": True, "errors": ["synthetic failure"]},
+            "codex": {"type": "turn.failed", "error": {"message": "synthetic failure"}},
+            "opencode": {"type": "error", "error": {"data": {"message": "synthetic failure"}}},
+        }
+        task = self.root / "edit/task_sample"
+        (task / "stages").mkdir(parents=True)
+        for backend, failure in failures.items():
+            for module, stage, output in ((script_queue, "script", "script.json"),
+                                          (s4_queue, "s4", "s4_cuts.json")):
+                with self.subTest(backend=backend, stage=stage):
+                    state = self.write_json("exports/sample/state.json", {stage: {"ok": True}})
+
+                    @contextmanager
+                    def process(*args, **kwargs):
+                        (task / "stages" / output).write_text("{}")
+                        yield mock.Mock(stdout=io.StringIO(json.dumps(failure)),
+                                        poll=lambda: 0, wait=lambda: 0, pid=0)
+
+                    with mock.patch.dict(os.environ, VIDEO_EDITING_ANNOTATION_BACKEND=backend), \
+                         mock.patch.object(module, "annotation_process", process), \
+                         mock.patch.object(module, "check", return_value=[]):
+                        ok, _, errors = module._once("sample", "Sample", str(task), 0, 0)
+                    self.assertFalse(ok)
+                    self.assertIn("synthetic failure", errors[0])
+                    self.assertFalse(json.loads(state.read_text())[stage]["ok"])
+
+    def test_successful_cli_cannot_reuse_stale_annotation(self):
+        success = {"claude": {"type": "result", "is_error": False},
+                   "codex": {"type": "turn.completed"},
+                   "opencode": {"type": "step_finish", "part": {"reason": "stop"}}}
+        task = self.root / "edit/task_sample"
+        for backend, event in success.items():
+            for module, stage, output in ((script_queue, "script", "script.json"),
+                                          (s4_queue, "s4", "s4_cuts.json")):
+                with self.subTest(backend=backend, stage=stage):
+                    self.write_json("exports/sample/state.json", {stage: {"ok": True}})
+                    self.write_json(f"edit/task_sample/stages/{output}", {})
+
+                    @contextmanager
+                    def process(*args, **kwargs):
+                        yield mock.Mock(stdout=io.StringIO(json.dumps(event)),
+                                        poll=lambda: 0, wait=lambda: 0, pid=0)
+
+                    with mock.patch.dict(os.environ, VIDEO_EDITING_ANNOTATION_BACKEND=backend), \
+                         mock.patch.object(module, "annotation_process", process), \
+                         mock.patch.object(module, "check", return_value=[]):
+                        ok, _, errors = module._once("sample", "Sample", str(task), 0, 0)
+                    self.assertFalse(ok)
+                    self.assertIn("没被本次运行写过", errors[0])
 
     def test_pending_marker_requires_success_state_not_just_old_file(self):
         self.write_json("exports/sample/state.json", {"s4": {"ok": False}})
@@ -248,20 +300,28 @@ class RuntimeBoundaries(unittest.TestCase):
             before = path.read_text()
             def provider(*args, **kwargs):
                 path.write_text(json.dumps(translated))
-                return subprocess.CompletedProcess([], 0, "", "")
+                return subprocess.CompletedProcess([], 0, json.dumps({"type": "result", "is_error": False}), "")
             with mock.patch.object(translation.subprocess, "run", side_effect=provider):
                 self.assertFalse(translation.run("sample", "Sample"))
             self.assertEqual(path.read_text(), before)
 
     def test_translation_allows_only_expected_new_fields(self):
-        original, translated = self.translation_documents()
-        path = self.write_json("edit/task_sample/stages/script.json", original)
-        def provider(*args, **kwargs):
-            path.write_text(json.dumps(translated))
-            return subprocess.CompletedProcess([], 0, "", "")
-        with mock.patch.object(translation.subprocess, "run", side_effect=provider):
-            self.assertTrue(translation.run("sample", "Sample"))
-        self.assertEqual(json.loads(path.read_text()), translated)
+        events = {"claude": {"type": "result", "is_error": False},
+                  "codex": {"type": "turn.completed"},
+                  "opencode": {"type": "step_finish", "part": {"reason": "stop"}}}
+        for backend, event in events.items():
+            with self.subTest(backend=backend):
+                original, translated = self.translation_documents()
+                path = self.write_json("edit/task_sample/stages/script.json", original)
+
+                def provider(*args, **kwargs):
+                    path.write_text(json.dumps(translated))
+                    return subprocess.CompletedProcess([], 0, json.dumps(event), "")
+
+                with mock.patch.dict(os.environ, VIDEO_EDITING_ANNOTATION_BACKEND=backend), \
+                     mock.patch.object(translation.subprocess, "run", side_effect=provider):
+                    self.assertTrue(translation.run("sample", "Sample"))
+                self.assertEqual(json.loads(path.read_text()), translated)
 
 
 if __name__ == "__main__":

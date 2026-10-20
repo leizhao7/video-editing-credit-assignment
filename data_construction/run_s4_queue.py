@@ -12,12 +12,14 @@ if __name__ == "__main__":
 
 try:
     from .release_config import (
-        CODE_ROOT, DATA_ROOT, require_target, require_annotation_model, env_text, validate_data_slug, export_slug, select_films, annotation_cli, annotation_process
+        CODE_ROOT, DATA_ROOT, require_target, env_text, validate_data_slug, export_slug, select_films, annotation_process
     )
+    from .annotation_backend import build_annotation_command, AnnotationEvents
 except ImportError:  # Direct script invocation.
     from release_config import (
-        CODE_ROOT, DATA_ROOT, require_target, require_annotation_model, env_text, validate_data_slug, export_slug, select_films, annotation_cli, annotation_process
+        CODE_ROOT, DATA_ROOT, require_target, env_text, validate_data_slug, export_slug, select_films, annotation_process
     )
+    from annotation_backend import build_annotation_command, AnnotationEvents
 
 import argparse, glob, json, os, re, shutil, signal, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
@@ -26,7 +28,6 @@ ROOT = DATA_ROOT
 EFFORT = "max"
 TOOLS = ("Read,Write,Edit,Glob,Grep,"
          "Bash(ffmpeg:*),Bash(ffprobe:*),Bash(python3:*),Bash(ls:*),Bash(cat:*)")
-DENY = "Agent,Task"
 MEASURE = re.compile(r"signalstats|blackdetect|scdet|gt\(scene|metadata=print|rawvideo|"
                      r"scenedetect|cv2|ssim|psnr|histogram", re.I)
 NEED = ["cutlist", "acuts", "s3"]
@@ -96,11 +97,7 @@ def check(slug, T):
 
 def _once(slug, name, T, n, attempt, why=None):
     validate_data_slug(ROOT, slug)
-    model = require_annotation_model()
-    cli = annotation_cli()
     mcp = env_text("VIDEO_EDITING_MCP_CONFIG")
-    if mcp:
-        mcp = os.path.abspath(os.path.expanduser(mcp))
     E = f"{ROOT}/exports/{slug}"
     st = json.load(open(f"{E}/state.json"))
     st["s4"] = {"ok": False, "at": time.strftime("%F %T"), "errors": ["Annotation attempt incomplete"]}
@@ -125,13 +122,9 @@ def _once(slug, name, T, n, attempt, why=None):
     t0 = time.time()
     print(f"  [{name}] {n} 切点 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
           flush=True)
-    with annotation_process(
-        [cli, "-p", prompt, "--model", model, "--effort", EFFORT,
-         "--allowedTools", TOOLS, "--disallowedTools", DENY,
-         "--permission-mode", "acceptEdits",
-         *(["--mcp-config", mcp, "--strict-mcp-config"] if mcp else []),
-         "--add-dir", T, "--output-format", "stream-json", "--verbose"],
-        cwd=T, stderr_path=f"{runs}/stderr.log") as p:
+    command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT, mcp_config=mcp)
+    events = AnnotationEvents(command.backend)
+    with annotation_process(command.argv, cwd=T, stderr_path=f"{runs}/stderr.log") as p:
 
         # A stalled agent used to block the queue for good: the read loop below simply
         # waits, and nothing else in this script has a clock. Watch for silence rather
@@ -148,42 +141,35 @@ def _once(slug, name, T, n, attempt, why=None):
                     return
         threading.Thread(target=_watchdog, daemon=True).start()
         with open(f"{runs}/session.jsonl", "w") as raw, open(f"{runs}/progress.log", "w") as prog:
-            ntool, cost, rl = 0, None, [{}]
+            ntool = 0
             for line in p.stdout:
                 raw.write(line); raw.flush()
                 last[0] = time.time()
-                try: ev = json.loads(line)
-                except Exception: continue
-                if ev.get("type") == "assistant":
-                    for c in ev.get("message", {}).get("content", []):
-                        if c.get("type") == "tool_use":
-                            ntool += 1
-                            a = c["input"].get("file_path") or c["input"].get("command") or ""
-                            one = " ".join(str(a).split())
-                            # Preserve the end of long paths because it distinguishes individual inspection artifacts.
-
-
-                            one = ("…" + one[-72:]) if (len(one) > 74 and "/" in one) else one[:80]
-                            prog.write(f"[{time.time()-t0:6.0f}s] → {c['name']}  {one}\n")
-                            prog.flush()
-                if ev.get("type") == "rate_limit_event":
-                    rl[0] = ev.get("rate_limit_info") or {}
-                if ev.get("type") == "result": cost = ev.get("total_cost_usd")
+                for tool in events.feed(line):
+                    ntool += 1
+                    args = tool["input"]
+                    value = args.get("file_path") or args.get("filePath") or args.get("command") or ""
+                    one = " ".join(str(value).split())
+                    one = ("…" + one[-72:]) if (len(one) > 74 and "/" in one) else one[:80]
+                    prog.write(f"[{time.time()-t0:6.0f}s] → {tool['name']}  {one}\n")
+                    prog.flush()
         returncode = p.wait()
+    cost, rl = events.cost, [events.rate_limit]
     if killed: print(f"  [{name}] ⚠ 静默超过 {STALL_S//60} 分钟，已终止", flush=True)
     dt = time.time() - t0
 
-    bad = check(slug, T)
+    bad = events.failures() + check(slug, T)
     if returncode != 0:
         bad.insert(0, f"Annotation process exited with status {returncode}; see stderr.log")
     if killed:
         bad.insert(0, "Annotation process exceeded its inactivity limit")
     if not bad and (not os.path.exists(out_p) or os.path.getmtime(out_p) <= pre_m):
         bad = ["s4_cuts.json 没被本次运行写过 —— 是上次遗留的文件"]
-    meas = _measured_ref(f"{runs}/session.jsonl")
+    meas = _measured_ref(f"{runs}/session.jsonl", command.backend)
     if os.path.exists(f"{T}/stages/s4_cuts.json"):
         shutil.copy(f"{T}/stages/s4_cuts.json", f"{runs}/s4_cuts.json")
     st["s4"] = {"ok": not bad, "at": time.strftime("%F %T"), "min": round(dt / 60, 1),
+                "backend": command.backend, "model": command.model,
                 "cost_usd": cost, "tools": ntool, "errors": bad[:5], "measured_ref": meas,
                 "rate_limit": rl[0].get("status")}
     if not bad:
@@ -202,20 +188,19 @@ def _once(slug, name, T, n, attempt, why=None):
     return (not bad, rl[0], bad)
 
 
-def _measured_ref(path):
-    """Count measurement commands executed against the reference.
-    Inspect Bash tool calls and strip heredoc bodies so written text is not counted as execution."""
+def _measured_ref(path, backend="claude"):
+    """Count reference measurement commands, excluding text written in heredocs."""
     n = 0
-    for l in open(path):
-        try: ev = json.loads(l)
-        except Exception: continue
-        if ev.get("type") != "assistant": continue
-        for c in ev.get("message", {}).get("content", []):
-            if c.get("type") != "tool_use" or c.get("name") != "Bash": continue
-            cmd = str(c.get("input", {}).get("command", ""))
-            cmd = re.sub(r"<<\s*'?(\w+)'?[\s\S]*?^\1", "", cmd, flags=re.M)   # 去掉 heredoc 正文
-            if MEASURE.search(cmd) and re.search(r"reference/golden|golden\.mp4", cmd):
-                n += 1
+    events = AnnotationEvents(backend)
+    with open(path) as stream:
+        for line in stream:
+            for tool in events.feed(line):
+                if tool["name"] != "Bash":
+                    continue
+                cmd = str(tool["input"].get("command", ""))
+                cmd = re.sub(r"<<\s*'?(\w+)'?[\s\S]*?^\1", "", cmd, flags=re.M)
+                if MEASURE.search(cmd) and re.search(r"reference/golden|golden\.mp4", cmd):
+                    n += 1
     return n
 
 

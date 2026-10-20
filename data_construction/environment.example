@@ -1,9 +1,16 @@
 # Private input/output directory. Default when unset: ./data/private
 VIDEO_EDITING_DATA_ROOT=./data/private
-# Only needed when explicitly invoking LLM annotation; no model is selected by default.
-VIDEO_EDITING_ANNOTATION_CLI=claude
+# Shared by run_script_queue.py, run_s4_queue.py, and translate_script.py.
+# Supported backends: claude (default), codex, opencode (1.x CLI).
+VIDEO_EDITING_ANNOTATION_BACKEND=claude
+# Optional executable path/name; blank uses the backend name. Do not include flags.
+VIDEO_EDITING_ANNOTATION_CLI=
+# Required for annotation; use provider/model for OpenCode. No default model.
 VIDEO_EDITING_ANNOTATION_MODEL=
-# Optional user-owned MCP configuration for the S4 annotation CLI.
+# Optional native effort/variant. Blank: Claude queues=max, translation=low;
+# Codex/OpenCode use their native default.
+VIDEO_EDITING_ANNOTATION_EFFORT=
+# Optional Claude-only S4 MCP config; other backends require native MCP config.
 VIDEO_EDITING_MCP_CONFIG=
 # Bundled adapters default to data_construction/modal; override only when needed.
 VIDEO_EDITING_MODAL_DIR=

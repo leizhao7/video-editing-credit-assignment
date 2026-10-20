@@ -12,12 +12,14 @@ if __name__ == "__main__":
 
 try:
     from .release_config import (
-        CODE_ROOT, DATA_ROOT, require_target, require_annotation_model, validate_data_slug, export_slug, select_films, annotation_cli, annotation_process
+        CODE_ROOT, DATA_ROOT, require_target, validate_data_slug, export_slug, select_films, annotation_process
     )
+    from .annotation_backend import build_annotation_command, AnnotationEvents
 except ImportError:  # Direct script invocation.
     from release_config import (
-        CODE_ROOT, DATA_ROOT, require_target, require_annotation_model, validate_data_slug, export_slug, select_films, annotation_cli, annotation_process
+        CODE_ROOT, DATA_ROOT, require_target, validate_data_slug, export_slug, select_films, annotation_process
     )
+    from annotation_backend import build_annotation_command, AnnotationEvents
 
 import argparse, glob, json, os, re, shutil, signal, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
@@ -26,7 +28,6 @@ ROOT = DATA_ROOT
 EFFORT = "max"   # 地基产物，后面每一步都以它为准
 TOOLS = ("Read,Write,Edit,Glob,Grep,"
          "Bash(ffmpeg:*),Bash(ffprobe:*),Bash(python3:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*)")
-DENY = "Agent,Task"
 STALL_S = 20 * 60
 TRIES = 2
 MAX_WAITS = 3
@@ -200,8 +201,6 @@ def check(slug, T):
 
 def _once(slug, name, T, n, attempt, why=None):
     validate_data_slug(ROOT, slug)
-    model = require_annotation_model()
-    cli = annotation_cli()
     E = f"{ROOT}/exports/{slug}"
     st = json.load(open(f"{E}/state.json"))
     st["script"] = {"ok": False, "at": time.strftime("%F %T"), "errors": ["Annotation attempt incomplete"]}
@@ -221,14 +220,11 @@ def _once(slug, name, T, n, attempt, why=None):
     t0 = time.time()
     print(f"  [{name}] {n} 镜头 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
           flush=True)
-    with annotation_process(
-        [cli, "-p", prompt, "--model", model, "--effort", EFFORT,
-         "--allowedTools", TOOLS, "--disallowedTools", DENY,
-         "--permission-mode", "acceptEdits",
-         "--add-dir", T, "--output-format", "stream-json", "--verbose"],
-        cwd=T, stderr_path=f"{runs}/stderr.log") as p:
+    command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT)
+    events = AnnotationEvents(command.backend)
+    with annotation_process(command.argv, cwd=T, stderr_path=f"{runs}/stderr.log") as p:
 
-        last = [time.time()]; killed = []; rl = [{}]
+        last = [time.time()]; killed = []
 
         def _watchdog():
             while p.poll() is None:
@@ -241,31 +237,25 @@ def _once(slug, name, T, n, attempt, why=None):
         threading.Thread(target=_watchdog, daemon=True).start()
 
         with open(f"{runs}/session.jsonl", "w") as raw, open(f"{runs}/progress.log", "w") as prog:
-            ntool, cost = 0, None
+            ntool = 0
             for line in p.stdout:
                 raw.write(line); raw.flush()
                 last[0] = time.time()
-                try: ev = json.loads(line)
-                except Exception: continue
-                if ev.get("type") == "assistant":
-                    for c in ev.get("message", {}).get("content", []):
-                        if c.get("type") == "tool_use":
-                            ntool += 1
-                            a = c["input"].get("file_path") or c["input"].get("command") or ""
-                            one = " ".join(str(a).split())
-                            one = ("…" + one[-72:]) if (len(one) > 74 and "/" in one) else one[:80]
-                            prog.write(f"[{time.time()-t0:6.0f}s] → {c['name']}  {one}\n")
-                            prog.flush()
-                if ev.get("type") == "rate_limit_event":
-                    rl[0] = ev.get("rate_limit_info") or {}
-                if ev.get("type") == "result":
-                    cost = ev.get("total_cost_usd")
+                for tool in events.feed(line):
+                    ntool += 1
+                    args = tool["input"]
+                    value = args.get("file_path") or args.get("filePath") or args.get("command") or ""
+                    one = " ".join(str(value).split())
+                    one = ("…" + one[-72:]) if (len(one) > 74 and "/" in one) else one[:80]
+                    prog.write(f"[{time.time()-t0:6.0f}s] → {tool['name']}  {one}\n")
+                    prog.flush()
         returncode = p.wait()
+    cost, rl = events.cost, [events.rate_limit]
     if killed:
         print(f"  [{name}] ⚠ 静默超过 {STALL_S//60} 分钟，已终止", flush=True)
     dt = time.time() - t0
 
-    bad = check(slug, T)
+    bad = events.failures() + check(slug, T)
     if returncode != 0:
         bad.insert(0, f"Annotation process exited with status {returncode}; see stderr.log")
     if killed:
@@ -275,6 +265,7 @@ def _once(slug, name, T, n, attempt, why=None):
     if os.path.exists(out_p):
         shutil.copy(out_p, f"{runs}/script.json")
     st["script"] = {"ok": not bad, "at": time.strftime("%F %T"), "min": round(dt / 60, 1),
+                    "backend": command.backend, "model": command.model,
                     "cost_usd": cost, "tools": ntool, "errors": bad[:5],
                     "rate_limit": rl[0].get("status")}
     json.dump(st, open(f"{E}/state.json", "w"), ensure_ascii=False, indent=1)

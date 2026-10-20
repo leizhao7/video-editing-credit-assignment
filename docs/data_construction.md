@@ -8,7 +8,7 @@ The code preserves the matching, trimming, selection, and task-assembly calculat
 
 ## Setup and private layout
 
-Use Python 3.10 or newer and install `data_construction/requirements.txt` in your own environment. These are direct import dependencies, not the historical experiment lockfile. Install `ffmpeg` and `ffprobe` separately; `card_text.py` also needs Tesseract with English language data. The optional `cut_takes.py` transcript check loads faster-whisper `small.en` on explicit invocation and may require the model weights to be available in its normal cache. The inherited proxy stage uses macOS VideoToolbox; an equivalent Linux encoder configuration has not been verified. Explicit cloud stages use the bundled adapters under `data_construction/modal/`, a configured Modal CLI, and an explicitly supplied user-owned volume. Install `data_construction/requirements-modal.txt` for the local CLI dependency; the adapters declare their GPU image dependencies separately. Explicit annotation stages use a separately installed and authenticated Claude-compatible CLI accepting the flags in the queue source; set the model yourself.
+Use Python 3.10 or newer and install `data_construction/requirements.txt` in your own environment. These are direct import dependencies, not the historical experiment lockfile. Install `ffmpeg` and `ffprobe` separately; `card_text.py` also needs Tesseract with English language data. The optional `cut_takes.py` transcript check loads faster-whisper `small.en` on explicit invocation and may require the model weights to be available in its normal cache. The inherited proxy stage uses macOS VideoToolbox; an equivalent Linux encoder configuration has not been verified. Explicit cloud stages use the bundled adapters under `data_construction/modal/`, a configured Modal CLI, and an explicitly supplied user-owned volume. Install `data_construction/requirements-modal.txt` for the local CLI dependency; the adapters declare their GPU image dependencies separately. Explicit annotation stages use a separately installed and authenticated Claude, Codex, or OpenCode 1.x CLI, configured as described below.
 
 All construction artifacts resolve under `VIDEO_EDITING_DATA_ROOT`, defaulting to `data/private` under the current working directory. Code and bundled resources resolve beside their Python files. Set this variable before invoking any script; the scripts do not read an `.env` file automatically. Configuration names are listed in `data_construction/environment.example`; no credentials are provided or embedded.
 
@@ -104,6 +104,58 @@ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q -
 These tests require `pytest` and `numpy`; they do not load a real Modal SDK or model, run FFmpeg, or access cloud services. They are not GPU execution or end-to-end processing checks on new media.
 
 The image recipes currently use unpinned TransNetV2/PyTorch, faster-whisper/CTranslate2 and Demucs dependencies; the cuDNN constraint specifies only its major version. Exact package/model revisions, weight hashes, FFmpeg codec build and CUDA compatibility still need qualification. Third-party code/binary notices and model-weight redistribution terms must be collected before bundling those dependencies; this source package includes none of their model weights or generated outputs. The new adapters preserve preprocessing settings and output schemas but are not a verified historical environment lockfile.
+
+## Annotation CLI configuration
+
+`run_script_queue.py`, `run_s4_queue.py`, and `translate_script.py` share these settings. Authentication and provider credentials stay in the selected CLI's native configuration.
+
+| Variable | Meaning |
+| --- | --- |
+| `VIDEO_EDITING_ANNOTATION_BACKEND` | `claude` (default), `codex`, or `opencode`. OpenCode support targets the 1.x CLI; 2.x compatibility is not established. |
+| `VIDEO_EDITING_ANNOTATION_CLI` | Optional executable path or name; blank uses the backend name. This is one executable argument, not a shell command containing flags. |
+| `VIDEO_EDITING_ANNOTATION_MODEL` | Required for annotation. Use the selected CLI's model identifier; OpenCode requires `provider/model`. |
+| `VIDEO_EDITING_ANNOTATION_EFFORT` | Optional backend-native effort/variant: Claude `--effort`, Codex `model_reasoning_effort`, or OpenCode `--variant`. When unset, Claude keeps `max` for both queues and `low` for translation; Codex and OpenCode keep their native defaults. |
+| `VIDEO_EDITING_MCP_CONFIG` | Optional user-owned MCP config for Claude S4 only. S4 rejects this setting with another backend; unset it and use that CLI's native MCP configuration. |
+
+The Claude adapter preserves the existing tool allowlist, `Agent,Task` denylist, `acceptEdits` permission mode, task directory, and stream-JSON options. Codex uses `exec --json --sandbox workspace-write --skip-git-repo-check -c approval_policy="never" --disable multi_agent --cd <task-directory>`. OpenCode uses `run --dir <absolute-task-directory> --format json --model <provider/model>` with native authentication and permissions; it does not pass `--auto` or override version-specific permission configuration. Permission questions in its noninteractive run are denied automatically.
+
+These controls are not interchangeable: Codex's workspace-write sandbox is not Claude's tool allowlist, and OpenCode's permissions are not an OS sandbox. Select a model and tool configuration that supports image input and local image inspection. The task workspace must be writable and its symlinked reference media readable; external source media need not be writable.
+
+For example, select a backend before running the same entry points:
+
+```sh
+export VIDEO_EDITING_ANNOTATION_BACKEND=codex
+export VIDEO_EDITING_ANNOTATION_MODEL='<your-model-id>'
+unset VIDEO_EDITING_ANNOTATION_CLI  # Clear any previous executable override.
+# Optional: export VIDEO_EDITING_ANNOTATION_CLI='/path/to/codex'
+```
+
+Backend selection preserves the output schemas, validators, retry rules, and checks that outputs were written by the current attempt. Provider-reported cost is recorded when available; unknown cost remains `null`, not zero. Tool-event counts reflect each CLI's event format and are not directly comparable across backends. A direct API/SDK backend would also need a tool-execution loop; changing an endpoint URL alone would not replace these agent CLIs.
+
+Changing the backend or model does not automatically rerun completed annotations. Use separate private data roots for backend comparisons; `run_script_queue.py` supports `--redo`, while S4 and translation retain their existing skip behavior.
+
+### Real CLI checks
+
+On 2026-10-20, each backend passed live file-read/write and image-tool checks through the shared adapter. Tests used newly generated JSON and a two-color PNG in temporary directories with spaces in their paths. They verified the copied nonce, computed sum, identified colors, unchanged inputs, zero exit status, and successful completion events. Tool logs were also inspected to confirm actual image viewing, rather than inferring it from a correct color answer.
+
+| CLI version | Model used in the live check | Result |
+| --- | --- | --- |
+| Claude Code 2.1.185 | `sonnet` (resolved to `claude-sonnet-4-6`) | Passed |
+| Codex CLI 0.144.6 | `gpt-5.6-sol` | Passed |
+| OpenCode 1.19.3 | `anthropic/claude-haiku-4-5` | Passed |
+
+These are tested configurations, not default model choices or guarantees of account access. For example, the local Codex default `gpt-6.1-sol` was rejected by the tested CLI account; explicitly selecting its available `gpt-5.6-sol` model succeeded. The adapter does not silently substitute models. OpenCode used native Anthropic environment authentication and a temporary native permission config allowing local read/edit tools. Codex retained its workspace-write sandbox. No credentials, raw provider logs, or generated test files are included in the repository.
+
+To check your own installed and authenticated CLI, run this opt-in command, which makes a real model call and may incur usage:
+
+```sh
+python data_construction/check_annotation_cli.py \
+  --backend codex --model '<available-model-id>' --timeout 180
+```
+
+Use `--backend claude` or `--backend opencode` with the appropriate model ID. Optional `--cli` selects an executable and `--effort` selects its native effort/variant. The checker prints the external temporary directory containing inputs and logs; it never writes test artifacts into the repository. A passing result confirms the small task's output and completion status. Inspect the native tool trace as well to establish image-tool use; some Codex versions omit image-tool events from the JSONL progress stream. `--help` and the unit tests do not invoke a provider.
+
+These checks validate CLI interoperability, not annotation quality or complete video preprocessing, FFmpeg execution, MCP integrations, or reproduction of the paper's dataset. Those still require validation on your own media and environment.
 
 After preprocessing, a typical explicit sequence is:
 

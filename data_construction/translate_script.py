@@ -12,12 +12,14 @@ if __name__ == "__main__":
 
 try:
     from .release_config import (
-        DATA_ROOT, require_target, require_annotation_model, validate_data_slug, export_slug, select_films, annotation_cli
+        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films
     )
+    from .annotation_backend import build_annotation_command, AnnotationEvents
 except ImportError:  # Direct script invocation.
     from release_config import (
-        DATA_ROOT, require_target, require_annotation_model, validate_data_slug, export_slug, select_films, annotation_cli
+        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films
     )
+    from annotation_backend import build_annotation_command, AnnotationEvents
 
 import argparse, glob, json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -75,15 +77,24 @@ def run(slug, name):
 译文要是**剪辑室里会说的英文**，不是逐字直译：具体、干脆、说清画面上发生了什么。
 人名地名保留原样。译完把整个 JSON 写回同一个文件。"""
     t0 = time.time()
-    r = subprocess.run(
-        [annotation_cli(), "-p", prompt, "--model", require_annotation_model(), "--effort", EFFORT,
-         "--allowedTools", "Read,Write,Edit,Bash(python3:*)",
-         "--disallowedTools", "Agent,Task", "--permission-mode", "acceptEdits",
-         "--add-dir", f"{ROOT}/edit/task_{slug}"],
-        cwd=f"{ROOT}/edit/task_{slug}", capture_output=True, text=True)
-    if r.returncode:
+    task_dir = f"{ROOT}/edit/task_{slug}"
+    command = build_annotation_command(prompt, task_dir, tools="Read,Write,Edit,Bash(python3:*)",
+                                       effort=EFFORT)
+    try:
+        r = subprocess.run(command.argv, cwd=task_dir, stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True)
+    except OSError as exc:
         Path(p).write_bytes(original)
-        print(f"  [{name}] ✗ 翻译进程失败 ({r.returncode}): {(r.stderr or '')[-200:]}", flush=True)
+        print(f"  [{name}] ✗ 翻译进程失败: {exc}", flush=True)
+        return False
+    events = AnnotationEvents(command.backend)
+    for line in (r.stdout or "").splitlines():
+        events.feed(line)
+    errors = events.failures()
+    if r.returncode or errors:
+        Path(p).write_bytes(original)
+        detail = "; ".join(errors) or r.stderr or ""
+        print(f"  [{name}] ✗ 翻译进程失败 ({r.returncode}): {detail[-200:]}", flush=True)
         return False
     try:
         d2 = json.loads(Path(p).read_text(encoding="utf-8"))

@@ -100,15 +100,23 @@ def select_films(films, args):
     return films
 
 
+def annotation_backend():
+    backend = env_text("VIDEO_EDITING_ANNOTATION_BACKEND", "claude").lower()
+    if backend not in {"claude", "codex", "opencode"}:
+        raise ValueError("VIDEO_EDITING_ANNOTATION_BACKEND must be claude, codex, or opencode")
+    return backend
+
+
 def annotation_cli():
-    return os.path.expanduser(env_text("VIDEO_EDITING_ANNOTATION_CLI", "claude"))
+    return os.path.expanduser(env_text("VIDEO_EDITING_ANNOTATION_CLI", annotation_backend()))
 
 
 @contextmanager
 def annotation_process(command, cwd, stderr_path):
     """Drain stdout as a stream and redirect stderr so its pipe cannot deadlock."""
     with open(stderr_path, "w", encoding="utf-8") as errors:
-        process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=errors,
+        process = subprocess.Popen(command, cwd=cwd, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=errors,
                                    text=True, bufsize=1, start_new_session=True)
         try:
             yield process
