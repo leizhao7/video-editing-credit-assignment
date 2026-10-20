@@ -74,6 +74,8 @@ python3 data_construction/setup_agent.py \
 
 A passing check establishes this small CLI task. Media preprocessing, FFmpeg permissions, optional MCP tools, and annotation quality still need checking for your own pipeline.
 
+Some Codex image calls are absent from its JSON event stream. In that case, inspect the corresponding native CLI session trace before concluding that image viewing succeeded or failed; the generated color answer alone is not enough.
+
 ## 4. Run annotation or switch backends
 
 After preprocessing has produced the required inputs, activate a profile and use the existing entry points:

@@ -149,8 +149,8 @@
     },
     {
       "path": "data_construction/environment.example",
-      "sha256": "d1dfea8f5ff2607978767d6069f96c28c97da31eb7cae553a120d5d14ab0e5c3",
-      "bytes": 1835
+      "sha256": "a1eb0deda70bd5611585deabd5206da9e88def54aacc024ce53f28a8e91bce0d",
+      "bytes": 2044
     },
     {
       "path": "data_construction/grade_s1.py",
@@ -229,13 +229,13 @@
     },
     {
       "path": "data_construction/prompts/PROMPT_SCRIPT.md",
-      "sha256": "64d5f1396a82d8195b004805a4285ffdb9b052a027216205fd9aa82a5fb0f8e1",
-      "bytes": 3029
+      "sha256": "6a214e203b2a8cf713c0318b2da3eff9445fd3da497780d0c1a2262e63890100",
+      "bytes": 3420
     },
     {
       "path": "data_construction/release_config.py",
-      "sha256": "d94409af979bf3dec18c6c6ed364b7cccf1896ac405ca2d389be51b5e14a04a4",
-      "bytes": 6032
+      "sha256": "4f68a73cf0ca47ecf3ec44e9020f0cb72ef45379ef8eaf1c11ae042c23b51b69",
+      "bytes": 8544
     },
     {
       "path": "data_construction/requirements-modal.txt",
@@ -254,8 +254,8 @@
     },
     {
       "path": "data_construction/run_script_queue.py",
-      "sha256": "f82d45256a79d1d5ab83b3ec39280bd94b28924063a2179b876c4a4bb36393ce",
-      "bytes": 16939
+      "sha256": "8c50f5fb2e0066a7011aa0f07317d95ec110a36f42f9b32e4a2bf1641d6601f8",
+      "bytes": 17496
     },
     {
       "path": "data_construction/s1_card_classification.py",
@@ -298,6 +298,11 @@
       "bytes": 12616
     },
     {
+      "path": "data_construction/tests/test_annotation_timeout.py",
+      "sha256": "f804506ddb8a361a5c49f1339146f532a087e88be8b815ceb831b76508645967",
+      "bytes": 8705
+    },
+    {
       "path": "data_construction/tests/test_check_annotation_cli.py",
       "sha256": "e8715ad2e766bfa8dea2fcbb733bef69353f18ebf98dc37eca771414b0bfc6f3",
       "bytes": 7016
@@ -333,6 +338,11 @@
       "bytes": 9611
     },
     {
+      "path": "data_construction/tests/test_script_contract.py",
+      "sha256": "7380a452dd63eccfba2008a95500eefca032490891097966fe573371c3d3f7df",
+      "bytes": 4442
+    },
+    {
       "path": "data_construction/tests/test_setup_agent.py",
       "sha256": "eb740f1759f69fb6676b9acd731a663d145a431e400e3fe3528676fbe8e4a094",
       "bytes": 9799
@@ -354,8 +364,8 @@
     },
     {
       "path": "docs/agent_setup.md",
-      "sha256": "e99b077aa61b124227081b2d7697a536f746ca2bb0d77b6afd27b6310dc8ed6d",
-      "bytes": 7062
+      "sha256": "5516a35633a357ef38634a12a4d9ac0dae22953b7258a9504c931f1bd48bf212",
+      "bytes": 7296
     },
     {
       "path": "docs/assets/editing-tasks.svg",
@@ -369,8 +379,8 @@
     },
     {
       "path": "docs/data_construction.md",
-      "sha256": "d5536453e7f2891d3fa87fa109c93c91b6a7fb8570bdf9014ef127f65e5aa4a9",
-      "bytes": 24930
+      "sha256": "333455293e35cbf42ba0e8c06c9599d7ffe35f6c02b851f35d2aaa64d2ddcbbe",
+      "bytes": 25354
     },
     {
       "path": "docs/evaluation.md",
@@ -384,8 +394,8 @@
     },
     {
       "path": "docs/one_film.md",
-      "sha256": "795e2dd7e8dc9ab03593a1ea6a37888976469e7232fc247f6a95da217ad3d965",
-      "bytes": 9399
+      "sha256": "d3f78798a5a173991573703912675d065bf39028495b848492e9e8683c1f96f1",
+      "bytes": 9797
     },
     {
       "path": "docs/opsd.md",

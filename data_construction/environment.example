@@ -10,6 +10,9 @@ VIDEO_EDITING_ANNOTATION_MODEL=
 # Optional native effort/variant. Blank: Claude queues=max, translation=low;
 # Codex/OpenCode use their native default.
 VIDEO_EDITING_ANNOTATION_EFFORT=
+# Optional total seconds per shot/S4 invocation or CLI check, including active output.
+# Leave unset to disable; a blank value is invalid. Does not limit translation.
+# VIDEO_EDITING_ANNOTATION_TIMEOUT_S=1800
 # Optional Claude-only S4 MCP config; other backends require native MCP config.
 VIDEO_EDITING_MCP_CONFIG=
 # Bundled adapters default to data_construction/modal; override only when needed.

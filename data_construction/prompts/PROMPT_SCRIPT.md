@@ -13,7 +13,7 @@ Write one JSON object to `stages/script.json`. The following table specifies fie
 | `shots` | One object per input shot, in exactly the original order. |
 | `shots[].id` | Copy its input ID. |
 | `shots[].desc` | Nonempty description of what is visible. |
-| `shots[].line` | The supplied spoken text, or null when absent. |
+| `shots[].line` | If the input `line` is an object, copy its `text` string exactly; if the input is null, write null. Include this field for every shot. Do not rewrite dialogue or stringify the object. |
 | `shots[].card_text` | Visible text on a card, or null when absent. |
 | `shots[].card_misflag` | Optional nonempty explanation when visual evidence contradicts a card classification. Do not use it merely to avoid transcribing a card. |
 | `beats` | Ordered narrative beats; each has `id`, `name`, `shots`, `what`, `function`, and `why_here`. |
@@ -29,4 +29,6 @@ Write one JSON object to `stages/script.json`. The following table specifies fie
 
 Beats must cover every shot once, with no gaps or overlaps. Chunks must do the same and remain entirely within their named parent beat. Prefer coherent boundaries to an arbitrary fixed length. The inherited validator requires at least two beats and nonempty chunks; it rejects a chunk longer than 15 shots when its containing beat is also longer than 15 shots. These are construction heuristics, not evidence that every sequence naturally has that structure. If the supplied material cannot support a valid annotation, report that limitation for human review rather than inventing content.
 
-Inspect the finished JSON against the inputs before ending. The queue checks coverage and required fields; those checks cannot establish the accuracy of descriptions or narrative interpretation.
+Timing, `kind`, music measurements, and the `from_prev` / `into_next` offsets remain in `script_inputs.json`; they need not be copied into the annotation. Do not modify that input file.
+
+Inspect the finished JSON against the inputs before ending. The queue checks coverage, required fields, the film slug, and exact preservation of supplied dialogue text/null; those checks cannot establish the accuracy of descriptions or narrative interpretation.

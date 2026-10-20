@@ -4,11 +4,14 @@ Importing this module neither creates directories nor calls a model/provider.
 """
 from pathlib import Path
 from contextlib import contextmanager
+import math
 import os
 import re
 import signal
 import subprocess
 import sys
+import threading
+import time
 
 
 def env_text(name, default=""):
@@ -113,22 +116,76 @@ def annotation_cli():
 
 @contextmanager
 def annotation_process(command, cwd, stderr_path):
-    """Drain stdout as a stream and redirect stderr so its pipe cannot deadlock."""
+    """Stream stdout, with an optional total deadline independent of CLI output."""
+    timeout_name = "VIDEO_EDITING_ANNOTATION_TIMEOUT_S"
+    timeout_text = os.environ.get(timeout_name)
+    timeout = None
+    if timeout_text is not None:
+        try:
+            timeout = float(timeout_text)
+        except ValueError as exc:
+            raise ValueError(f"{timeout_name} must be a finite positive number of seconds") from exc
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError(f"{timeout_name} must be a finite positive number of seconds")
+
     with open(stderr_path, "w", encoding="utf-8") as errors:
         process = subprocess.Popen(command, cwd=cwd, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=errors,
                                    text=True, bufsize=1, start_new_session=True)
+        timed_out = threading.Event()
+        cancelled = threading.Event()
+        timer = None
+
+        def signal_group(sig):
+            # start_new_session gives this invocation its own group, including CLI children.
+            try:
+                os.killpg(process.pid, sig)
+            except ProcessLookupError:
+                pass
+
+        def watch_deadline():
+            remaining = timeout
+            # Event.wait has a platform-dependent maximum, even for finite floats.
+            while remaining > 0:
+                interval = min(remaining, threading.TIMEOUT_MAX)
+                started = time.monotonic()
+                if cancelled.wait(interval):
+                    return
+                remaining -= time.monotonic() - started
+            if process.poll() is not None:
+                # A CLI may exit while its child still owns the stdout pipe.
+                # Only a vanished group means there is nothing left to stop.
+                try:
+                    os.killpg(process.pid, 0)
+                except ProcessLookupError:
+                    return
+            timed_out.set()
+            signal_group(signal.SIGTERM)
+            # Give descendants a chance to exit too, even if the leader exits first.
+            time.sleep(1)
+            signal_group(signal.SIGKILL)
+
         try:
+            if timeout is not None:
+                timer = threading.Thread(target=watch_deadline,
+                                         name=f"annotation-timeout-{process.pid}", daemon=True)
+                timer.start()
             yield process
         finally:
-            if process.poll() is None:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
+            cancelled.set()
+            if timer is not None and timer.ident is not None:
+                timer.join()
+            # The leader can exit before its children. Always clean this invocation's
+            # group when leaving the context, including early caller errors.
+            signal_group(signal.SIGKILL)
             process.wait()
             if process.stdout:
                 process.stdout.close()
+            if timed_out.is_set():
+                raise TimeoutError(
+                    f"Annotation CLI exceeded the {timeout:g}s total runtime limit "
+                    f"({timeout_name}); its process group was terminated. "
+                    f"See {stderr_path} and the local session log.")
 
 
 def require_annotation_model():

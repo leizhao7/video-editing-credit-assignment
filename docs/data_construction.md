@@ -46,7 +46,7 @@ data/private/
 
 All commands below are opt-in commands. Replace `<slug>` with your own input slug. Imports and `--help` do not start preprocessing, annotation, training, or cloud work. Queue scripts require a target (`--film`, `--films` where available, or explicit `--all`).
 
-Whitespace-only optional environment settings use their documented defaults. Worker counts and `PROXY_LANES` must be positive; stage names and target selection are validated before processing. Ambiguous film selectors, mismatched probe slugs and colliding export names are rejected. `--gc` retains its separate cache-cleanup behavior.
+Whitespace-only optional text settings use their documented defaults. Worker counts and `PROXY_LANES` must be positive; stage names and target selection are validated before processing. Ambiguous film selectors, mismatched probe slugs and colliding export names are rejected. `--gc` retains its separate cache-cleanup behavior.
 
 | Step | Entry point | Inputs and outputs |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q -
 
 These tests require `pytest` and `numpy`; they do not load a real Modal SDK or model, run FFmpeg, or access cloud services. They are not GPU execution or end-to-end processing checks on new media.
 
-The image recipes currently use unpinned TransNetV2/PyTorch, faster-whisper/CTranslate2 and Demucs dependencies; the cuDNN constraint specifies only its major version. Exact package/model revisions, weight hashes, FFmpeg codec build and CUDA compatibility still need qualification. Third-party code/binary notices and model-weight redistribution terms must be collected before bundling those dependencies; this source package includes none of their model weights or generated outputs. The new adapters preserve preprocessing settings and output schemas but are not a verified historical environment lockfile.
+The transcription recipes pin faster-whisper to 1.2.1 and constrain PyAV to `>=11,<19` for compatibility. TransNetV2/PyTorch, CTranslate2 and Demucs are not fully pinned; the cuDNN constraint specifies only its major version. Exact package/model revisions, weight hashes, FFmpeg codec build and CUDA compatibility still need qualification. Third-party code/binary notices and model-weight redistribution terms must be collected before bundling those dependencies; this source package includes none of their model weights or generated outputs. The new adapters preserve preprocessing settings and output schemas but are not a verified historical environment lockfile.
 
 ## Annotation CLI configuration
 
@@ -119,6 +119,7 @@ For first-time configuration, follow [Agent setup](agent_setup.md) or run `pytho
 | `VIDEO_EDITING_ANNOTATION_CLI` | Optional executable path or name; blank uses the backend name. This is one executable argument, not a shell command containing flags. |
 | `VIDEO_EDITING_ANNOTATION_MODEL` | Required for annotation. Use the selected CLI's model identifier; OpenCode requires `provider/model`. |
 | `VIDEO_EDITING_ANNOTATION_EFFORT` | Optional backend-native effort/variant: Claude `--effort`, Codex `model_reasoning_effort`, or OpenCode `--variant`. When unset, Claude keeps `max` for both queues and `low` for translation; Codex and OpenCode keep their native defaults. |
+| `VIDEO_EDITING_ANNOTATION_TIMEOUT_S` | Optional total seconds per invocation in the shot and S4 annotation queues and CLI smoke checks. Must be finite and positive; leave unset to disable (blank is invalid). Active model output does not reset this deadline. Timeout terminates that invocation's process group and reports failure. Translation does not use this setting. |
 | `VIDEO_EDITING_MCP_CONFIG` | Optional user-owned MCP config for Claude S4 only. S4 rejects this setting with another backend; unset it and use that CLI's native MCP configuration. |
 
 The Claude adapter preserves the existing tool allowlist, `Agent,Task` denylist, `acceptEdits` permission mode, task directory, and stream-JSON options. Codex uses `exec --json --sandbox workspace-write --skip-git-repo-check -c approval_policy="never" --disable multi_agent --cd <task-directory>`. OpenCode uses `run --dir <absolute-task-directory> --format json --model <provider/model>` with native authentication and permissions; it does not pass `--auto` or override version-specific permission configuration. Permission questions in its noninteractive run are denied automatically.

@@ -109,13 +109,19 @@ def check(slug, T):
     if not os.path.exists(p):
         return ["script.json 未生成"]
     try:
-        d = json.load(open(p))
+        with open(p, encoding="utf-8") as stream:
+            d = json.load(stream)
     except Exception as e:
         return [f"JSON 解析失败: {e}"]
-    inp = json.load(open(f"{T}/stages/script_inputs.json"))
+    with open(f"{T}/stages/script_inputs.json", encoding="utf-8") as stream:
+        inp = json.load(stream)
     want = [s["id"] for s in inp["shots"]]
     kind = {s["id"]: s["kind"] for s in inp["shots"]}
+    lines = {s["id"]: s["line"].get("text") if isinstance(s.get("line"), dict)
+             else s.get("line") for s in inp["shots"]}
     bad = []
+    if d.get("film") != slug or d.get("film") != inp.get("film"):
+        bad.append("film 必须与输入及请求的 slug 一致")
 
     got = [s.get("id") for s in d.get("shots", [])]
     if got != want:
@@ -125,6 +131,8 @@ def check(slug, T):
                    + (f" 缺{miss[:4]}" if miss else "") + (f" 多{extra[:4]}" if extra else "")
                    + ("" if miss or extra else " 顺序不一致"))
     for s in d.get("shots", []):
+        if s.get("id") in lines and ("line" not in s or s["line"] != lines[s["id"]]):
+            bad.append(f"{s.get('id')} 的 line 必须原样保留输入对白 text 或 null"); break
         if not (s.get("desc") or "").strip():
             bad.append(f"{s.get('id')} 缺画面描述"); break
         if kind.get(s.get("id")) == "card" and not (s.get("card_text") or "").strip() \

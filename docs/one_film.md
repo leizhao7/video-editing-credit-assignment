@@ -77,6 +77,8 @@ Each stage prints its start and a private log path under `exports/myfilm/logs/`.
 Run the inspection helpers against this single-film root:
 
 ```sh
+# Optional 30-minute limit for each shot/S4 annotation invocation.
+export VIDEO_EDITING_ANNOTATION_TIMEOUT_S=1800
 python data_construction/run_script_queue.py --film myfilm --prep-only
 python data_construction/shot_luma.py --all
 python data_construction/verify_matches.py --all
@@ -88,7 +90,7 @@ python data_construction/run_s4_queue.py --film myfilm
 
 The two annotation queues and translation invoke your selected model. The shot queue checks descriptions and beat/chunk coverage; the S4 queue checks cut annotations. These are structural checks: they do not prove that the model viewed every shot or described it correctly. Uniformly sampling a fast-cut trailer can miss short shots. Translation supplies the English fields consumed by task builders, even when the first annotation already uses English. Logs and generated annotations stay under the private root. Inspect visual descriptions, chunk boundaries, subtitle cards, and the generated report before treating them as reviewed data.
 
-Allow time for full-trailer annotation; the small CLI setup check does not predict its runtime. Queues save provider events in `edit/runs/<slug>/` and validate a film-level result at completion. They do not provide per-shot annotation checkpoints. Inspect the current run's logs before restarting; a retry can repeat substantial model work.
+Allow time for full-trailer annotation; the small CLI setup check does not predict its runtime. Queues save provider events in `edit/runs/<slug>/` and validate a film-level result at completion. They do not provide per-shot annotation checkpoints. Inspect the current run's logs before restarting; a retry can repeat substantial model work. The optional total limit above also stops a model that keeps sending status events without finishing. On timeout, inspect the logs and deliberately adjust the limit or backend before retrying. Unset this variable to disable it; it does not constrain the separate translation command.
 
 FC also needs dialogue candidates extracted from the **source film**. The main preprocessing command only transcribes the trailer; it does not perform this separate sequence:
 
