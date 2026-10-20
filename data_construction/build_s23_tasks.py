@@ -365,7 +365,9 @@ def build_film(slug, name):
     beat_en = {b["id"]: b.get("name_en") for b in script["beats"]}
 
     n2 = n3 = 0; errs = []
-    for ch in script["chunks"]:
+    for chunk_number, ch in enumerate(script["chunks"], 1):
+        print(f"  [NS/RC] {slug} processing chunk {chunk_number}/{len(script['chunks'])}: {ch['id']}",
+              flush=True)
         ch = {**ch, "beat_name": beat_name.get(ch.get("beat")),
               "beat_name_en": beat_en.get(ch.get("beat"))}
         seq, cards = collect(ch, inputs, p2, shots, pb, srcpath, gold, scrop, gcrop)

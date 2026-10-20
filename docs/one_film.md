@@ -116,6 +116,8 @@ python data_construction/build_s4_editorial.py --film myfilm
 
 Outputs appear under `training_task/myfilm/`: `s_1` is CS, `s_2` is NS, `s_3` is RC, and `s_4e` is FC. `s_4` is an intermediate used to construct FC. Builders filter unsuitable chunks, so counts need not match across task types. Check that the intended stages contain tasks; exit status alone does not establish nonempty output.
 
+Builders print the current chunk and total before processing it. This is progress through candidate chunks, not a count of accepted tasks; the final summary reports how many tasks were built. A [one-film check](release_status.md#one-film-construction-check) exercised this workflow, with the scope and remaining limitations recorded separately.
+
 For each task, inspect `task.json`, `task_prompt.md`, `initial_state/manifest.json`, verifier metadata, and the referenced media. Every supplied clip, handle, dialogue take, and music file must exist and be readable. Cards explicitly marked for the agent to build need not have a supplied clip. Confirm that FC contains usable dialogue candidates where expected, rather than accepting an empty pool by accident.
 
 These are candidate tasks. Review the [known temporal-alignment limitation](data_construction.md#alignment-quality-limitation) before accepting source matches. CS's final quality policy requires genuine review evidence; NS/RC's historical automatic rubric writers are not bundled; FC supplies a rubric seed. See [scoring and reconstruction limits](data_construction.md#scoring-and-reconstruction-limits) before training or reporting benchmark results.

@@ -64,8 +64,8 @@
     },
     {
       "path": "data_construction/README.md",
-      "sha256": "1305208f1b44b0ada93de29fc7b4af180dd007273cf400ea1393117e4d23e79c",
-      "bytes": 1958
+      "sha256": "f1c73c9db17467300ce1b39169a6fb6bf5bf28f5f223b3909f1adb5eb9b088cd",
+      "bytes": 2170
     },
     {
       "path": "data_construction/__init__.py",
@@ -104,13 +104,13 @@
     },
     {
       "path": "data_construction/build_s1_tasks.py",
-      "sha256": "c1811bd16048bdf178e0a0cb2f560e57e75c917c030a4933b033825ed384b8ca",
-      "bytes": 52153
+      "sha256": "02e9fd75f5a088b08692bbce9171cc044d241b8b4f7bdd7e488e5fd7e049a9cd",
+      "bytes": 52307
     },
     {
       "path": "data_construction/build_s23_tasks.py",
-      "sha256": "30df24ed4f2d24da324607465145d9245eec754061bc7ea110c3345611b0f70e",
-      "bytes": 20967
+      "sha256": "3bc921d980630cf3f6f118d136538e8c6ca0020a28ee888079d3c291cd9be43f",
+      "bytes": 21124
     },
     {
       "path": "data_construction/build_s3.py",
@@ -119,13 +119,13 @@
     },
     {
       "path": "data_construction/build_s4_editorial.py",
-      "sha256": "787208498e450c3bff6a71aa03fb6265467812c16c511c05db62e4dd15c7104a",
-      "bytes": 34385
+      "sha256": "67d95eb41313824d79a2e2ecc737a94ce9e53ecd95f4a94a7381c11dc962480d",
+      "bytes": 34554
     },
     {
       "path": "data_construction/build_s4_tasks.py",
-      "sha256": "10256f5e9cc6843fa2932ec264e2a39998e841a09ba711fc7887858afb1698c2",
-      "bytes": 29331
+      "sha256": "e5a6dd05a0837c7d06de32918ea7df727e2815beb7765c2cc08e4f1e5076fff5",
+      "bytes": 29489
     },
     {
       "path": "data_construction/card_text.py",
@@ -379,8 +379,8 @@
     },
     {
       "path": "docs/data_construction.md",
-      "sha256": "333455293e35cbf42ba0e8c06c9599d7ffe35f6c02b851f35d2aaa64d2ddcbbe",
-      "bytes": 25354
+      "sha256": "fe8d4009bc234ad3b39debe8074958c1ca427eb32341b4a502e6787081f9f404",
+      "bytes": 25491
     },
     {
       "path": "docs/evaluation.md",
@@ -394,8 +394,8 @@
     },
     {
       "path": "docs/one_film.md",
-      "sha256": "d3f78798a5a173991573703912675d065bf39028495b848492e9e8683c1f96f1",
-      "bytes": 9797
+      "sha256": "1cb7183165ca71092e295e050b43e0a29c6bb62a58b55f8764461f3329032b89",
+      "bytes": 10143
     },
     {
       "path": "docs/opsd.md",
@@ -404,8 +404,8 @@
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "9feac24eeed9885e0e16977cea3cf3be0247c228bc5bbe3baccaa1a89da920ff",
-      "bytes": 3866
+      "sha256": "d0e7c2f626bd4b25f77695fc8eef79a4b6cf6ccfd2544a52142efb5b5ade68de",
+      "bytes": 5802
     },
     {
       "path": "docs/training.md",

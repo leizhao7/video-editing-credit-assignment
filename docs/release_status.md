@@ -9,6 +9,16 @@ This is a source-release preparation draft. No dataset or original task instance
 - OPSD: the final turn-suggestion recipe matches its recorded source identity. Its original 20-file snapshot is retained internally; the public draft excludes the private deployment module and includes portable configuration and selected CPU tests. This is not the original reference-answer recipe.
 - Outcome evaluation: the recovered fixed-PRM grader modules match the recorded source hashes; public portability and failure-handling adaptations have separate hashes. The decay changes are kept in a separate overlay. The original fixed service wrapper and stage bridge have also been identified internally, but a portable service integration remains to be completed.
 
+## One-film construction check
+
+On 2026-10-20, a fresh GitHub checkout and Python 3.12 environment were used with one full-length English film and its matching trailer. The run started from raw media, with no reused annotations or task bundles. macOS handled orchestration and assembly; Modal ran shot detection, transcription, and source separation. Fixes were applied as problems were found, and completed stages were resumed. This was a debugging and validation run, not a clean rerun of the final release revision.
+
+The run produced 15 CS, 15 NS, 15 RC, and 13 FC candidate tasks. Structural and reference checks passed for all 58 tasks. FFprobe read all 843 audio/video files without an error; no missing media references were found. FC manifests contained 61 dialogue entries drawn from 18 distinct audio-file contents. These checks validate file and stream metadata, not full frame decoding or task solvability.
+
+Shot annotation, translation, and cut annotation completed with Codex. An earlier Claude annotation attempt was stopped after a 30-minute observer limit: stream events continued, but no annotation file was produced. The trace did not establish a provider-side cause. The queues now offer a configurable total deadline independent of stream activity. Small file/image CLI checks for Claude, Codex, and OpenCode do not establish that all three complete this full workload.
+
+Exact dialogue preservation, cut adjacency, and consistency with supplied measurements passed additional checks. Targeted visual spot checks did not establish overall annotation accuracy; some action descriptions remained uncertain. Candidate tasks still require review, including the [temporal-alignment limitation](data_construction.md#alignment-quality-limitation). This run does not reproduce the paper's final dataset selection, grading assembly, or RL training. Media, generated tasks, and diagnostic logs remain outside the repository.
+
 ## Work still needed before claiming full reproducibility
 
 1. Restore the original reference-answer OPSD recipe with aggregate SHA-256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`. The final turn-suggestion recipe must not be silently substituted.

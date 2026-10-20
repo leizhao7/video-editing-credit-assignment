@@ -562,7 +562,9 @@ def main():
             [c for c in os.listdir(base) if os.path.isdir(f"{base}/{c}")],
             key=lambda x: int(x[1:]) if x[1:].isdigit() else 0)
         made = []
-        for c in chunks:
+        for chunk_number, c in enumerate(chunks, 1):
+            print(f"  [S4 intermediate] {slug} processing chunk {chunk_number}/{len(chunks)}: {c}",
+                  flush=True)
             n = build(slug, c, names.get(slug, slug))
             if n:
                 made.append(f"{c}:{n}"); tot += n

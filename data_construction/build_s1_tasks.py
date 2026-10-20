@@ -920,7 +920,9 @@ def build_film(slug, name, text_only=False, skip_existing=False, repair_cards=Fa
     beat_en = {b["id"]: b.get("name_en") for b in script["beats"]}
 
     rows, errs = [], []
-    for ch in script["chunks"]:
+    for chunk_number, ch in enumerate(script["chunks"], 1):
+        print(f"  [CS] {slug} processing chunk {chunk_number}/{len(script['chunks'])}: {ch['id']}",
+              flush=True)
         ch = {**ch, "beat_name": beat_name.get(ch.get("beat")),
               "beat_name_en": beat_en.get(ch.get("beat"))}
         r, err = build_chunk(slug, name, ch, script, inputs, p2, units, shots, pb,

@@ -571,7 +571,10 @@ def main():
         if not os.path.isdir(base):
             continue
         got = []
-        for c in sorted(os.listdir(base), key=lambda x: (len(x), x)):
+        chunks = sorted(os.listdir(base), key=lambda x: (len(x), x))
+        for chunk_number, c in enumerate(chunks, 1):
+            print(f"  [FC] {slug} processing chunk {chunk_number}/{len(chunks)}: {c}",
+                  flush=True)
             r = build(slug, c)
             if r == "skip" or r is None:
                 continue
