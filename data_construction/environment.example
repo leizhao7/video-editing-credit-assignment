@@ -2,6 +2,9 @@
 VIDEO_EDITING_DATA_ROOT=./data/private
 # Shared by run_script_queue.py, run_s4_queue.py, and translate_script.py.
 # Supported backends: claude (default), codex, opencode (1.x CLI).
+# Claude visual calls handle <=12 shots or S4 boundaries; each has separate logs.
+# Both queues resume a strictly validated prefix; --redo starts fresh inspection.
+# S4 requires successful strip image reads; this checks access, not accuracy.
 VIDEO_EDITING_ANNOTATION_BACKEND=claude
 # Optional executable path/name; blank uses the backend name. Do not include flags.
 VIDEO_EDITING_ANNOTATION_CLI=
@@ -10,8 +13,9 @@ VIDEO_EDITING_ANNOTATION_MODEL=
 # Optional native effort/variant. Blank: Claude queues=max, translation=low;
 # Codex/OpenCode use their native default.
 VIDEO_EDITING_ANNOTATION_EFFORT=
-# Optional total seconds per shot/S4 invocation or CLI check, including active output.
-# Leave unset to disable; a blank value is invalid. Does not limit translation.
+# Optional total seconds per shot/S4/translation invocation or CLI check, including active output.
+# For Claude queues, applies separately to each batch and the script structure call.
+# Leave unset to disable; a blank value is invalid.
 # VIDEO_EDITING_ANNOTATION_TIMEOUT_S=1800
 # Optional Claude-only S4 MCP config; other backends require native MCP config.
 VIDEO_EDITING_MCP_CONFIG=

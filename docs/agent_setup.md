@@ -98,7 +98,9 @@ source ~/.config/video-editing-credit-assignment/opencode.env
 
 Each profile explicitly sets or clears the executable override, effort, and Claude-specific MCP setting, so switching does not inherit those values from the previous backend. Optional S4 MCP integration can be configured afterward using the [backend-specific rules](data_construction.md#annotation-cli-configuration). Other native CLI settings, including authentication and permission rules, remain managed by that CLI.
 
-Changing backends does not automatically regenerate completed annotations. For comparisons, choose separate private data directories; the script-annotation queue also provides `--redo`.
+With Claude, visual annotation uses separate calls of at most 12 shots in the script queue and 12 cut boundaries in the S4 queue. Each call has its own logs and optional total deadline. S4 requires a successful image-read result for every boundary strip before accepting a batch; this verifies image access, not annotation accuracy.
+
+Changing backends does not automatically regenerate completed annotations. For comparisons, choose separate private data directories. Both `run_script_queue.py` and `run_s4_queue.py` support `--redo` to archive the previous Claude draft and start fresh. Without `--redo`, retries recheck the saved ordered prefix against the current inputs and continue from it; an invalid prefix is rejected. Codex and OpenCode retain their single-session annotation workflow.
 
 ## Troubleshooting
 
@@ -109,6 +111,8 @@ Changing backends does not automatically regenerate completed annotations. For c
 | Login or model-access error | Check native login status and select a model available to that account. The adapter does not silently switch models. |
 | Model cannot view the image | Choose a vision-capable model and enable the CLI's local image-reading tool. |
 | Permission denied or no result file | Inspect the local logs and native permission configuration. The task directory needs write access, and reference-media links need read access. |
+| Claude keeps running without a final annotation | Check the batch logs and saved prefix counts. Each visual call handles at most 12 shots or S4 boundaries. Retry to continue from the validated prefix, or use the queue's `--redo` for fresh inspection. A draft is not a completed annotation. `VIDEO_EDITING_ANNOTATION_TIMEOUT_S` bounds each model call independently of stream activity. |
+| S4 reports incomplete visual access | Inspect the batch's `progress.log` and native session trace. Every listed strip needs a matched successful image-read result; reading only measured JSON or a contact sheet does not satisfy this check. See [one-film guidance](one_film.md#4-prepare-annotations-and-dialogue) for interpreting the strips. |
 | Profile already exists | Source the existing profile, choose a new `--output` path, or deliberately replace it with `--force`. |
 | A different backend still runs | Source the intended profile in the same shell used to launch the pipeline. Profiles are not loaded automatically. |
 

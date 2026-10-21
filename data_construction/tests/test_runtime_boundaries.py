@@ -31,9 +31,33 @@ class RuntimeBoundaries(unittest.TestCase):
         for module in (pipeline, script_queue, s4_queue, translation):
             self.stack.enter_context(mock.patch.object(module, "ROOT", str(self.root)))
         self.stack.enter_context(mock.patch.object(pipeline, "SRC", str(self.root / "sources")))
+        self.stack.enter_context(mock.patch.object(script_queue, "prepare_script_visuals", return_value={
+            "manifest_path": self.root / "edit/task_sample/work/visuals/manifest.json",
+            "draft_path": self.root / "edit/task_sample/work/visuals/script.draft.json",
+            "sheet_paths": [], "fingerprint": "test-fixture",
+        }))
+        self.stack.enter_context(mock.patch.object(s4_queue, "prepare_cut_visuals", return_value={
+            "manifest_path": self.root / "edit/task_sample/work/cut_visuals/manifest.json",
+            "draft_path": self.root / "edit/task_sample/work/cut_visuals/s4.draft.json",
+            "sheet_paths": [], "fingerprint": "test-fixture",
+        }))
         self.stack.enter_context(mock.patch.dict(os.environ, {"VIDEO_EDITING_ANNOTATION_MODEL": "test-model", "VIDEO_EDITING_ANNOTATION_BACKEND": "claude", "VIDEO_EDITING_MCP_CONFIG": "", "VIDEO_EDITING_ANNOTATION_EFFORT": ""}))
         self.stack.enter_context(redirect_stdout(io.StringIO()))
         self.stack.enter_context(redirect_stderr(io.StringIO()))
+        self.write_json("edit/task_sample/stages/script_inputs.json", {
+            "film": "sample", "shots": [{"id": "s1", "kind": "source", "line": None}]})
+        self.write_json("edit/task_sample/work/visuals/manifest.json", {
+            "fingerprint": "test-fixture", "shots": [{"id": "s1", "frame_path": "frame.jpg"}],
+            "sheets": [{"path": "sheet.jpg", "shot_ids": ["s1"]}]})
+        self.write_json("edit/task_sample/stages/s3_units.json", {
+            "film": "sample", "units": [{"id": "s1"}, {"id": "s2"}]})
+        self.write_json("edit/task_sample/stages/cut_list.json", {
+            "film": "sample", "cuts": [{"idx": 1, "after": "s1", "before": "s2"}]})
+        self.write_json("edit/task_sample/stages/audio_measured.json", {"cuts": [{"idx": 1}]})
+        self.write_json("edit/task_sample/stages/picture_measured.json", {
+            "cuts": [{"idx": 1, "continuous": False}]})
+        self.write_json("edit/task_sample/work/cut_visuals/manifest.json", {
+            "cuts": [{"idx": 1, "after": "s1", "before": "s2", "strip_path": "work/cut-strip.jpg"}]})
 
     def write_json(self, relative, value):
         path = self.root / relative
@@ -44,7 +68,7 @@ class RuntimeBoundaries(unittest.TestCase):
     def annotation_inputs(self, stage):
         state = self.write_json("exports/sample/state.json", {stage: {"ok": True}})
         task = self.root / "edit/task_sample"
-        (task / "stages").mkdir(parents=True)
+        (task / "stages").mkdir(parents=True, exist_ok=True)
         return state, task
 
     @staticmethod
@@ -171,6 +195,7 @@ class RuntimeBoundaries(unittest.TestCase):
              mock.patch.object(script_queue, "_once", return_value=(True, {}, [])) as once:
             self.assertTrue(script_queue.run("sample", "Sample", redo=True))
         once.assert_called_once()
+        self.assertFalse(once.call_args.kwargs["resume"])
 
     def test_failed_annotation_cannot_pass_with_valid_output(self):
         for module, stage, output in ((script_queue, "script", "script.json"),
@@ -202,7 +227,7 @@ class RuntimeBoundaries(unittest.TestCase):
             "opencode": {"type": "error", "error": {"data": {"message": "synthetic failure"}}},
         }
         task = self.root / "edit/task_sample"
-        (task / "stages").mkdir(parents=True)
+        (task / "stages").mkdir(parents=True, exist_ok=True)
         for backend, failure in failures.items():
             for module, stage, output in ((script_queue, "script", "script.json"),
                                           (s4_queue, "s4", "s4_cuts.json")):
@@ -245,7 +270,14 @@ class RuntimeBoundaries(unittest.TestCase):
                          mock.patch.object(module, "check", return_value=[]):
                         ok, _, errors = module._once("sample", "Sample", str(task), 0, 0)
                     self.assertFalse(ok)
-                    self.assertIn("没被本次运行写过", errors[0])
+                    if backend == "claude" and stage == "script":
+                        # A prior final cannot substitute for a complete shot draft
+                        # and a newly generated structure in the staged path.
+                        self.assertIn("Shot batch output missing or invalid", errors[0])
+                    elif backend == "claude" and stage == "s4":
+                        self.assertIn("S4 visual access incomplete", errors[0])
+                    else:
+                        self.assertIn("没被本次运行写过", errors[0])
 
     def test_pending_marker_requires_success_state_not_just_old_file(self):
         self.write_json("exports/sample/state.json", {"s4": {"ok": False}})
@@ -279,29 +311,43 @@ class RuntimeBoundaries(unittest.TestCase):
         translated["chunks"][0]["what_en"] = "translation"
         return original, translated
 
+    def write_translation_patch(self, translated):
+        directory = max((self.root / "edit/task_sample/work").glob("translation-*"),
+                        key=lambda p: p.stat().st_mtime_ns)
+        patch = {"beats": [{k: b[k] for k in ("id", "name_en", "what_en")} for b in translated["beats"]],
+                 "chunks": [{k: c[k] for k in ("id", "what_en")} for c in translated["chunks"]]}
+        if "logline_en" in translated:
+            patch["logline_en"] = translated["logline_en"]
+        (directory / "fields.json").write_text(json.dumps(patch))
+
     def test_failed_translation_process_restores_original(self):
         original, translated = self.translation_documents()
         path = self.write_json("edit/task_sample/stages/script.json", original)
         before = path.read_text()
+        @contextmanager
         def provider(*args, **kwargs):
-            path.write_text(json.dumps(translated))
-            return subprocess.CompletedProcess([], 9, "", "provider failed")
-        with mock.patch.object(translation.subprocess, "run", side_effect=provider):
+            self.write_translation_patch(translated)
+            yield mock.Mock(stdout=io.StringIO(""), wait=lambda: 9)
+        with mock.patch.object(translation, "annotation_process", provider):
             self.assertFalse(translation.run("sample", "Sample"))
         self.assertEqual(path.read_text(), before)
 
     def test_translation_rejects_dropped_entries_or_changed_source(self):
-        for change in (lambda d: d["chunks"].clear(),
-                       lambda d: d["shots"][0].update(desc="changed"),
-                       lambda d: d.pop("logline_en")):
+        for mode in ("dropped_chunk", "changed_source", "missing_logline"):
             original, translated = self.translation_documents()
-            change(translated)
+            if mode == "dropped_chunk":
+                translated["chunks"].clear()
+            elif mode == "missing_logline":
+                translated.pop("logline_en")
             path = self.write_json("edit/task_sample/stages/script.json", original)
             before = path.read_text()
+            @contextmanager
             def provider(*args, **kwargs):
-                path.write_text(json.dumps(translated))
-                return subprocess.CompletedProcess([], 0, json.dumps({"type": "result", "is_error": False}), "")
-            with mock.patch.object(translation.subprocess, "run", side_effect=provider):
+                self.write_translation_patch(translated)
+                if mode == "changed_source":
+                    path.write_text('{"changed":true}')
+                yield mock.Mock(stdout=io.StringIO(json.dumps({"type": "result", "is_error": False}) + "\n"), wait=lambda: 0)
+            with mock.patch.object(translation, "annotation_process", provider):
                 self.assertFalse(translation.run("sample", "Sample"))
             self.assertEqual(path.read_text(), before)
 
@@ -314,12 +360,13 @@ class RuntimeBoundaries(unittest.TestCase):
                 original, translated = self.translation_documents()
                 path = self.write_json("edit/task_sample/stages/script.json", original)
 
+                @contextmanager
                 def provider(*args, **kwargs):
-                    path.write_text(json.dumps(translated))
-                    return subprocess.CompletedProcess([], 0, json.dumps(event), "")
+                    self.write_translation_patch(translated)
+                    yield mock.Mock(stdout=io.StringIO(json.dumps(event) + "\n"), wait=lambda: 0)
 
                 with mock.patch.dict(os.environ, VIDEO_EDITING_ANNOTATION_BACKEND=backend), \
-                     mock.patch.object(translation.subprocess, "run", side_effect=provider):
+                     mock.patch.object(translation, "annotation_process", provider):
                     self.assertTrue(translation.run("sample", "Sample"))
                 self.assertEqual(json.loads(path.read_text()), translated)
 

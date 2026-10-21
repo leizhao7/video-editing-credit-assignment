@@ -66,7 +66,7 @@ The source check verifies syntax, source hashes, symlinks, and excluded artifact
 
 **Next:** choose a component below. Its guide describes dependencies, supported checks, and the remaining runtime requirements.
 
-To try task generation on your own media, follow **[one film from setup to candidate tasks](docs/one_film.md)**. It covers local dependencies, Modal, annotation, dialogue preparation, and output inspection.
+To try task generation on your own media, follow **[one film from setup to candidate tasks](docs/one_film.md)**. It covers local dependencies, Modal, annotation, dialogue preparation, semantic quality review, sampling, and outcome scoring.
 
 ### Set up an annotation agent
 
@@ -93,9 +93,10 @@ source ~/.config/video-editing-credit-assignment/codex.env
 | Set up or switch an annotation agent | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
 | Generate candidate tasks from one film | [One-film walkthrough](docs/one_film.md) | [`pipeline.py`](data_construction/pipeline.py) |
 | Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
+| Review and sample generated tasks | [Quality review](docs/data_construction.md#quality-review-and-sampling) | [`task_quality.py`](data_construction/task_quality.py) · [`quality_selection.py`](data_construction/quality_selection.py) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |
-| Understand outcome grading and aggregation | [Evaluation](docs/evaluation.md) | [`evaluation/`](evaluation/) |
+| Score agent submissions | [Evaluation](docs/evaluation.md) | [`task_pipeline.py`](evaluation/task_pipeline.py) |
 | Find recorded settings and dependency identities | [Experiment notes](docs/experiment_notes.md) | [`configs/`](configs/) |
 | Check reproduction gaps and release boundaries | [Release status](docs/release_status.md) | [`scripts/check_release.py`](scripts/check_release.py) |
 
@@ -119,7 +120,7 @@ tests/               Synthetic tests for release tools
 
 The dataset is not distributed. The README includes the paper's Figure 1, with illustrative film thumbnails and aggregate results. Underlying film media, generated task instances, reference answers, cached trajectories, model checkpoints, and raw benchmark result files are not distributed.
 
-The paper's four evaluation repetitions are **not four independent training seeds**. Recorded configurations and upstream commit IDs also do not reconstruct the original modified training environment. The missing environment builds, launch services, reference-answer OPSD snapshot, and final filtering/sampling procedure are tracked in [release status](docs/release_status.md).
+The paper's four evaluation repetitions are **not four independent training seeds**. Recorded configurations and upstream commit IDs also do not reconstruct the original modified training environment. The final deterministic sampling procedure has been recovered; new semantic audits do not replay the historical task-by-task author repairs. Remaining environment, launch-service, evaluation-version and reference-answer OPSD gaps are tracked in [release status](docs/release_status.md).
 
 ## Citation
 

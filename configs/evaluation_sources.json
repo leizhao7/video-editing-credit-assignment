@@ -189,5 +189,14 @@
     "sha256": "e3ad2cad7c30582f47d9d4405ccc85692ec5b4a7242b1c29d26a7a61997c2de6",
     "modified": false,
     "change": "New public shared CLI validation, bounded verifier parsing and atomic result-publication helper; not a recovered historical run source."
+  },
+  {
+    "path": "evaluation/task_pipeline.py",
+    "source_arm": "public_release",
+    "source_type": "generated_public_helper",
+    "generated": true,
+    "sha256": "d729537bc260466bacd6e45450a805b5dacae4192a8fb3735d67a52b2b5c34ec",
+    "modified": false,
+    "change": "New local integration of task rubric preparation, preserved task-specific CS/NS graders, fixed-snapshot RC/FC evidence and direct judging. Validates submissions, binds source hashes, clears stale component scores and marks incomplete rubric responses unscored. Historical core algorithms remain separate and unchanged."
   }
 ]

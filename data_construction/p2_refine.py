@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/p2_refine.py [options]\n\n  --film\n  --source\n  --golden\n  --crop\n  --crop-expr\n  --afps\n  --wm\n  --fps\n  --win\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/p2_refine.py [options]\n\n  --film\n  --source\n  --golden\n  --crop\n  --crop-expr\n  --afps\n  --wm\n  --fps\n  --win\n  --peak-band FLOAT  Diagnostic cosine-score band (default .02), not calibrated confidence.\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 def main():
@@ -17,8 +17,14 @@ def main():
     except ImportError:  # Direct script invocation.
         from release_config import (CODE_ROOT, DATA_ROOT, require_target,
             require_annotation_model, cloud_volume, run_legacy_rubric_hook)
+    try:
+        from .temporal_alignment import (SCORE_KIND, paired_frame_scores,
+                                         aligned_source_start, peak_interval)
+    except ImportError:
+        from temporal_alignment import (SCORE_KIND, paired_frame_scores,
+                                        aligned_source_start, peak_interval)
 
-    import argparse, csv, subprocess, time
+    import argparse, csv, math, subprocess, time
     import numpy as np
 
     # Keep artifact-generating work inside the explicit entry point; importing must not run it.
@@ -34,7 +40,15 @@ def main():
     P.add_argument("--wm", default="")
     P.add_argument("--fps", type=float, default=24000/1001)
     P.add_argument("--win", type=float, default=1.5)     # search ± this many seconds
+    P.add_argument("--peak-band", type=float, default=0.02,
+                   help="diagnostic paired-cosine band around the peak, not a calibrated confidence interval")
     A = P.parse_args()
+    if not math.isfinite(A.fps) or A.fps <= 0:
+        P.error("--fps must be finite and positive")
+    if not math.isfinite(A.win) or A.win < 0:
+        P.error("--win must be finite and nonnegative")
+    if not math.isfinite(A.peak_band) or A.peak_band <= 0:
+        P.error("--peak-band must be finite and positive")
 
     W, H = 128, 58
     CROP = (A.crop_expr + ",") if A.crop_expr else (
@@ -54,6 +68,8 @@ def main():
         r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0,t):.4f}", "-t", f"{dur:.4f}",
                             "-i", path, "-vf", vf, "-f", "rawvideo", "-pix_fmt", "gray", "-"],
                            capture_output=True)
+        if r.returncode:
+            raise RuntimeError(f"alignment decoding failed: {r.stderr.decode('utf8', 'replace')[-400:]}")
         n = len(r.stdout)//(W*H)
         return np.frombuffer(r.stdout[:n*W*H], np.uint8).reshape(n, H, W).astype(np.float32)
 
@@ -66,38 +82,50 @@ def main():
         return d / (np.linalg.norm(d, axis=1, keepdims=True) + 1e-8)
 
 
-    rows = list(csv.DictReader(open(f"{E}/p2_final.csv")))
+    with open(f"{E}/p2_final.csv") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        input_fields = reader.fieldnames or []
     t0 = time.time()
     out = []
     print(f"{'id':>6} {'dur':>6} {'旧入点':>10} {'精修后':>10} {'移动':>8} {'峰值':>6} "
-          f"{'平台':>6}  判定")
+          f"{'峰区宽':>6}  诊断（非置信度）")
     moved, plats = [], []
+    empty = {"refined_src_s": "", "plateau_frames": "", "peak": "",
+             "alignment_score_kind": SCORE_KIND, "alignment_fps": A.fps,
+             "plateau_kind": "contiguous-peak-band-width-v1",
+             "peak_band": A.peak_band, "near_peak_count": "", "selected_offset": "",
+             "peak_left_offset": "", "peak_right_offset": "", "disjoint_near_peaks": "",
+             "alignment_review_reason": ""}
     for r in rows:
         if not r["verdict"].startswith("MATCH"):
-            out.append({**r, "refined_src_s": "", "plateau_frames": "", "peak": ""}); continue
+            out.append({**r, **empty}); continue
         g0, g1 = float(r["g_start_s"]), float(r["g_end_s"])
         st = float(r["matched_src_s"]); dur = g1 - g0
-        lo = g0 + dur*0.15
+        lo = round(max(0.0, g0 + dur*0.15), 4)
         span = min(dur*0.7, 2.0)
         Q = desc(win(A.golden, lo, span, True))
         if len(Q) < 3:
-            Q = desc(win(A.golden, g0, dur, True))
-        S = desc(win(A.source, st - A.win, dur + 2*A.win, False))
+            lo = round(max(0.0, g0), 4)
+            Q = desc(win(A.golden, lo, dur, True))
+        source_start = round(max(0.0, st - A.win), 4)
+        S = desc(win(A.source, source_start, dur + 2*A.win, False))
         if len(Q) < 2 or len(S) < len(Q):
-            out.append({**r, "refined_src_s": "", "plateau_frames": "", "peak": ""}); continue
-        k = len(Q)
-        C = S @ Q.T
-        acc = np.array([C[o:o+k, np.arange(k)].mean() for o in range(len(S)-k+1)])
-        b = int(np.argmax(acc)); pk = float(acc[b])
-        plateau = int((acc > pk - 0.02).sum())          # 峰值附近多平
-        ref = max(0.0, st - A.win + (b/A.fps) - (lo - g0))
+            out.append({**r, **empty, "verdict": "REVIEW(alignment)",
+                        "alignment_review_reason": "insufficient_decoded_frames"}); continue
+        acc = paired_frame_scores(S, Q)
+        interval = peak_interval(acc, A.peak_band)
+        b = interval["selected_offset"]; pk = float(acc[b])
+        plateau = interval["plateau_frames"]
+        ref = aligned_source_start(source_start, b, A.fps, lo, g0)
         dm = (ref - st)*A.fps
-        v = "OK" if plateau <= 6 else ("宽平台" if plateau <= 30 else "不可判")
+        v = "存在分离近峰" if interval["disjoint_near_peaks"] else "连续峰区"
         moved.append(abs(dm)); plats.append(plateau)
         print(f"{r['golden_id']:>6} {dur:5.2f}s {st:9.3f} {ref:10.3f} {dm:+7.1f}帧 "
               f"{pk:6.3f} {plateau:5d}帧  {v}")
-        out.append({**r, "refined_src_s": round(ref, 4), "plateau_frames": plateau,
-                    "peak": round(pk, 3)})
+        out.append({**r, **empty, **interval, "refined_src_s": round(ref, 4),
+                    "peak": round(pk, 6),
+                    "alignment_review_reason": "disjoint_near_peaks" if interval["disjoint_near_peaks"] else ""})
 
     moved, plats = np.array(moved), np.array(plats)
     if len(moved) == 0:
@@ -107,12 +135,11 @@ def main():
         print("\n没有可精修的镜头 —— p2 一个都没匹配上，检查画框/裁切是否对齐")
         import sys as _s
         with open(f"{E}/p2_refined.csv", "w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=list(out[0].keys())); w.writeheader(); w.writerows(out)
+            w = csv.DictWriter(f, fieldnames=list(out[0]) if out else list(dict.fromkeys(input_fields + list(empty)))); w.writeheader(); w.writerows(out)
         print(f"-> {E}/p2_refined.csv"); _s.exit(0)
     print(f"\n精修 {len(moved)} 条   移动 中位 {np.median(moved):.1f} 帧  最大 {moved.max():.0f} 帧")
-    print(f"对齐平台宽度  中位 {np.median(plats):.0f} 帧   "
-          f"<=6帧(可判) {int((plats<=6).sum())}  7-30帧 {int(((plats>6)&(plats<=30)).sum())}  "
-          f">30帧(不可判) {int((plats>30).sum())}")
+    print(f"连续近峰宽度中位 {np.median(plats):.0f} 个采样帧（{A.fps:g} fps）；"
+          f"分数带 {A.peak_band:g}，仅为启发式诊断，不代表对齐置信度")
     o = f"{E}/p2_refined.csv"
     with open(o, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(out[0].keys())); w.writeheader(); w.writerows(out)

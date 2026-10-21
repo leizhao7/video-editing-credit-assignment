@@ -15,14 +15,27 @@ try:
         CODE_ROOT, DATA_ROOT, require_target, validate_data_slug, export_slug, select_films, annotation_process
     )
     from .annotation_backend import build_annotation_command, AnnotationEvents
+    from .annotation_visuals import prepare_script_visuals
+    from .annotation_script_stages import (
+        build_shot_prompt, validate_draft, build_structure_prompt,
+        merge_structure, atomic_write_json, validate_prefix, make_shot_batch,
+        canonicalize_batch_lines, SHOT_BATCH_SIZE,
+    )
 except ImportError:  # Direct script invocation.
     from release_config import (
         CODE_ROOT, DATA_ROOT, require_target, validate_data_slug, export_slug, select_films, annotation_process
     )
     from annotation_backend import build_annotation_command, AnnotationEvents
+    from annotation_visuals import prepare_script_visuals
+    from annotation_script_stages import (
+        build_shot_prompt, validate_draft, build_structure_prompt,
+        merge_structure, atomic_write_json, validate_prefix, make_shot_batch,
+        canonicalize_batch_lines, SHOT_BATCH_SIZE,
+    )
 
-import argparse, glob, json, os, re, shutil, signal, subprocess, sys, threading, time
+import argparse, glob, json, os, re, shutil, signal, subprocess, sys, tempfile, threading, time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 ROOT = DATA_ROOT
 EFFORT = "max"   # 地基产物，后面每一步都以它为准
@@ -31,6 +44,19 @@ TOOLS = ("Read,Write,Edit,Glob,Grep,"
 STALL_S = 20 * 60
 TRIES = 2
 MAX_WAITS = 3
+
+
+def _draft_count(path, slug):
+    """Best-effort progress only; final coverage and dialogue checks remain separate."""
+    try:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+        if document.get("film") != slug or not isinstance(document.get("shots"), list):
+            return None
+        return len({row["id"] for row in document["shots"]
+                    if isinstance(row, dict) and isinstance(row.get("id"), str)
+                    and isinstance(row.get("desc"), str) and row["desc"].strip()})
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
 
 
 def prep(slug):
@@ -115,6 +141,18 @@ def check(slug, T):
         return [f"JSON 解析失败: {e}"]
     with open(f"{T}/stages/script_inputs.json", encoding="utf-8") as stream:
         inp = json.load(stream)
+    return check_document(slug, inp, d)
+
+
+def check_document(slug, inp, d):
+    """Validate a complete candidate in memory before publishing script.json."""
+    if not isinstance(d, dict):
+        return ["Script must be a JSON object"]
+    if not isinstance(d.get("shots"), list) or any(not isinstance(s, dict) for s in d["shots"]):
+        return ["Script shots must be an array of objects"]
+    for key in ("beats", "chunks"):
+        if not isinstance(d.get(key), list) or any(not isinstance(row, dict) for row in d[key]):
+            return [f"Script {key} must be an array of objects"]
     want = [s["id"] for s in inp["shots"]]
     kind = {s["id"]: s["kind"] for s in inp["shots"]}
     lines = {s["id"]: s["line"].get("text") if isinstance(s.get("line"), dict)
@@ -207,7 +245,278 @@ def check(slug, T):
     return bad
 
 
-def _once(slug, name, T, n, attempt, why=None):
+def _claude_phase(command, T, log_dir, slug, name, n, draft_path=None):
+    """Run one fresh native session with its own deadline and private logs."""
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    events = AnnotationEvents(command.backend)
+    started, ntool = time.monotonic(), 0
+    stopped, killed = threading.Event(), []
+    last = [time.monotonic()]
+    errors, returncode, watcher = [], None, None
+    try:
+        with annotation_process(command.argv, cwd=T, stderr_path=log_dir / "stderr.log") as process:
+            def watch_silence():
+                while not stopped.wait(30):
+                    if process.poll() is not None:
+                        return
+                    if time.monotonic() - last[0] > STALL_S:
+                        killed.append(True)
+                        try:
+                            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        return
+            watcher = threading.Thread(target=watch_silence, daemon=True)
+            watcher.start()
+            with (log_dir / "session.jsonl").open("w", encoding="utf-8") as raw, \
+                 (log_dir / "progress.log").open("w", encoding="utf-8") as progress:
+                draft_stamp = None
+                for line in process.stdout:
+                    raw.write(line); raw.flush()
+                    last[0] = time.monotonic()
+                    for tool in events.feed(line):
+                        ntool += 1
+                        args = tool["input"]
+                        value = args.get("file_path") or args.get("filePath") or args.get("command") or ""
+                        one = " ".join(str(value).split())
+                        one = "…" + one[-72:] if len(one) > 74 and "/" in one else one[:80]
+                        progress.write(f"[{time.monotonic()-started:6.0f}s] → {tool['name']}  {one}\n")
+                        progress.flush()
+                    if draft_path is not None:
+                        try:
+                            stat = Path(draft_path).stat()
+                            stamp = (stat.st_mtime_ns, stat.st_size)
+                        except OSError:
+                            continue
+                        if stamp != draft_stamp:
+                            draft_stamp = stamp
+                            count = _draft_count(draft_path, slug)
+                            if count is not None:
+                                message = f"draft contains {count}/{n} shot descriptions (not yet validated)"
+                                progress.write(f"[{time.monotonic()-started:6.0f}s] {message}\n")
+                                progress.flush()
+                                print(f"  [{name}] {message}", flush=True)
+            returncode = process.wait()
+    except (OSError, TimeoutError) as exc:
+        errors.append(f"{type(exc).__name__}: {exc}")
+    finally:
+        stopped.set()
+        if watcher is not None:
+            watcher.join()
+    errors.extend(events.failures())
+    if returncode is not None and returncode != 0:
+        errors.insert(0, f"Annotation process exited with status {returncode}; see {log_dir}/stderr.log")
+    if killed:
+        errors.insert(0, "Annotation process exceeded its inactivity limit")
+    return {"errors": errors, "completed": events.completed,
+            "seconds": round(time.monotonic() - started, 3), "tools": ntool,
+            "cost_usd": events.cost, "rate_limit": events.rate_limit,
+            "log_dir": str(log_dir)}
+
+
+def _restore_bytes(path, contents):
+    """Restore an exact pre-session snapshot without publishing a partial file."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=Path(path).parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _claude_once(slug, name, T, n, runs, st, resume=True, why=None):
+    """Validate independent shot batches, then request structure in a fresh session."""
+    # Different attempts can start in the same second; never reuse structure output.
+    run_dir = Path(tempfile.mkdtemp(prefix="staged-", dir=runs))
+    inputs_path = Path(T) / "stages/script_inputs.json"
+    final_path = Path(T) / "stages/script.json"
+    input_bytes = inputs_path.read_bytes()
+    inputs = json.loads(input_bytes)
+    original_final = final_path.read_bytes() if final_path.exists() else None
+    started = time.monotonic()
+    phases, errors, visuals, published = {}, [], None, False
+    model = None
+    draft_path, trusted_draft_bytes = None, None
+
+    def unchanged(path, expected):
+        try:
+            return Path(path).read_bytes() == expected
+        except OSError:
+            return False
+
+    def guard_inputs():
+        bad = []
+        if not unchanged(inputs_path, input_bytes):
+            bad.append("Measured script_inputs.json was changed or removed during annotation")
+        current = final_path.read_bytes() if final_path.exists() else None
+        if current != original_final:
+            bad.append("Model wrote stages/script.json before validated Python publication")
+        if trusted_draft_bytes is not None and not unchanged(draft_path, trusted_draft_bytes):
+            bad.append("Previously validated global shot prefix was changed or removed")
+        return bad
+
+    def phase(which, prompt, output_path=None, count=None):
+        nonlocal model
+        if why:
+            prompt += ("\n\n## Previous attempt was rejected\n\n"
+                       "Address these validation failures without modifying measured inputs "
+                       "or frozen shot annotations:\n" +
+                       "\n".join(f"- {str(error)[:500]}" for error in why[:5]) + "\n")
+        log_dir = run_dir / which
+        log_dir.mkdir()
+        (log_dir / "PROMPT.md").write_text(prompt, encoding="utf-8")
+        command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT)
+        if command.backend != "claude":
+            raise ValueError("Annotation backend changed during the staged Claude run")
+        model = command.model
+        print(f"  [{name}] Claude {which} → {log_dir}/progress.log", flush=True)
+        result = _claude_phase(command, T, log_dir, slug, name,
+                               n if count is None else count, output_path)
+        phases[which] = result
+        errors.extend(result["errors"])
+        errors.extend(guard_inputs())
+
+    try:
+        print(f"  [{name}] preparing contact sheets for {n} shots", flush=True)
+        visuals = prepare_script_visuals(T)
+        errors.extend(guard_inputs())
+        draft_path = Path(visuals["draft_path"])
+        draft = {"film": inputs["film"], "shots": []}
+        if not resume and draft_path.exists():
+            shutil.copyfile(draft_path, run_dir / "previous-draft.json")
+            draft_path.unlink()
+            print(f"  [{name}] --redo starts a new shot inspection; previous draft archived", flush=True)
+        if resume and draft_path.exists():
+            try:
+                candidate = json.loads(draft_path.read_bytes())
+                prefix_errors = validate_prefix(inputs, candidate)
+                if not prefix_errors:
+                    draft = candidate
+                    phases["shots_resume"] = {"resumed": True, "draft": str(draft_path),
+                                              "shots": len(draft["shots"])}
+                    print(f"  [{name}] resuming matching prefix {len(draft['shots'])}/{n}; contract checks "
+                          "do not establish visual accuracy", flush=True)
+                else:
+                    errors.extend([f"Cannot resume invalid shot prefix: {error}" for error in prefix_errors])
+            except (OSError, ValueError, TypeError) as exc:
+                errors.append(f"Cannot resume unreadable shot prefix: {exc}; use --redo to restart inspection")
+        if not errors:
+            working = draft_path.parent / f"attempt-{run_dir.name}"
+            if not working.resolve().is_relative_to(Path(T).resolve()):
+                raise ValueError("Staged annotation outputs must remain inside the task directory")
+            working.mkdir()
+            if not draft_path.exists():
+                atomic_write_json(draft_path, draft)
+            trusted_draft_bytes = draft_path.read_bytes()
+            manifest = json.loads(Path(visuals["manifest_path"]).read_bytes())
+            while len(draft["shots"]) < len(inputs["shots"]) and not errors:
+                start = len(draft["shots"])
+                # Continue a partial sheet first, then keep the original 12-shot boundaries.
+                stop = min(len(inputs["shots"]), (start // SHOT_BATCH_SIZE + 1) * SHOT_BATCH_SIZE)
+                batch_name = f"shots-{start // SHOT_BATCH_SIZE + 1:03d}"
+                batch_dir = working / batch_name
+                batch_dir.mkdir()
+                batch_inputs_path = batch_dir / "inputs.json"
+                batch_manifest_path = batch_dir / "manifest.json"
+                batch_output_path = batch_dir / "shots.json"
+                batch_inputs, batch_manifest = make_shot_batch(
+                    inputs, manifest, start, stop, task_dir=T,
+                    inputs_path=batch_inputs_path, output_path=batch_output_path)
+                atomic_write_json(batch_inputs_path, batch_inputs)
+                atomic_write_json(batch_manifest_path, batch_manifest)
+                frozen_batch = {batch_inputs_path: batch_inputs_path.read_bytes(),
+                                batch_manifest_path: batch_manifest_path.read_bytes()}
+                batch_visuals = {"manifest_path": batch_manifest_path, "draft_path": batch_output_path}
+                phase(batch_name, build_shot_prompt(batch_inputs_path, batch_visuals),
+                      batch_output_path, count=stop - start)
+                for path, expected in frozen_batch.items():
+                    if not unchanged(path, expected):
+                        errors.append(f"Frozen batch {path.name} was changed or removed in {batch_name}")
+                if batch_output_path.exists():
+                    shutil.copyfile(batch_output_path, run_dir / batch_name / "shots.json")
+                if not errors:
+                    try:
+                        batch = canonicalize_batch_lines(batch_inputs, json.loads(batch_output_path.read_bytes()))
+                        errors.extend(validate_draft(batch_inputs, batch))
+                    except (OSError, ValueError, TypeError) as exc:
+                        errors.append(f"Shot batch output missing or invalid: {exc}")
+                if not errors:
+                    atomic_write_json(run_dir / batch_name / "shots.canonical.json", batch)
+                    draft = {"film": inputs["film"], "shots": draft["shots"] + batch["shots"]}
+                    errors.extend(validate_prefix(inputs, draft))
+                    if not errors:
+                        atomic_write_json(draft_path, draft)
+                        trusted_draft_bytes = draft_path.read_bytes()
+                        print(f"  [{name}] validated shot prefix {len(draft['shots'])}/{n} "
+                              "(data contract only; visual accuracy is not certified)", flush=True)
+            if not errors:
+                errors.extend(validate_draft(inputs, draft))
+        if not errors:
+            frozen_path = working / "shots.frozen.json"
+            atomic_write_json(frozen_path, {"film": draft["film"], "shots": draft["shots"]})
+            frozen_bytes = frozen_path.read_bytes()
+            frozen = json.loads(frozen_bytes)
+            atomic_write_json(run_dir / "shots.frozen.json", frozen)
+            structure_path = working / "script.structure.json"
+            phase("structure", build_structure_prompt(frozen_path, inputs_path, structure_path))
+            if not unchanged(frozen_path, frozen_bytes):
+                errors.append("Frozen shot draft was changed or removed during structure annotation")
+            if structure_path.exists():
+                shutil.copyfile(structure_path, run_dir / "script.structure.json")
+            if not errors:
+                structure = json.loads(structure_path.read_bytes())
+                document = merge_structure(frozen, structure)
+                errors.extend(check_document(slug, inputs, document))
+                if not errors:
+                    atomic_write_json(final_path, document)
+                    published = True
+                    atomic_write_json(run_dir / "script.json", document)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        errors.append(f"{type(exc).__name__}: {exc}")
+    finally:
+        if trusted_draft_bytes is not None and not unchanged(draft_path, trusted_draft_bytes):
+            if draft_path.exists():
+                shutil.copyfile(draft_path, run_dir / "draft.modified.json")
+            _restore_bytes(draft_path, trusted_draft_bytes)
+        if not unchanged(inputs_path, input_bytes):
+            if inputs_path.exists():
+                shutil.copyfile(inputs_path, run_dir / "inputs.modified.json")
+            _restore_bytes(inputs_path, input_bytes)
+        # A CLI may disobey the output path. Never leave its unvalidated final file
+        # in place, or destroy a previously published result on a failed --redo.
+        if not published:
+            current = final_path.read_bytes() if final_path.exists() else None
+            if current != original_final:
+                if original_final is None:
+                    final_path.unlink(missing_ok=True)
+                else:
+                    _restore_bytes(final_path, original_final)
+
+    executed = [p for p in phases.values() if not p.get("resumed")]
+    reported_costs = [p["cost_usd"] for p in executed]
+    cost = sum(reported_costs) if reported_costs and all(v is not None for v in reported_costs) else None
+    rate_limit = next((p["rate_limit"] for p in reversed(executed) if p.get("rate_limit")), {})
+    state = {"ok": not errors and published, "at": time.strftime("%F %T"),
+             "min": round((time.monotonic() - started) / 60, 1), "backend": "claude",
+             "model": model, "cost_usd": cost, "tools": sum(p["tools"] for p in executed),
+             "errors": errors[:5], "rate_limit": rate_limit.get("status"),
+             "phases": phases, "run_dir": str(run_dir)}
+    if visuals:
+        state.update(visual_manifest=str(visuals["manifest_path"]), draft=str(visuals["draft_path"]))
+    st["script"] = state
+    atomic_write_json(Path(ROOT) / "exports" / slug / "state.json", st)
+    print(f"  [{name}] " + ("✓ shot and structure stages validated" if state["ok"]
+                            else f"✗ {(errors or ['No validated final output'])[0]}"), flush=True)
+    return state["ok"], rate_limit, errors
+
+
+def _once(slug, name, T, n, attempt, why=None, resume=True):
     validate_data_slug(ROOT, slug)
     E = f"{ROOT}/exports/{slug}"
     st = json.load(open(f"{E}/state.json"))
@@ -223,12 +532,14 @@ def _once(slug, name, T, n, attempt, why=None):
     if why:
         prompt += ("\n## 上一次被打回了\n\n原因：\n- " + "\n- ".join(why[:5]) +
                    "\n\n这次务必避开。\n")
+    command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT)
+    if command.backend == "claude":
+        return _claude_once(slug, name, T, n, runs, st, resume=resume, why=why)
     open(f"{runs}/PROMPT.md", "w").write(prompt)
 
     t0 = time.time()
     print(f"  [{name}] {n} 镜头 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
           flush=True)
-    command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT)
     events = AnnotationEvents(command.backend)
     with annotation_process(command.argv, cwd=T, stderr_path=f"{runs}/stderr.log") as p:
 
@@ -309,7 +620,8 @@ def run(slug, name, redo=False):
         attempt = waits = 0
         why = None
         while attempt < TRIES:
-            ok, rl, why = _once(slug, name, T, n, attempt, why)
+            ok, rl, why = _once(slug, name, T, n, attempt, why,
+                                resume=not redo or attempt > 0 or waits > 0)
             if ok:
                 return True
             if rl.get("status") not in (None, "allowed") and waits < MAX_WAITS:
@@ -324,6 +636,14 @@ def run(slug, name, redo=False):
         return False
     except Exception as e:
         print(f"  [{name}] ✗ 未捕获异常: {type(e).__name__}: {str(e)[:160]}", flush=True)
+        try:
+            state_path = Path(ROOT) / "exports" / slug / "state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["script"] = {"ok": False, "at": time.strftime("%F %T"),
+                               "errors": [f"{type(e).__name__}: {str(e)[:500]}"]}
+            state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+        except (OSError, ValueError) as state_error:
+            print(f"  [{name}] cannot record failure state: {state_error}", file=sys.stderr, flush=True)
         return False
 
 

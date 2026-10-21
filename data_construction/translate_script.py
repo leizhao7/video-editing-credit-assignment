@@ -12,16 +12,18 @@ if __name__ == "__main__":
 
 try:
     from .release_config import (
-        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films
+        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films,
+        annotation_process
     )
     from .annotation_backend import build_annotation_command, AnnotationEvents
 except ImportError:  # Direct script invocation.
     from release_config import (
-        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films
+        DATA_ROOT, require_target, validate_data_slug, export_slug, select_films,
+        annotation_process
     )
     from annotation_backend import build_annotation_command, AnnotationEvents
 
-import argparse, glob, json, os, subprocess, sys, time
+import argparse, glob, json, os, sys, tempfile, time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
@@ -49,68 +51,182 @@ def source_fields(document):
     return result
 
 
+def translation_payload(document):
+    """Select translatable fields and validate the identifiers used for merging."""
+    if not isinstance(document, dict):
+        raise ValueError("Source script must be a JSON object")
+    payload = {"logline": document.get("logline")}
+    for kind, fields in (("beats", ("id", "name", "what")), ("chunks", ("id", "what"))):
+        entries = document.get(kind)
+        if not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries):
+            raise ValueError(f"Source {kind} must be an array of objects")
+        identifiers = [entry.get("id") for entry in entries]
+        if (any(not isinstance(identifier, str) or not identifier.strip() for identifier in identifiers)
+                or len(set(identifiers)) != len(identifiers)):
+            raise ValueError(f"Source {kind} IDs must be nonempty unique strings")
+        if any(not isinstance(entry.get(field), str) for entry in entries for field in fields):
+            raise ValueError(f"Source {kind} text fields must be strings")
+        payload[kind] = [{field: entry[field] for field in fields} for entry in entries]
+    return payload
+
+
+def merge_translation_patch(document, patch):
+    """Accept only the complete ordered English-field patch, without source edits."""
+    payload = translation_payload(document)
+    if not isinstance(patch, dict) or set(patch) != {"logline_en", "beats", "chunks"}:
+        raise ValueError("Translation patch must contain exactly logline_en, beats, chunks")
+    if not isinstance(patch["logline_en"], str) or not patch["logline_en"].strip():
+        raise ValueError("Translation patch needs nonempty logline_en")
+    merged = deepcopy(document)
+    merged["logline_en"] = patch["logline_en"]
+    for kind, fields in (("beats", ("name_en", "what_en")), ("chunks", ("what_en",))):
+        entries = patch[kind]
+        if not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries):
+            raise ValueError(f"Translation patch {kind} must be an array of objects")
+        if [entry.get("id") for entry in entries] != [entry["id"] for entry in payload[kind]]:
+            raise ValueError(f"Translation patch {kind} IDs must match every source ID once, in order")
+        for target, entry in zip(merged[kind], entries):
+            if set(entry) != {"id", *fields}:
+                raise ValueError(f"Translation patch {kind} entries allow only id and {', '.join(fields)}")
+            for field in fields:
+                if not isinstance(entry[field], str) or not entry[field].strip():
+                    raise ValueError(f"Translation patch {entry['id']}.{field} must be nonempty text")
+                target[field] = entry[field]
+    return merged
+
+
+def _atomic_write_bytes(path, content):
+    """Replace a file atomically, also used to restore the original exact bytes."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=Path(path).parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _stream_status(line, count):
+    """Summarize event metadata without copying model prose or reasoning."""
+    try:
+        event = json.loads(line)
+    except (ValueError, TypeError):
+        event = {}
+    if not isinstance(event, dict):
+        event = {}
+    status = f"received {count} stream events"
+    estimated = event.get("estimated_tokens")
+    if event.get("subtype") == "thinking_tokens" and isinstance(estimated, (int, float)):
+        status += f"; estimated reasoning tokens={estimated}"
+    return status
+
+
 def run(slug, name):
     validate_data_slug(ROOT, slug)
     p = f"{ROOT}/edit/task_{slug}/stages/script.json"
     original = Path(p).read_bytes()
     d = json.loads(original)
+    try:
+        payload = translation_payload(d)
+    except ValueError as exc:
+        print(f"  [{name}] ✗ Invalid translation source: {exc}", flush=True)
+        return False
     nb, nc = need(d)
     if not nb and not nc and isinstance(d.get("logline_en"), str) and d["logline_en"].strip():
         print(f"  [{name}] 已有译文，跳过", flush=True); return True
-    payload = {"logline": d.get("logline"),
-               "beats": [{"id": b["id"], "name": b["name"], "what": b["what"]} for b in d["beats"]],
-               "chunks": [{"id": c["id"], "what": c["what"]} for c in d["chunks"]]}
-    prompt = f"""这是《{name}》预告片场记表里要放进任务提示词的文字，现在是中文，需要英文版。
+    task_dir = Path(ROOT) / "edit" / f"task_{slug}"
+    work = task_dir / "work"
+    work.mkdir(exist_ok=True)
+    if not work.resolve().is_relative_to(task_dir.resolve()):
+        raise ValueError("Translation working outputs must remain inside the task directory")
+    working = Path(tempfile.mkdtemp(prefix="translation-", dir=work))
+    patch_path = working / "fields.json"
+    prompt = f"""这是《{name}》预告片场记表里要放进任务提示词的文字，需要补齐英文版字段。
+原文可能已经是英文；若已经是自然英文，原样复制到对应的 `_en` 字段。原有字段不得修改。
 
 ```json
 {json.dumps(payload, ensure_ascii=False, indent=1)}
 ```
 
-把它们译成英文，写到 `{p}`：
-
-- 每个 beat 加 `name_en` 和 `what_en`
-- 每个 chunk 加 `what_en`
-- 顶层加 `logline_en`
-- **原有的中文字段一个都不许改、不许删**，只是加新字段
-- 其余结构（shots、id、shots 区间等）原样不动
+只把英文新增字段写到 {json.dumps(str(patch_path), ensure_ascii=False)}，不要重写完整场记表。
+输出 JSON 必须恰好包含以下三个顶层字段：
+- `logline_en`：非空英文字符串。
+- `beats`：按输入顺序覆盖每个 beat，每项只能含 `id`、`name_en`、`what_en`。
+- `chunks`：按输入顺序覆盖每个 chunk，每项只能含 `id`、`what_en`。
+所有译文字段均为非空字符串。IDs 必须与输入逐项一致，不得缺漏、重复、重排或增加。
+不要输出 `shots`、原字段或其他额外字段。不要修改 `stages/script.json` 或其他输入文件。
+调用方会验证这份小 patch 并将英文新增字段合并到原稿；原有数据由程序原样保留。
 
 译文要是**剪辑室里会说的英文**，不是逐字直译：具体、干脆、说清画面上发生了什么。
-人名地名保留原样。译完把整个 JSON 写回同一个文件。"""
-    t0 = time.time()
-    task_dir = f"{ROOT}/edit/task_{slug}"
+人名地名保留原样。保存上述 patch 后结束本次任务。"""
+    t0 = time.monotonic()
     command = build_annotation_command(prompt, task_dir, tools="Read,Write,Edit,Bash(python3:*)",
                                        effort=EFFORT)
-    try:
-        r = subprocess.run(command.argv, cwd=task_dir, stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True)
-    except OSError as exc:
-        Path(p).write_bytes(original)
-        print(f"  [{name}] ✗ 翻译进程失败: {exc}", flush=True)
-        return False
+    runs = Path(ROOT) / "edit/runs" / slug
+    runs.mkdir(parents=True, exist_ok=True)
+    log_dir = Path(tempfile.mkdtemp(prefix=time.strftime("%Y%m%d_%H%M%S_translation-"), dir=runs))
+    (log_dir / "PROMPT.md").write_text(prompt, encoding="utf-8")
+    print(f"  [{name}] translation ({command.backend}) → {log_dir}/progress.log", flush=True)
     events = AnnotationEvents(command.backend)
-    for line in (r.stdout or "").splitlines():
-        events.feed(line)
-    errors = events.failures()
-    if r.returncode or errors:
-        Path(p).write_bytes(original)
-        detail = "; ".join(errors) or r.stderr or ""
-        print(f"  [{name}] ✗ 翻译进程失败 ({r.returncode}): {detail[-200:]}", flush=True)
-        return False
+    errors, ok, returncode = [], False, None
     try:
-        d2 = json.loads(Path(p).read_text(encoding="utf-8"))
-        nb2, nc2 = need(d2)
-        same = source_fields(d2) == source_fields(d)
-        logline_ok = isinstance(d2.get("logline_en"), str) and bool(d2["logline_en"].strip())
-        ok = not nb2 and not nc2 and logline_ok and same
-    except (OSError, ValueError, TypeError, AttributeError) as e:
-        Path(p).write_bytes(original)
-        print(f"  [{name}] ✗ 翻译结果无效: {e}", flush=True)
-        return False
-    if not ok:
-        Path(p).write_bytes(original)
-    print(f"  [{name}] {time.time()-t0:.0f}s  "
-          + ("✓" if ok else f"✗ 缺译 beats{len(nb2)}/chunks{len(nc2)}"
-             + ("" if same else "  ★原文被改动")), flush=True)
+        with (log_dir / "session.jsonl").open("w", encoding="utf-8") as raw, \
+             (log_dir / "progress.log").open("w", encoding="utf-8") as progress:
+            def record(message):
+                progress.write(f"[{time.monotonic()-t0:6.1f}s] {message}\n")
+                progress.flush()
+
+            record(f"translation started; backend={command.backend}; model={command.model}")
+            count, last_status = 0, None
+            try:
+                with annotation_process(command.argv, cwd=task_dir,
+                                        stderr_path=log_dir / "stderr.log") as process:
+                    for line in process.stdout:
+                        raw.write(line)
+                        raw.flush()
+                        count += 1
+                        was_completed = events.completed
+                        for tool in events.feed(line):
+                            record(f"tool: {tool['name']}")
+                        now = time.monotonic()
+                        if last_status is None or now - last_status >= 15:
+                            message = _stream_status(line, count)
+                            record(message)
+                            print(f"  [{name}] translation {message}", flush=True)
+                            last_status = now
+                        if events.completed and not was_completed:
+                            record("CLI successful completion event received; output not yet validated")
+                    returncode = process.wait()
+            except (OSError, ValueError, TimeoutError) as exc:
+                errors.append(f"{type(exc).__name__}: {exc}")
+            errors.extend(events.failures())
+            if returncode != 0:
+                errors.append(f"Annotation process exited with status {returncode}; see stderr.log")
+            if not Path(p).exists() or Path(p).read_bytes() != original:
+                errors.append("Model changed or removed the original script; only a translation patch is permitted")
+            if not errors:
+                try:
+                    patch = json.loads(patch_path.read_text(encoding="utf-8"))
+                    d2 = merge_translation_patch(d, patch)
+                    _atomic_write_bytes(p, (json.dumps(d2, ensure_ascii=False, indent=2,
+                                                      allow_nan=False) + "\n").encode("utf-8"))
+                except (OSError, ValueError, TypeError, AttributeError) as exc:
+                    errors.append(f"Invalid translation output: {type(exc).__name__}: {exc}")
+            ok = not errors
+            record("validated translation" if ok else "translation rejected: " + "; ".join(errors))
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        errors.append(f"{type(exc).__name__}: {exc}")
+        ok = False
+    finally:
+        if not ok:
+            _atomic_write_bytes(p, original)
+    print(f"  [{name}] {time.monotonic()-t0:.0f}s  "
+          + ("✓" if ok else f"✗ {errors[0][:240]}; original script restored; see {log_dir}/progress.log"),
+          flush=True)
     return ok
 
 

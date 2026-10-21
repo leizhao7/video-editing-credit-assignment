@@ -17,7 +17,7 @@ except ImportError:  # Direct script invocation.
     from release_config import (CODE_ROOT, DATA_ROOT, require_target,
         require_annotation_model, cloud_volume, run_legacy_rubric_hook)
 
-import argparse, csv, glob, hashlib, json, os, random, shutil, subprocess, sys
+import argparse, csv, glob, hashlib, json, math, os, random, shutil, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,7 +25,7 @@ from build_s1_tasks import (cut, source_shots, shot_index, bound, cover,
                             mark_cards, load_matches, build_id, OUT, ROOT)
 
 FPS_DEFAULT = 24000 / 1001
-IN_TOL_MIN = 6             # 入点容差下限（帧）
+IN_TOL_MIN = 6             # Existing minimum, in source-video frames.
 DUR_TOL = 4                # 出点/时长容差（帧）
 MIN_SLACK = 0.6            # 互裁后每个 clip 至少要留的余量（秒）；见 separate()
 
@@ -62,7 +62,17 @@ def collect(ch, inputs, p2, shots, pb, srcpath, gold, scrop, gcrop):
             e = {"shot": sid, "src": srcpath, "clip_t0": t0, "clip_dur": dur,
                  "crop": scrop, "origin": "film", "src_shot": i,
                  "in_s": float(r["refined_src_s"]), "use_dur": sh_["dur_s"],
-                 "plateau": int(r.get("plateau_frames") or 0), "extra_uses": []}
+                 "plateau": int(r.get("plateau_frames") or 0), "extra_uses": [],
+                 # Pipeline refinement samples at reference FPS, even when the
+                 # source video has a different native FPS. Old CSVs lack this
+                 # field; retain an explicit legacy metric label in that case.
+                 "alignment_fps": float(r.get("alignment_fps") or pb["gold"]["fps"]),
+                 "alignment_score_kind": r.get("alignment_score_kind") or "legacy-all-pairs-window-mean",
+                 "plateau_kind": r.get("plateau_kind") or "legacy-near-peak-count",
+                 "peak_band": float(r.get("peak_band") or 0.02),
+                 "near_peak_count": int(r.get("near_peak_count") or r.get("plateau_frames") or 0),
+                 "disjoint_near_peaks": int(r.get("disjoint_near_peaks") or 0),
+                 "alignment_review_reason": r.get("alignment_review_reason") or ""}
             seen[i] = e; seq.append(e)
         else:
             seq.append({"shot": sid, "src": gold, "clip_t0": sh_["start_s"],
@@ -211,9 +221,32 @@ Every id, first to last.
     return {"chunk": ch["id"], "n": len(made)}, None
 
 
+def inpoint_tolerance(clip, source_fps, reference_fps):
+    """Return the existing heuristic tolerance with explicit measurement units.
+
+    The six-source-frame minimum is unchanged. The measured peak width is in
+    alignment samples, which need not have the source video's native FPS.
+    Legacy pipeline CSVs used reference FPS but counted all near-peak offsets;
+    keep that provenance rather than relabeling them as paired contiguous widths.
+    """
+    measured_fps = clip.get("alignment_fps")
+    alignment_fps = float(reference_fps if measured_fps in (None, "") else measured_fps)
+    if any(not math.isfinite(x) or x <= 0 for x in (source_fps, alignment_fps)):
+        raise ValueError("in-point tolerance requires positive finite source and alignment FPS")
+    width = int(clip.get("plateau") or 0)
+    if width < 0:
+        raise ValueError("alignment peak width must be nonnegative")
+    seconds = max(IN_TOL_MIN / source_fps, width / (2.0 * alignment_fps))
+    return {"in_tol_s": round(seconds, 4),
+            "in_tol_frames": round(seconds * source_fps, 1),
+            "plateau_frames": width, "alignment_fps": alignment_fps,
+            "alignment_score_kind": clip.get("alignment_score_kind") or "legacy-all-pairs-window-mean",
+            "plateau_kind": clip.get("plateau_kind") or "legacy-near-peak-count"}
+
+
 def build_s3(slug, name, ch, seq, cards, pb, tdir):
     fps = pb["gold"]["fps"]        # 预告片：镜头长度量在这个帧率下
-    src_fps = pb["src"]["fps"]     # 正片：自相似平台宽度量在这个帧率下
+    src_fps = pb["src"]["fps"]     # Native source FPS sets only the minimum tolerance.
     cdir = f"{tdir}/initial_state/clips"
     for d in (cdir, f"{tdir}/output", f"{tdir}/verifier"):
         os.makedirs(d, exist_ok=True)
@@ -304,17 +337,15 @@ Give all {len(made)}, in order.
     key = []
     for cid, c in zip(ids, seq):
         rel_in = max(0.0, c["in_s"] - c["clip_t0"]) if c["origin"] == "film" else 0.0
-        tol = max(IN_TOL_MIN, (c["plateau"] or 0) / 2.0)
-        # Convert each tolerance to seconds using the frame rate at which it was measured.
-        # Source-film, reference-edit, and normalized-clip frame rates are not interchangeable.
-
-
+        tolerance = inpoint_tolerance(c, src_fps, fps)
         key.append({"clip": cid, "trailer_shot": c["shot"], "origin": c["origin"],
                     "in_s": round(rel_in, 4), "out_s": round(rel_in + c["use_dur"], 4),
                     "dur_s": round(c["use_dur"], 4),
-                    "in_tol_s": round(tol / src_fps, 4),
-                    "in_tol_frames": round(tol, 1),     # 诊断用；量在正片帧率下
-                    "plateau_frames": c["plateau"],
+                    **tolerance,   # in_tol_frames is expressed in native source frames.
+                    "peak_band": c.get("peak_band"),
+                    "near_peak_count": c.get("near_peak_count"),
+                    "disjoint_near_peaks": c.get("disjoint_near_peaks"),
+                    "alignment_review_reason": c.get("alignment_review_reason", ""),
                     "scored": c["origin"] == "film"})
     json.dump({"task": tid, "fps": fps, "src_fps": round(src_fps, 3),
                "target_duration_s": round(target, 3),
@@ -323,11 +354,11 @@ Give all {len(made)}, in order.
                "cuts": key},
               open(f"{tdir}/verifier/answer.json", "w"), ensure_ascii=False, indent=1)
     json.dump({"id": tid, "deliverable_kind": "json_cutlist",
-               "verifier_class": "mechanical",
+               "verifier_class": "mechanical_component_with_rubric_judges",
                "golden_semantics": "answer_key — the trailer's actual in-point and length; golden 1.0",
-               "reward": "PROVISIONAL — a shot counts as hit when both in-point and length fall inside tolerance; score = hit rate; pass 0.7. Scoring not settled: see scoring_status.",
+               "reward": "The deterministic component is the fraction of scored shots whose in-point and duration both fall within tolerance. Run evaluation/task_pipeline.py --prepare-only to attach the released RC scoring contract: 0.4 deterministic, 0.4 reference-aware judge, 0.2 blind judge.",
                "source_evidence": f"{slug} chunk {ch['id']}: in-point is refined_src_s minus the film shot's start; length is dur_s from the golden shot list",
-               "tolerance_note": "in-point tolerance is per shot, from the self-similarity plateau the matcher measured (plateau/2, floor 6 frames, converted to seconds at the FILM's frame rate) — a locked-off shot has no unique in-point and a flat tolerance would penalise that",
+               "tolerance_note": "Heuristic in-point tolerance: half the contiguous paired-score peak-band width divided by alignment_fps, with a floor of 6/source_fps seconds. in_tol_frames is the equivalent native-source frame count. This is not a calibrated confidence interval; disjoint near peaks remain flagged for review. Legacy rows are labelled separately and use the pipeline's reference FPS when alignment_fps is absent.",
                "golden_reference": "verifier/golden/ — the answer as footage, not numbers. One file per clip: the film "
                    "cut at the in-point and length this key specifies, so it is what a correct "
                    "deliverable produces for that clip. Shots with no film counterpart are "

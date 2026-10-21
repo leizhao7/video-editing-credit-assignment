@@ -77,7 +77,9 @@ def main():
 
     out, n_card, n_live = {}, 0, 0
     for r in rows:
-        if r["verdict"] != "NOT-IN-SOURCE": continue
+        # Colour-only candidates still need card/live filtering while awaiting
+        # source-match review; they are not accepted source footage.
+        if r["verdict"] not in {"NOT-IN-SOURCE", "REVIEW(colour)", "REVIEW(alignment)"}: continue
         g = gm[r["golden_id"]]
         f = feats(G, float(g["start_s"]), float(g["dur_s"]),
                   pb.get("crop_expr") or pb["crop"])

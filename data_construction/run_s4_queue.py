@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/run_s4_queue.py [options]\n\n  --film\n  --films  文本文件，每行一个 slug；只跑这些\n  --wait  等机械队列跑完再开始\n  -j, --workers  同时跑几部片。S4 不碰 Resolve/Modal，各片只写自己的目录，\n                         唯一共享的是速率窗口 —— 撞上会各自等到重置\n  --all  Process all inputs explicitly\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/run_s4_queue.py [options]\n\n  --film\n  --films  文本文件，每行一个 slug；只跑这些\n  --wait  等机械队列跑完再开始\n  -j, --workers  同时跑几部片。S4 不碰 Resolve/Modal，各片只写自己的目录，\n                         唯一共享的是速率窗口 —— 撞上会各自等到重置\n  --all  Process all inputs explicitly\n  --redo  Reinspect completed S4 cuts; archive the previous draft.\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 try:
@@ -15,14 +15,23 @@ try:
         CODE_ROOT, DATA_ROOT, require_target, env_text, validate_data_slug, export_slug, select_films, annotation_process
     )
     from .annotation_backend import build_annotation_command, AnnotationEvents
+    from .annotation_cut_visuals import prepare_cut_visuals
+    from .annotation_s4_stages import (CUT_BATCH_SIZE, INPUT_FILES, VisualReadCoverage,
+        atomic_write_bytes, atomic_write_json, build_cut_prompt, make_cut_batch,
+        validate_document, validate_inputs)
 except ImportError:  # Direct script invocation.
     from release_config import (
         CODE_ROOT, DATA_ROOT, require_target, env_text, validate_data_slug, export_slug, select_films, annotation_process
     )
     from annotation_backend import build_annotation_command, AnnotationEvents
+    from annotation_cut_visuals import prepare_cut_visuals
+    from annotation_s4_stages import (CUT_BATCH_SIZE, INPUT_FILES, VisualReadCoverage,
+        atomic_write_bytes, atomic_write_json, build_cut_prompt, make_cut_batch,
+        validate_document, validate_inputs)
 
-import argparse, glob, json, os, re, shutil, signal, subprocess, sys, threading, time
+import argparse, glob, json, os, re, shutil, signal, subprocess, sys, tempfile, threading, time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 ROOT = DATA_ROOT
 EFFORT = "max"
@@ -78,24 +87,234 @@ def check(slug, T):
     if not os.path.exists(p): return ["s4_cuts.json 未生成"]
     try: d = json.load(open(p))
     except Exception as e: return [f"JSON 解析失败: {e}"]
-    cl = json.load(open(f"{T}/stages/cut_list.json"))["cuts"]
-    cu = d.get("cuts", []); bad = []
-    if len(cu) != len(cl): bad.append(f"切点数 {len(cu)} != {len(cl)}")
-    for i, (a, b) in enumerate(zip(cu, cl)):
-        if (a.get("after"), a.get("before")) != (b["after"], b["before"]):
-            bad.append(f"第 {i+1} 条相邻关系不对"); break
-    for c in cu:
-        if not (c.get("transition") or {}).get("type"): bad.append(f"#{c.get('idx')} 缺 transition")
-        if not c.get("technique"): bad.append(f"#{c.get('idx')} 缺 technique")
-        if not c.get("note"): bad.append(f"#{c.get('idx')} 缺 note")
-
-    techs = {c.get("technique") for c in cu if c.get("technique")}
-    if len(cu) >= 20 and len(techs) < 3:
-        bad.append(f"只有 {len(techs)} 种手法 {sorted(techs)} —— 这是初判占位表，没有回头精修")
-    return bad
+    try:
+        inputs = {key: json.loads((Path(T) / "stages" / filename).read_bytes())
+                  for key, filename in INPUT_FILES.items()}
+        return validate_inputs(inputs, slug) + validate_document(inputs, d)
+    except (OSError, ValueError, TypeError) as exc:
+        return [f"Invalid S4 inputs: {exc}"]
 
 
-def _once(slug, name, T, n, attempt, why=None):
+def _cut_phase(command, T, log_dir, coverage):
+    """One isolated CLI invocation, including successful image-result coverage."""
+    events, errors = AnnotationEvents(command.backend), []
+    started, last = time.monotonic(), [time.monotonic()]
+    stopped, killed = threading.Event(), []
+    watcher, returncode, ntool = None, None, 0
+    try:
+        with annotation_process(command.argv, cwd=T, stderr_path=log_dir / "stderr.log") as process:
+            def watch_silence():
+                while not stopped.wait(30):
+                    if process.poll() is not None:
+                        return
+                    if time.monotonic() - last[0] > STALL_S:
+                        killed.append(True)
+                        try:
+                            os.killpg(process.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        return
+            watcher = threading.Thread(target=watch_silence, daemon=True)
+            watcher.start()
+            with (log_dir / "session.jsonl").open("w", encoding="utf-8") as raw, \
+                 (log_dir / "progress.log").open("w", encoding="utf-8") as progress:
+                count, reported, last_status = 0, 0, None
+                for line in process.stdout:
+                    raw.write(line); raw.flush()
+                    last[0] = time.monotonic()
+                    count += 1
+                    for tool in events.feed(line):
+                        ntool += 1
+                        progress.write(f"[{last[0]-started:6.1f}s] tool: {tool['name']}\n")
+                    coverage.feed(line)
+                    if len(coverage.seen) != reported:
+                        reported = len(coverage.seen)
+                        progress.write(f"[{last[0]-started:6.1f}s] successful strip image reads "
+                                       f"{reported}/{len(coverage.required)} (access coverage only)\n")
+                    if last_status is None or last[0] - last_status >= 15:
+                        progress.write(f"[{last[0]-started:6.1f}s] received {count} stream events\n")
+                        last_status = last[0]
+                    progress.flush()
+            returncode = process.wait()
+    except (OSError, ValueError, TimeoutError) as exc:
+        errors.append(f"{type(exc).__name__}: {exc}")
+    finally:
+        stopped.set()
+        if watcher is not None:
+            watcher.join()
+    errors.extend(events.failures())
+    if returncode is None and not errors:
+        errors.append("Annotation process did not report exit status 0")
+    if returncode is not None and returncode != 0:
+        errors.insert(0, f"Annotation process exited with status {returncode}; see stderr.log")
+    if killed:
+        errors.insert(0, "Annotation process exceeded its inactivity limit")
+    errors.extend(coverage.failures())
+    return {"errors": errors, "completed": events.completed, "tools": ntool,
+            "seconds": round(time.monotonic() - started, 3), "cost_usd": events.cost,
+            "rate_limit": events.rate_limit, "strip_reads": len(coverage.seen),
+            "required_strips": len(coverage.required), "log_dir": str(log_dir)}
+
+
+def _claude_once(slug, name, T, n, runs, st, mcp, why=None, resume=True):
+    run_dir = Path(tempfile.mkdtemp(prefix="batched-", dir=runs))
+    source_paths = {key: Path(T) / "stages" / filename for key, filename in INPUT_FILES.items()}
+    source_bytes = {path: path.read_bytes() for path in source_paths.values()}
+    inputs = {key: json.loads(source_bytes[path]) for key, path in source_paths.items()}
+    final_path = Path(T) / "stages/s4_cuts.json"
+    original_final = final_path.read_bytes() if final_path.exists() else None
+    errors, phases, published = validate_inputs(inputs, slug), {}, False
+    started, visuals, draft_path, trusted = time.monotonic(), None, None, None
+    model = None
+
+    def unchanged(path, expected):
+        try:
+            return Path(path).read_bytes() == expected
+        except OSError:
+            return False
+
+    def guard():
+        bad = [f"Measured input {path.name} was changed or removed" for path, data in source_bytes.items()
+               if not unchanged(path, data)]
+        current = final_path.read_bytes() if final_path.exists() else None
+        if current != original_final:
+            bad.append("Model wrote s4_cuts.json before validated Python publication")
+        if trusted is not None and not unchanged(draft_path, trusted):
+            bad.append("Previously validated S4 prefix was changed or removed")
+        return bad
+
+    try:
+        if not errors:
+            visuals = prepare_cut_visuals(T)
+            errors.extend(guard())
+            draft_path = Path(visuals["draft_path"])
+            if not draft_path.resolve().is_relative_to(Path(T).resolve()):
+                raise ValueError("S4 working outputs must remain inside the task directory")
+            draft = {"stage": "S4", "cuts": []}
+            if not resume and draft_path.exists():
+                shutil.copyfile(draft_path, run_dir / "previous-draft.json")
+                draft_path.unlink()
+            if resume and draft_path.exists():
+                candidate = json.loads(draft_path.read_bytes())
+                prefix_errors = validate_document(inputs, candidate, prefix=True, diversity=False)
+                if prefix_errors:
+                    errors.extend([f"Cannot resume invalid S4 prefix: {error}" for error in prefix_errors])
+                else:
+                    draft = candidate
+                    phases["resume"] = {"resumed": True, "cuts": len(draft["cuts"])}
+                    print(f"  [{name}] resuming validated S4 prefix {len(draft['cuts'])}/{n}; "
+                          "contract checks do not certify visual accuracy", flush=True)
+        if not errors:
+            working = draft_path.parent / f"attempt-{run_dir.name}"
+            working.mkdir()
+            if not draft_path.exists():
+                atomic_write_json(draft_path, draft)
+            trusted = draft_path.read_bytes()
+            manifest = json.loads(Path(visuals["manifest_path"]).read_bytes())
+            template = (Path(CODE_ROOT) / "prompts/PROMPT_S4.md").read_text()
+            # Keep shared vocabulary headings/tables, omitting the whole-film output instruction.
+            vocabulary = template[template.index("### 一、"):template.index("## Review")]
+            while len(draft["cuts"]) < len(inputs["cut_list"]["cuts"]) and not errors:
+                start = len(draft["cuts"])
+                stop = min(len(inputs["cut_list"]["cuts"]), (start // CUT_BATCH_SIZE + 1) * CUT_BATCH_SIZE)
+                batch_name = f"cuts-{start // CUT_BATCH_SIZE + 1:03d}"
+                batch_dir, log_dir = working / batch_name, run_dir / batch_name
+                batch_dir.mkdir(); log_dir.mkdir()
+                batch, batch_manifest = make_cut_batch(inputs, manifest, start, stop)
+                frozen = {}
+                for key, filename in INPUT_FILES.items():
+                    path = batch_dir / filename
+                    atomic_write_json(path, batch[key]); frozen[path] = path.read_bytes()
+                relative = lambda path: path.resolve().relative_to(Path(T).resolve()).as_posix()
+                batch_manifest["inputs_paths"] = {filename: relative(batch_dir / filename)
+                                                   for filename in INPUT_FILES.values()}
+                batch_manifest["draft_path"] = relative(batch_dir / "cuts.json")
+                manifest_path = batch_dir / "manifest.json"
+                atomic_write_json(manifest_path, batch_manifest)
+                frozen[manifest_path] = manifest_path.read_bytes()
+                output_path = batch_dir / "cuts.json"
+                prompt = build_cut_prompt(batch_dir, output_path, vocabulary)
+                if why:
+                    prompt += "\nPrevious attempt was rejected:\n" + "\n".join(f"- {str(e)[:500]}" for e in why[:5])
+                (log_dir / "PROMPT.md").write_text(prompt, encoding="utf-8")
+                command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT, mcp_config=mcp)
+                if command.backend != "claude":
+                    raise ValueError("Annotation backend changed during bounded Claude S4")
+                model = command.model
+                coverage = VisualReadCoverage(T, [c["strip_path"] for c in batch_manifest["cuts"]])
+                print(f"  [{name}] S4 {batch_name} → {log_dir}/progress.log", flush=True)
+                phase = _cut_phase(command, T, log_dir, coverage)
+                phases[batch_name] = phase
+                errors.extend(phase["errors"])
+                errors.extend(guard())
+                errors.extend(f"Frozen batch input {path.name} was changed or removed"
+                              for path, data in frozen.items() if not unchanged(path, data))
+                if output_path.exists():
+                    shutil.copyfile(output_path, log_dir / "cuts.json")
+                if not errors:
+                    try:
+                        annotation = json.loads(output_path.read_bytes())
+                        errors.extend(validate_document(batch, annotation, diversity=False))
+                    except (OSError, ValueError, TypeError) as exc:
+                        errors.append(f"S4 batch output missing or invalid: {exc}")
+                if not errors:
+                    draft = {"stage": "S4", "cuts": draft["cuts"] + annotation["cuts"]}
+                    errors.extend(validate_document(inputs, draft, prefix=True, diversity=False))
+                    if not errors:
+                        atomic_write_json(draft_path, draft)
+                        trusted = draft_path.read_bytes()
+                        print(f"  [{name}] validated S4 prefix {len(draft['cuts'])}/{n} "
+                              "(data contract and image access only)", flush=True)
+            if not errors:
+                errors.extend(guard())
+                errors.extend(validate_document(inputs, draft))
+            if not errors:
+                atomic_write_json(final_path, {"stage": "S4", "cuts": draft["cuts"]})
+                published = True
+                shutil.copyfile(final_path, run_dir / "s4_cuts.json")
+                report = subprocess.run([sys.executable, "-W", "ignore", f"{CODE_ROOT}/build_report.py",
+                                         "--film", slug], capture_output=True, text=True)
+                if report.returncode:
+                    errors.append(f"Report generation failed: {report.stderr.strip()[-160:]}")
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        errors.append(f"{type(exc).__name__}: {exc}")
+    finally:
+        for path, data in source_bytes.items():
+            if not unchanged(path, data):
+                if path.exists():
+                    shutil.copyfile(path, run_dir / f"modified-{path.name}")
+                atomic_write_bytes(path, data)
+        if trusted is not None and not unchanged(draft_path, trusted):
+            if draft_path.exists():
+                shutil.copyfile(draft_path, run_dir / "modified-draft.json")
+            atomic_write_bytes(draft_path, trusted)
+        if not published:
+            current = final_path.read_bytes() if final_path.exists() else None
+            if current != original_final:
+                if original_final is None:
+                    final_path.unlink(missing_ok=True)
+                else:
+                    atomic_write_bytes(final_path, original_final)
+    executed = [phase for phase in phases.values() if not phase.get("resumed")]
+    costs = [phase["cost_usd"] for phase in executed]
+    rate_limit = next((p["rate_limit"] for p in reversed(executed) if p.get("rate_limit")), {})
+    measured = sum(_measured_ref(str(Path(p["log_dir"]) / "session.jsonl")) for p in executed
+                   if (Path(p["log_dir"]) / "session.jsonl").exists())
+    state = {"ok": not errors and published, "at": time.strftime("%F %T"),
+             "min": round((time.monotonic()-started)/60, 1), "backend": "claude", "model": model,
+             "cost_usd": sum(costs) if costs and all(c is not None for c in costs) else None,
+             "tools": sum(p["tools"] for p in executed), "errors": errors[:5],
+             "measured_ref": measured, "rate_limit": rate_limit.get("status"),
+             "phases": phases, "run_dir": str(run_dir)}
+    if visuals:
+        state.update(visual_manifest=str(visuals["manifest_path"]), draft=str(visuals["draft_path"]))
+    st["s4"] = state
+    atomic_write_json(Path(ROOT) / "exports" / slug / "state.json", st)
+    print(f"  [{name}] " + ("✓ S4 batches validated" if state["ok"] else f"✗ {(errors or ['No final output'])[0]}"), flush=True)
+    return state["ok"], rate_limit, errors
+
+
+def _once(slug, name, T, n, attempt, why=None, resume=True):
     validate_data_slug(ROOT, slug)
     mcp = env_text("VIDEO_EDITING_MCP_CONFIG")
     E = f"{ROOT}/exports/{slug}"
@@ -123,6 +342,8 @@ def _once(slug, name, T, n, attempt, why=None):
     print(f"  [{name}] {n} 切点 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
           flush=True)
     command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT, mcp_config=mcp)
+    if command.backend == "claude":
+        return _claude_once(slug, name, T, n, runs, st, mcp, why=why, resume=resume)
     events = AnnotationEvents(command.backend)
     with annotation_process(command.argv, cwd=T, stderr_path=f"{runs}/stderr.log") as p:
 
@@ -204,11 +425,11 @@ def _measured_ref(path, backend="claude"):
     return n
 
 
-def run(slug, name):
+def run(slug, name, redo=False):
     """Process one film without propagating its failure to the other queue items."""
     validate_data_slug(ROOT, slug)
     try:
-        return _film(slug, name)
+        return _film(slug, name, redo=redo)
     except Exception as e:
         print(f"  [{name}] ✗ 未捕获异常: {type(e).__name__}: {str(e)[:160]}", flush=True)
         try:
@@ -222,19 +443,20 @@ def run(slug, name):
         return False
 
 
-def _film(slug, name):
+def _film(slug, name, redo=False):
     E = f"{ROOT}/exports/{slug}"
     st = json.load(open(f"{E}/state.json"))
     miss = [s for s in NEED if not st.get(s, {}).get("ok")]
     if miss:
         print(f"  跳过 {name}: 机械阶段未完成 {miss}", flush=True); return False
-    if st.get("s4", {}).get("ok"):
+    if st.get("s4", {}).get("ok") and not redo:
         print(f"  跳过 {name}: S4 已完成", flush=True); return True
     T, n = prep(slug)
     attempt = waits = 0
     why = None
     while attempt < TRIES:
-        ok, rl, why = _once(slug, name, T, n, attempt, why)
+        ok, rl, why = _once(slug, name, T, n, attempt, why,
+                            resume=not redo or attempt > 0 or waits > 0)
         if ok: return True
         # A rate-limited run is not this film's failure — it is a global stop. Left
         # alone, the queue would burn its two tries here and then march through every
@@ -253,6 +475,7 @@ def _film(slug, name):
 def main():
     P = argparse.ArgumentParser()
     P.add_argument("--film")
+    P.add_argument("--redo", action="store_true", help="Reinspect completed S4 cuts; archive the previous draft")
     # A film list limits the selected inputs while allowing independent per-film jobs to run concurrently.
 
     P.add_argument("--films", help="文本文件，每行一个 slug；只跑这些")
@@ -289,9 +512,9 @@ def main():
     if A.workers > 1:
         print(f"并行 {A.workers} 路（各片互不共享文件；共享的只有速率窗口）\n", flush=True)
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
-            ok = sum(bool(r) for r in ex.map(lambda kv: run(*kv), films.items()))
+            ok = sum(bool(r) for r in ex.map(lambda kv: run(*kv, redo=A.redo), films.items()))
     else:
-        ok = sum(bool(run(slug, name)) for slug, name in films.items())
+        ok = sum(bool(run(slug, name, redo=A.redo)) for slug, name in films.items())
     print(f"\nS4 完成 {ok}/{len(films)}")
     _clear_sentinel(films)          # 全部重判完才清；否则哨兵留着
     if ok != len(films):
