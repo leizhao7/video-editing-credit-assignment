@@ -358,7 +358,7 @@ def test_new_mode_only_changes_privilege_and_binds_resume(tmp_path, direction):
     for other in (old, copy.deepcopy(new)):
         if other is not old:
             other["opsd"]["hint_placement"] = "system"
-        with pytest.raises(ValueError, match="changed"):
+        with pytest.raises(ValueError, match="same-identity resume only"):
             check_resume(receipt, other)
     with pytest.raises(ValueError, match="private answers"):
         new_plan(source, **options, privileged_information=MODE, private_answers_path="/answers")

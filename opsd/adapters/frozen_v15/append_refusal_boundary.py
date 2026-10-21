@@ -7,6 +7,7 @@ agent loop remain untouched. No provider result is rewritten or synthesized.
 import functools
 import hashlib
 from pathlib import Path
+import re
 import types
 
 POLICY = 'trusted-candidate-finish-refusal-v1'
@@ -25,9 +26,17 @@ def candidate_evidence(result, stage):
         if not isinstance(rows, list):
             continue
         for row in rows:
-            if isinstance(row, dict) and row.get('err') == '空回复 finish=PROHIBITED_CONTENT':
+            error = row.get('err') if isinstance(row, dict) else None
+            # The frozen core already recognizes the historical Chinese
+            # prompt-block prefix. Add its English equivalent here, alongside
+            # both spellings of the candidate-finish extension.
+            if (isinstance(error, str) and (
+                    error in ('空回复 finish=PROHIBITED_CONTENT',
+                              'Empty response finish=PROHIBITED_CONTENT') or
+                    (error.startswith('No candidates: ') and
+                     re.search(r'"promptFeedback"\s*:\s*\{\s*"blockReason"\s*:\s*"PROHIBITED_CONTENT"', error)))):
                 evidence.append({'file': name, 'rubric': row.get('rubric'),
-                    'reason': 'PROHIBITED_CONTENT', 'provider_error': row['err']})
+                    'reason': 'PROHIBITED_CONTENT', 'provider_error': error})
     return evidence
 
 

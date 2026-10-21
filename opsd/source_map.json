@@ -251,12 +251,13 @@
       "staging_relative_path": "examples/train/answer_self_distillation/tests/test_opsd.py",
       "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_opsd.py",
       "source_sha256": "03258ff98c7bba485d427782d61e37a3b6e7b66284c904b2b3c0c5c680bf24a0",
-      "public_sha256": "0ef648fd17f59982edfae8b837724661095f611a85258723f75bbed29f8787d8",
+      "public_sha256": "36e2af9180f8bf24550a15ec56fb867cc5f54cf2a5b805077e03c0f0f248ade1",
       "unchanged": false,
       "category": "recipe_test",
       "changes": [
         "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture.",
-        "Remove optional corpus-specific full-release audit and its hard-coded real split counts; retain synthetic algorithm tests."
+        "Remove optional corpus-specific full-release audit and its hard-coded real split counts; retain synthetic algorithm tests.",
+        "Update stale resume-error assertions to match the existing public same-identity restriction; runtime behavior unchanged."
       ]
     },
     {
@@ -277,11 +278,12 @@
       "staging_relative_path": "examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
       "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
       "source_sha256": "f24ecb349e7a339c656c138c6f9b8216f225c30a3822fb1aaceabdd9153c978a",
-      "public_sha256": "daec399161d624950876319135c0d2523cb5b529c13aff6b38167309d8b5985c",
+      "public_sha256": "afa67b63da40a4bfaee65a008cc3f4fd296f50ad2afec483bf6d8343583f8e30",
       "unchanged": false,
       "category": "recipe_test",
       "changes": [
-        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture."
+        "Source-inspection root obtained from OPSD_TEST_SKYRL_ROOT; skip without explicit fixture.",
+        "Update stale resume-error assertion to match the existing public same-identity restriction; runtime behavior unchanged."
       ]
     },
     {
@@ -351,10 +353,12 @@
       "staging_relative_path": "adapters/frozen_v15/append_refusal_boundary.py",
       "source_relative_path": "append_v13_fd_recovery_20260909/append_refusal_boundary.py",
       "source_sha256": "629bf8d6023ae3cf7b69d9aa87921e377c7570a5bda31c28694292ce109c21a1",
-      "public_sha256": "629bf8d6023ae3cf7b69d9aa87921e377c7570a5bda31c28694292ce109c21a1",
-      "unchanged": true,
+      "public_sha256": "b580eac49800b52e4cb24fab15159f2d8123a5306cf9bffd7a1849e63ab90759",
+      "unchanged": false,
       "category": "adapter",
-      "changes": []
+      "changes": [
+        "Recognize current English candidate-finish and prompt-block refusal errors alongside historical forms; preserve the frozen-source guard and exception routing."
+      ]
     },
     {
       "public_relative_path": "adapters/frozen_v15/fd_recovery_regression.py",

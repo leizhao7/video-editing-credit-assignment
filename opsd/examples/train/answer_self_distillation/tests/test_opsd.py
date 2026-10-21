@@ -315,11 +315,11 @@ def test_launch_preserves_task_batch_optimizer_and_async_limits(tmp_path, direct
     other = copy.deepcopy(plan)
     other["opsd"]["kl_direction"] = "reverse" if direction == "forward" else "forward"
     other["opsd"]["loss"] = f"teacher_topk_tail_{other['opsd']['kl_direction']}_kl"
-    with pytest.raises(ValueError, match="changed"):
+    with pytest.raises(ValueError, match="same-identity resume only"):
         check_resume(receipt, other)
     changed = copy.deepcopy(plan)
     changed["opsd"]["gap_clip"] = 2.
-    with pytest.raises(ValueError, match="changed"):
+    with pytest.raises(ValueError, match="same-identity resume only"):
         check_resume(receipt, changed)
     cfg.trainer.algorithm.zero_variance_filter = True
     with pytest.raises(ValueError, match="normalization"):

@@ -49,7 +49,19 @@ Users must prepare their own authorized media and task artifacts. Exact score re
 
 ## Selected CPU verification
 
-The reviewed selection completed **82 passed, 16 skipped, 0 failed**. It covers an independent dense reference at exactly K=64 with 65 probability classes, chunked KL loss/gradients, full-vocabulary normalization, token mean under unequal simulated data-parallel partitions, token/media masks, teacher-only input construction, and bounded quota/retry utilities using synthetic clients. No GPU, real model, real dataset, service startup, or cloud call was used.
+For checks that do not need a SkyRL checkout, run from the repository root:
+
+```bash
+# Standard-library checkpoint identity checks; no package installation needed.
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_opsd_resume.py'
+
+# After installing training/requirements-cpu.txt in a separate environment:
+PYTHONPATH=opsd PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider opsd/tests/test_paper_top64.py
+```
+
+On 2026-10-21 these commands passed 9 resume tests and 3 K=64 numerical tests, respectively. They check matching checkpoint identities, rejection of changed objectives/data/contracts/graders, valid resume steps, and the paper's sparse KL calculation. They do not exercise the complete trainer or multimodal harness. The broader runner below still needs the matching SkyRL and harness sources; installing the PRM CPU requirements alone is insufficient.
+
+In the earlier environment with matching SkyRL and harness sources, the reviewed selection completed **82 passed, 16 skipped, 0 failed**. It covers an independent dense reference at exactly K=64 with 65 probability classes, chunked KL loss/gradients, full-vocabulary normalization, token mean under unequal simulated data-parallel partitions, token/media masks, teacher-only input construction, and bounded quota/retry utilities using synthetic clients. No GPU, real model, real dataset, service startup, or cloud call was used. This broader selection was not rerun successfully in the fresh PRM-only environment: collection stops at the missing SkyRL dependency.
 
 The 16 skips are two production-source inspections and 14 parameterized production-trimmer checks whose explicit source fixtures were not provided. No dependency error occurred in the completed selection. Tests used an existing CPU environment with Python 3.12, PyTorch 2.14.0, pytest 9.1.1, and SciPy 1.18.1, plus the recorded SkyRL checkout and existing harness source on `PYTHONPATH`. These are test-environment versions, not the recovered production training lockfile. The shared environment was not modified.
 

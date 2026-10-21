@@ -70,8 +70,9 @@ def prohibited_content_evidence(result, stage):
             # candidate finish boundary. Match only the adapter's exact trusted
             # error format; an explanation mentioning the marker is not enough.
             if (isinstance(error, str) and (
-                    error == '空回复 finish=PROHIBITED_CONTENT' or
-                    (error.startswith('无 candidates: ') and
+                    error in ('空回复 finish=PROHIBITED_CONTENT',
+                              'Empty response finish=PROHIBITED_CONTENT') or
+                    (error.startswith(('无 candidates: ', 'No candidates: ')) and
                      re.search(r'"promptFeedback"\s*:\s*\{\s*"blockReason"\s*:\s*"PROHIBITED_CONTENT"', error)))):
                 evidence.append({'file': name, 'rubric': row.get('rubric'),
                                  'reason': 'PROHIBITED_CONTENT', 'provider_error': error})

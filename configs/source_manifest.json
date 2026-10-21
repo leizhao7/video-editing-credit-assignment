@@ -524,8 +524,8 @@
     },
     {
       "path": "docs/opsd.md",
-      "sha256": "46bcb8fbe3720ec93d0dcc3153bced4fe0d8497ea3fd4fa85fbdfd57b3c52ef9",
-      "bytes": 7672
+      "sha256": "c9f0eade3414f9bea8acb937080cecb4e4b653cb4e3769328439a3a791403dcd",
+      "bytes": 8775
     },
     {
       "path": "docs/release_status.md",
@@ -534,8 +534,8 @@
     },
     {
       "path": "docs/training.md",
-      "sha256": "70e519125488633339dce399b0f856224ce709b5de3a1d4a46936fb4f887306d",
-      "bytes": 9498
+      "sha256": "d496711a5bc5ab4face04985c214a47c16d1e09bc938820c9eb2d0d7f366417e",
+      "bytes": 13659
     },
     {
       "path": "docs/workflow.md",
@@ -709,8 +709,8 @@
     },
     {
       "path": "opsd/adapters/frozen_v15/append_refusal_boundary.py",
-      "sha256": "629bf8d6023ae3cf7b69d9aa87921e377c7570a5bda31c28694292ce109c21a1",
-      "bytes": 2563
+      "sha256": "b580eac49800b52e4cb24fab15159f2d8123a5306cf9bffd7a1849e63ab90759",
+      "bytes": 3121
     },
     {
       "path": "opsd/adapters/frozen_v15/append_resume_checkpoint.py",
@@ -824,8 +824,8 @@
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/tests/test_opsd.py",
-      "sha256": "0ef648fd17f59982edfae8b837724661095f611a85258723f75bbed29f8787d8",
-      "bytes": 25241
+      "sha256": "36e2af9180f8bf24550a15ec56fb867cc5f54cf2a5b805077e03c0f0f248ade1",
+      "bytes": 25277
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/tests/test_topk.py",
@@ -834,8 +834,8 @@
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/tests/test_turn_demonstrations.py",
-      "sha256": "daec399161d624950876319135c0d2523cb5b529c13aff6b38167309d8b5985c",
-      "bytes": 19834
+      "sha256": "afa67b63da40a4bfaee65a008cc3f4fd296f50ad2afec483bf6d8343583f8e30",
+      "bytes": 19852
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/tests/test_turn_teacher_trim.py",
@@ -894,8 +894,8 @@
     },
     {
       "path": "opsd/source_map.json",
-      "sha256": "643a8bf0362833d7e4ba1d67ec7a2e8352b0540b68e0e11b556fd4a9b0806a22",
-      "bytes": 28353
+      "sha256": "e116882dcfdac448a885c0836cf9bffd62d2bf1cf86a032291251491515c83ff",
+      "bytes": 28793
     },
     {
       "path": "opsd/tests/run_cpu.py",
@@ -928,14 +928,24 @@
       "bytes": 8453
     },
     {
+      "path": "tests/test_grading_refusal_compatibility.py",
+      "sha256": "c75ae4cd606244c101f21821ff371aabec2150b73147b491a2cbbf10f5d28e7e",
+      "bytes": 9376
+    },
+    {
+      "path": "tests/test_opsd_resume.py",
+      "sha256": "74adff4c581ba10d2d919c0024758798c7943155c3509c7cdb46209618a0dccb",
+      "bytes": 5188
+    },
+    {
       "path": "tests/test_release_tools.py",
       "sha256": "dbea208a0704c5f0c1d2db3674b39764e1d7d8315a9536978f3dbb768388bacb",
       "bytes": 14157
     },
     {
       "path": "training/README.md",
-      "sha256": "93d1b364cba2d32a22a2335887ef55e9599a55bce37ad3eb584920cb741d2704",
-      "bytes": 405
+      "sha256": "dfbcef95cf796a4763cf4a4fd9561810506ff18642f1bfbec30b0233ad141f87",
+      "bytes": 735
     },
     {
       "path": "training/overlays/decay/append_agent_rl/client.py",
@@ -949,8 +959,8 @@
     },
     {
       "path": "training/overlays/decay/opencode_rl/grading_client.py",
-      "sha256": "e7a910811c22a1c16bc55433494300571d4a66d9f7f10213795daa79f25a1d51",
-      "bytes": 18156
+      "sha256": "d3f8fbb9603d0ebf116c4548860813b5b35d8ccef87164caff60b2f8c5f07ba6",
+      "bytes": 18253
     },
     {
       "path": "training/overlays/decay/opencode_rl/skyrl_adapter.py",
@@ -989,8 +999,8 @@
     },
     {
       "path": "training/provenance.json",
-      "sha256": "d6909d1fd88c045a233d0a440e4df86b49d4cf68a65cc277f06cc4fb1f4112bd",
-      "bytes": 49829
+      "sha256": "bfea47b8ca419a95d7dcf8718853483bd3e0774ce44560da17ba5bd4bc6f2f3e",
+      "bytes": 50057
     },
     {
       "path": "training/requirements-cpu.txt",
@@ -1264,8 +1274,8 @@
     },
     {
       "path": "training/src/opencode_rl/grading_client.py",
-      "sha256": "4edf1b6f5a4d80aad83ef48f92252d4a8e94e49b3a9cb37de4767417d61222b0",
-      "bytes": 17354
+      "sha256": "fd9bb84a6d14f8ec56d8e5a7148dc77d1e903fd270dc32736322bcc08a65c798",
+      "bytes": 17451
     },
     {
       "path": "training/src/opencode_rl/install_binary.py",

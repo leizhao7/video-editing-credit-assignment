@@ -349,8 +349,8 @@
       "path": "src/opencode_rl/grading_client.py",
       "source_relative_path": "src/opencode_rl/grading_client.py",
       "source_sha256": "4edf1b6f5a4d80aad83ef48f92252d4a8e94e49b3a9cb37de4767417d61222b0",
-      "public_sha256": "4edf1b6f5a4d80aad83ef48f92252d4a8e94e49b3a9cb37de4767417d61222b0",
-      "transformation": "byte-identical"
+      "public_sha256": "fd9bb84a6d14f8ec56d8e5a7148dc77d1e903fd270dc32736322bcc08a65c798",
+      "transformation": "public compatibility: recognize both English and historical Chinese provider-refusal errors; preserve terminal/refusal semantics"
     },
     {
       "path": "src/opencode_rl/install_binary.py",
@@ -811,8 +811,8 @@
       "path": "overlays/decay/opencode_rl/grading_client.py",
       "source_relative_path": "overlays/decay/opencode_rl/grading_client.py",
       "source_sha256": "e7a910811c22a1c16bc55433494300571d4a66d9f7f10213795daa79f25a1d51",
-      "public_sha256": "e7a910811c22a1c16bc55433494300571d4a66d9f7f10213795daa79f25a1d51",
-      "transformation": "byte-identical"
+      "public_sha256": "d3f8fbb9603d0ebf116c4548860813b5b35d8ccef87164caff60b2f8c5f07ba6",
+      "transformation": "public compatibility: recognize both English and historical Chinese provider-refusal errors; preserve terminal/refusal semantics"
     },
     {
       "path": "overlays/decay/opencode_rl/skyrl_adapter.py",
