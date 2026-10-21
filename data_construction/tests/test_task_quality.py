@@ -82,6 +82,36 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(before, {p: p.read_bytes() for p in before})
         self.assertTrue((self.root / "complete/request.json").is_file())
 
+    def test_changed_harness_source_invalidates_bound_audit(self):
+        harness = Path(quality.__file__).resolve().parents[1] / "evaluation/s12_task.py"
+        original_sha = quality.sha
+        with mock.patch.object(quality, "sha", side_effect=lambda path: (
+                "changed-harness" if Path(path) == harness else original_sha(path))):
+            with self.assertRaisesRegex(ValueError, "harness source changed"):
+                quality.verify_sources(self.value)
+
+    def test_changed_bound_or_released_tools_invalidate_audit(self):
+        changed = deepcopy(self.value)
+        changed["current_local_RL_tools"][0]["description"] = "Changed bound tool"
+        with self.assertRaisesRegex(ValueError, "Bound tool contract changed"):
+            quality.verify_sources(changed)
+        with mock.patch.object(quality, "FUNCTIONS", [{"name": "changed_release_tool"}]):
+            with self.assertRaisesRegex(ValueError, "Released tool contract changed"):
+                quality.verify_sources(self.value)
+        changed = deepcopy(self.value)
+        changed["tool_contract_source"] = "unknown"
+        with self.assertRaisesRegex(ValueError, "Unknown tool contract source"):
+            quality.verify_sources(changed)
+
+    def test_operator_tools_remain_bound_without_requiring_released_schema(self):
+        value = quality.prepare(self.task, tools=[{"name": "custom_tool", "description": "Custom runtime"}])
+        self.assertEqual(value["tool_contract_source"], "operator_supplied")
+        with mock.patch.object(quality, "FUNCTIONS", [{"name": "different_release_tool"}]):
+            quality.verify_sources(value)
+        value["current_local_RL_tools"][0]["description"] = "Changed custom runtime"
+        with self.assertRaisesRegex(ValueError, "Bound tool contract changed"):
+            quality.verify_sources(value)
+
     def test_missing_duplicate_unknown_or_uninspected_media_rejected(self):
         good = decision(self.value)
         bads = []

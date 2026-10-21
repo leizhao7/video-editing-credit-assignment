@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "4cd8397f512174de9020be3dd18b4ce60bf4d1592c9491a40ee8100bb0c78f7f",
-      "bytes": 10720
+      "sha256": "bb8ca4c91cf809511b626a4ffb1ae7287999e635318f235f9117c85939b6542b",
+      "bytes": 11971
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -324,8 +324,8 @@
     },
     {
       "path": "data_construction/task_quality.py",
-      "sha256": "cec91964aad768b244ba9293bffaa50819778c72375a6401be331bb6b330c86f",
-      "bytes": 31298
+      "sha256": "82eaf9c6a5ed8bd700a512a321ba0ff63ceab3f90d5fd9dbc0c2d72bb607a6ea",
+      "bytes": 32212
     },
     {
       "path": "data_construction/temporal_alignment.py",
@@ -429,8 +429,8 @@
     },
     {
       "path": "data_construction/tests/test_task_quality.py",
-      "sha256": "34df46224a80613e31466005fffb1126d133672b5e5ce6ab07c3d7dcbb923357",
-      "bytes": 12297
+      "sha256": "cb729703282132956095dd32906d91d3a8cab788052abaad880b5336b23e2202",
+      "bytes": 14149
     },
     {
       "path": "data_construction/tests/test_temporal_alignment.py",
@@ -443,6 +443,21 @@
       "bytes": 14531
     },
     {
+      "path": "data_construction/tests/test_workflow.py",
+      "sha256": "7f3972b710e7871846f985bde97135ac83d30cf72bdaebf5713d49f5d343ad74",
+      "bytes": 18303
+    },
+    {
+      "path": "data_construction/tests/test_workflow_doctor.py",
+      "sha256": "41f107685f1d687c9a83d93b44cfe51a58df079baf2c554c30975ca7ee592a47",
+      "bytes": 11363
+    },
+    {
+      "path": "data_construction/tests/test_workflow_process.py",
+      "sha256": "d22494a8e5d24a28a79224fabaaae633dae6275cfea808aec95dffdb07784acf",
+      "bytes": 4504
+    },
+    {
       "path": "data_construction/translate_script.py",
       "sha256": "727a00997c478a14dc01c9220ad0972f36f6837bc8247b5de1285161086fe61d",
       "bytes": 12693
@@ -451,6 +466,16 @@
       "path": "data_construction/verify_matches.py",
       "sha256": "1d8b2dcf1ce37157ec7ba4b5b0d4880bc20fdb70828f583acedb279f27e895d5",
       "bytes": 6256
+    },
+    {
+      "path": "data_construction/workflow.py",
+      "sha256": "1adc1db7eaf79e84d63978db5f362ce08b61cf93d3c03b3ae8f73cb9a1bd47a4",
+      "bytes": 37536
+    },
+    {
+      "path": "data_construction/workflow_doctor.py",
+      "sha256": "c4058938b979480a7eb5a416ab70bdf5898987f2980b3227ef1c736638d68564",
+      "bytes": 11920
     },
     {
       "path": "docs/agent_setup.md",
@@ -484,8 +509,8 @@
     },
     {
       "path": "docs/one_film.md",
-      "sha256": "24bed9f87092a9e16901f8ce4db329b2a4137e52e7fe90ea4ca5111ee450ef1b",
-      "bytes": 18137
+      "sha256": "130e449bdadc7d1a6bf059853edf3514371b48544d42ac692f50de8d16757231",
+      "bytes": 18510
     },
     {
       "path": "docs/opsd.md",
@@ -494,13 +519,18 @@
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "14fe6723a8d7d159fb8fa4240e5c6930966d31a4f76f5c58c6e194949b7bd642",
-      "bytes": 10463
+      "sha256": "4f0d3415772af6475ddb1ff966c8d48206595e513c72bc77906478f69fbe6dc7",
+      "bytes": 11704
     },
     {
       "path": "docs/training.md",
       "sha256": "70e519125488633339dce399b0f856224ce709b5de3a1d4a46936fb4f887306d",
       "bytes": 9498
+    },
+    {
+      "path": "docs/workflow.md",
+      "sha256": "2b551af65ae6885757c8d828107f42c93df44966f2c443f06012c1cf29d1c7c9",
+      "bytes": 10483
     },
     {
       "path": "evaluation/decay_overlay/grading_judge.py",
@@ -1606,6 +1636,11 @@
       "path": "training/third_party/SkyRL/uv.lock",
       "sha256": "41be5417436289d4e85d3838db923d4bcd8a8372ed07dfa936cf7929eca3952b",
       "bytes": 2877292
+    },
+    {
+      "path": "video_editing.py",
+      "sha256": "6e0d9886df8887218c00feafac8ad61c12c20998fb6ff271c514a0482e212b10",
+      "bytes": 202
     }
   ]
 }

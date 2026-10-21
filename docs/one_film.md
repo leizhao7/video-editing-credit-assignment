@@ -1,5 +1,7 @@
 # Generate tasks from one film
 
+**For a new run, use the [recommended project workflow](workflow.md).** Its `video_editing.py` entry point handles the commands below in order, saves progress, and connects quality review and scoring. This page remains the manual reference for inspecting or running individual stages; use a separate private root rather than mixing manual commands into a managed project.
+
 Start with one full film and its matching trailer in a new private directory. This walkthrough builds candidate CS, NS, RC, and FC tasks, attaches the released scoring configuration, and runs semantic quality review. The resulting accepted-task list can be passed directly to the scoring entry point. It does not reproduce the paper's private dataset or every historical repair.
 
 You need Python 3.12, FFmpeg/FFprobe, Tesseract with English language data, a Modal account, and one authenticated annotation CLI. Use English media with English as the default audio track: transcription requests English, and several clip-extraction steps use the default track. You do not need a local GPU or DaVinci Resolve: local commands prepare and assemble media; Modal runs TransNetV2, Whisper, and Demucs.

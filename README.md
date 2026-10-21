@@ -21,7 +21,7 @@ We build a **scalable pipeline for generating video-editing tasks** from real fi
 
 **Figure 1 · When process rewards help and hurt.** (a) Independent editing tasks, ordered by base-policy horizon; turns and base scores are task-type averages. (b) Final score differences from outcome-only GRPO. (c) Training rewards and the process-reward weight λ; shading marks the decay window over updates 20–30. [View full resolution](docs/assets/paper-teaser.png) · [Figure details](docs/experiment_notes.md#illustrations)
 
-> **Repository status:** This is a research source snapshot in release preparation. Local source checks and selected CPU tests are available; a complete GPU training build and end-to-end reproduction have not yet been verified. [What is included and what remains →](docs/release_status.md)
+> **Try your own film:** The [project workflow](docs/workflow.md) connects task generation, quality review, and submission scoring. Its components have real-media checks; the new unified wrapper has not yet been rerun on a complete film. Full GPU training and benchmark reproduction remain unverified. [Validation scope →](docs/release_status.md)
 
 ## Overview
 
@@ -52,37 +52,35 @@ These process-reward findings concern **LLM-judged turn-level rewards in our GRP
 
 ## Quick start
 
-Start with **local source verification**. These commands need Python 3.12 and the standard library; they do not train a model, contact a judge, or allocate a GPU.
+**[Start with the setup guide →](docs/workflow.md)** You need Python 3.12, local media tools, Modal, one authenticated annotation CLI, and a Gemini API key for quality review. The guide covers installation and account setup. No local GPU is required.
+
+From the installed repository checkout, give the workflow a movie, its matching trailer, and a **new private project directory**:
 
 ```sh
-git clone https://github.com/leizhao7/video-editing-credit-assignment.git
-cd video-editing-credit-assignment
+python video_editing.py init \
+  --project "$HOME/video-editing-demo" \
+  --movie '/path/to/movie.mkv' --trailer '/path/to/trailer.mp4' \
+  --name myfilm --backend claude --model sonnet
 
-python3 scripts/check_release.py
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_release_tools.py'
+python video_editing.py doctor --project "$HOME/video-editing-demo"
+python video_editing.py run --project "$HOME/video-editing-demo" --plan
+
+# Paid preprocessing/annotation; review only one candidate on this first run.
+python video_editing.py run --project "$HOME/video-editing-demo" --review-limit 1
+python video_editing.py status --project "$HOME/video-editing-demo"
 ```
 
-The source check verifies syntax, source hashes, symlinks, and excluded artifact types. The tests exercise source assembly, manifest validation, and patch verification with temporary synthetic fixtures. Neither check establishes that the full training stack is installed or that benchmark scores can be reproduced.
+Replace the paths and choose an annotation model available to your account. `init`, `doctor`, `status`, and `run --plan` make no cloud/model calls. `run` performs preprocessing, annotation, four task builders, scoring preparation, and Gemini quality review; it can incur Modal and model usage. Use `run --until probe` for a local media check, or `run --until tasks` to stop before Gemini review.
 
-**Next:** choose a component below. Its guide describes dependencies, supported checks, and the remaining runtime requirements.
+Progress and log links appear in the private project's `README.md`. Rerunning construction or review resumes saved work. `accepted_tasks.json` contains candidates that passed review; `review --review-limit 5` reviews up to five additional tasks. Task generation includes scoring rules, but **an agent must submit its edit before it can receive a score**. `score` checks submissions locally; `score --execute` starts a new evaluation, using Gemini for RC/FC.
 
-To try task generation on your own media, follow **[one film from setup to candidate tasks](docs/one_film.md)**. It covers local dependencies, Modal, annotation, dialogue preparation, semantic quality review, sampling, and outcome scoring.
+For source-only verification, run `python scripts/check_release.py` and `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_release_tools.py'`. These standard-library checks do not exercise the full training or media pipeline.
 
 ### Set up an annotation agent
 
-Task generation supports **Claude Code, Codex CLI, and OpenCode 1.x**. Pick the CLI you already use, install it, and sign in with its own login command. The setup wizard asks for your backend, an available model, and a private data directory:
+Task generation supports **Claude Code, Codex CLI, and OpenCode 1.x**. Install and sign in to one CLI, then pass `--backend` and `--model` to `video_editing.py init`. The project saves those choices, so it does not require sourcing a shell profile. OpenCode uses a `provider/model` ID; `--cli` selects a particular executable.
 
-```sh
-python3 data_construction/setup_agent.py
-```
-
-It checks the CLI version and saves a separate configuration for each backend outside the repository. Copy the `source` command it prints to activate that configuration, then its check command to verify file reading, image viewing, and JSON output. The check makes a small real model call; setup alone does not.
-
-Switch between saved configurations with one command, for example:
-
-```sh
-source ~/.config/video-editing-credit-assignment/codex.env
-```
+For the [manual individual-stage workflow](docs/one_film.md), `python data_construction/setup_agent.py` remains available to create sourceable backend profiles. The optional [live CLI check](docs/agent_setup.md#3-verify-before-processing-media) tests file/image access and JSON output with a real model call.
 
 **[Installation, login, model selection, and troubleshooting →](docs/agent_setup.md)**
 
@@ -90,13 +88,14 @@ source ~/.config/video-editing-credit-assignment/codex.env
 
 | I want to… | Guide | Source |
 | :--- | :--- | :--- |
-| Set up or switch an annotation agent | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
-| Generate candidate tasks from one film | [One-film walkthrough](docs/one_film.md) | [`pipeline.py`](data_construction/pipeline.py) |
+| Generate and review tasks from my movie/trailer | [Recommended project workflow](docs/workflow.md) | [`video_editing.py`](video_editing.py) |
+| Set up an annotation CLI | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
+| Run individual construction stages | [Manual one-film reference](docs/one_film.md) | [`pipeline.py`](data_construction/pipeline.py) |
 | Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
 | Review and sample generated tasks | [Quality review](docs/data_construction.md#quality-review-and-sampling) | [`task_quality.py`](data_construction/task_quality.py) · [`quality_selection.py`](data_construction/quality_selection.py) |
 | Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
 | Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |
-| Score agent submissions | [Evaluation](docs/evaluation.md) | [`task_pipeline.py`](evaluation/task_pipeline.py) |
+| Check and score completed edits | [Project scoring](docs/workflow.md#5-check-and-score-an-agents-edit) · [Evaluation details](docs/evaluation.md) | [`video_editing.py`](video_editing.py) · [`task_pipeline.py`](evaluation/task_pipeline.py) |
 | Find recorded settings and dependency identities | [Experiment notes](docs/experiment_notes.md) | [`configs/`](configs/) |
 | Check reproduction gaps and release boundaries | [Release status](docs/release_status.md) | [`scripts/check_release.py`](scripts/check_release.py) |
 
@@ -104,6 +103,7 @@ source ~/.config/video-editing-credit-assignment/codex.env
 <summary><strong>Repository map</strong></summary>
 
 ```text
+video_editing.py     Project setup, resumable generation, review, and scoring
 data_construction/   Task-generation pipeline, adapters, and generic prompts
 training/            Fixed-PRM source, separate decay overlay, and CPU tests
 opsd/                Forward-KL recipe, teacher-input code, and adapters

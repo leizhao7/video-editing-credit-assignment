@@ -255,6 +255,20 @@ def prepare(task, stage=None, tools=None):
 
 
 def verify_sources(value):
+    harness_path = Path(__file__).resolve().parents[1] / "evaluation/s12_task.py"
+    if sha(harness_path) != value.get("harness_sha256"):
+        raise ValueError("Released harness source changed during audit")
+    contract = value.get("current_local_RL_tools")
+    if (not isinstance(contract, list) or not contract
+            or any(not isinstance(tool, dict) for tool in contract)
+            or hashlib.sha256(canonical(contract)).hexdigest() != value.get("tool_contract_sha256")):
+        raise ValueError("Bound tool contract changed during audit")
+    source = value.get("tool_contract_source")
+    if source == "recovered_fixed_schema":
+        if hashlib.sha256(canonical(FUNCTIONS)).hexdigest() != value["tool_contract_sha256"]:
+            raise ValueError("Released tool contract changed during audit")
+    elif source != "operator_supplied":
+        raise ValueError("Unknown tool contract source")
     released = grading_sources(value["stage"])
     if set(released) != set(value["released_grading_sources"]) or any(
             sha(path) != value["released_grading_sources"][key]["sha256"] for key, path in released.items()):

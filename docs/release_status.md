@@ -34,6 +34,12 @@ The local outcome entry point completed a real four-task scoring check with Gemi
 
 The portable quality audit also completed one real Gemini 3.8 Flash request for each of those four candidate tasks. All returned `keep_candidate`, passed the response/coverage checks, and preserved the bound task and scoring-source hashes. The generated accepted index fed the sampler with an explicit single-film test split. Its output passed submission preflight and a further complete scoring run for all four stages, including the new incomplete-rubric guard. These four model assessments validate the integration, not overall dataset quality or reproduction of the historical audit decisions.
 
+## Unified project workflow checks
+
+The `video_editing.py` entry point adds project setup, local prerequisite checks, ordered generation, incremental quality review, progress reporting, and submission preflight/scoring. On 2026-10-20, 397 regression tests passed: 287 construction/workflow tests and 110 scoring/release tests. The new tests cover all-stage orchestration with synthetic outputs and mocked providers, interrupted review recovery without a second model request, exclusion of repair decisions, changed-input rejection, stale-score handling, and real local process cleanup on Ctrl-C.
+
+Seven local CLI checks also passed using small FFmpeg-generated movie/trailer files and paths containing spaces: initialization, prerequisite checks, plan, media probe, resumed probe, status, and submission prerequisites. The probe ran once across two invocations, and the checks worked without a Gemini key. No cloud or model stages ran in this check. The unified entry point has not yet been rerun from raw media through all stages on a complete film; the component-level evidence above remains the full-film validation record. Construction and quality reviews resume saved work; each `score --execute` invocation starts a fresh evaluation.
+
 ## Work still needed before claiming full reproducibility
 
 1. Restore the original reference-answer OPSD recipe with aggregate SHA-256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`. The final turn-suggestion recipe must not be silently substituted.
