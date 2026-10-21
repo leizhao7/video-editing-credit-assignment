@@ -137,7 +137,7 @@ def run(slug, name):
         return False
     nb, nc = need(d)
     if not nb and not nc and isinstance(d.get("logline_en"), str) and d["logline_en"].strip():
-        print(f"  [{name}] 已有译文，跳过", flush=True); return True
+        print(f"  [{name}] English fields already complete; skipping", flush=True); return True
     task_dir = Path(ROOT) / "edit" / f"task_{slug}"
     work = task_dir / "work"
     work.mkdir(exist_ok=True)
@@ -145,24 +145,24 @@ def run(slug, name):
         raise ValueError("Translation working outputs must remain inside the task directory")
     working = Path(tempfile.mkdtemp(prefix="translation-", dir=work))
     patch_path = working / "fields.json"
-    prompt = f"""这是《{name}》预告片场记表里要放进任务提示词的文字，需要补齐英文版字段。
-原文可能已经是英文；若已经是自然英文，原样复制到对应的 `_en` 字段。原有字段不得修改。
+    prompt = f"""Complete the English fields used in task briefs for the trailer annotation of {name}.
+The source may already be in English. Copy natural English exactly into the corresponding `_en` fields. Do not modify any original fields.
 
 ```json
 {json.dumps(payload, ensure_ascii=False, indent=1)}
 ```
 
-只把英文新增字段写到 {json.dumps(str(patch_path), ensure_ascii=False)}，不要重写完整场记表。
-输出 JSON 必须恰好包含以下三个顶层字段：
-- `logline_en`：非空英文字符串。
-- `beats`：按输入顺序覆盖每个 beat，每项只能含 `id`、`name_en`、`what_en`。
-- `chunks`：按输入顺序覆盖每个 chunk，每项只能含 `id`、`what_en`。
-所有译文字段均为非空字符串。IDs 必须与输入逐项一致，不得缺漏、重复、重排或增加。
-不要输出 `shots`、原字段或其他额外字段。不要修改 `stages/script.json` 或其他输入文件。
-调用方会验证这份小 patch 并将英文新增字段合并到原稿；原有数据由程序原样保留。
+Write only the additional English fields to {json.dumps(str(patch_path), ensure_ascii=False)}; do not rewrite the complete annotation.
+The output JSON must contain exactly three top-level fields:
+- `logline_en`: a nonempty English string.
+- `beats`: every input beat in order, each containing only `id`, `name_en`, and `what_en`.
+- `chunks`: every input chunk in order, each containing only `id` and `what_en`.
+Every translated field must be a nonempty string. Preserve IDs and their order exactly; do not omit, duplicate, reorder, or add entries.
+Do not output `shots`, original fields, or any extra fields. Do not modify `stages/script.json` or other inputs.
+The caller validates this small patch and merges the English fields while preserving the original data programmatically.
 
-译文要是**剪辑室里会说的英文**，不是逐字直译：具体、干脆、说清画面上发生了什么。
-人名地名保留原样。保存上述 patch 后结束本次任务。"""
+Use clear, concise English suitable for an editing brief, describing concrete visible events rather than translating word for word.
+Preserve proper names. End the task after saving the patch."""
     t0 = time.monotonic()
     command = build_annotation_command(prompt, task_dir, tools="Read,Write,Edit,Bash(python3:*)",
                                        effort=EFFORT)
@@ -248,14 +248,14 @@ def main():
     except ValueError as exc:
         P.error(str(exc))
     if not films:
-        sys.exit("没有可翻译的片")
-    print(f"翻译: {len(films)} 部\n", flush=True)
+        sys.exit("No films are available for translation")
+    print(f"Preparing English fields for {len(films)} films\n", flush=True)
     if A.workers > 1:
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             n = sum(bool(x) for x in ex.map(lambda kv: run(*kv), films.items()))
     else:
         n = sum(bool(run(s, v)) for s, v in films.items())
-    print(f"\n完成 {n}/{len(films)}")
+    print(f"\nCompleted {n}/{len(films)} films")
     if n != len(films):
         raise SystemExit(1)
 

@@ -277,7 +277,7 @@ class RuntimeBoundaries(unittest.TestCase):
                     elif backend == "claude" and stage == "s4":
                         self.assertIn("S4 visual access incomplete", errors[0])
                     else:
-                        self.assertIn("没被本次运行写过", errors[0])
+                        self.assertIn("was not written by this attempt", errors[0])
 
     def test_pending_marker_requires_success_state_not_just_old_file(self):
         self.write_json("exports/sample/state.json", {"s4": {"ok": False}})

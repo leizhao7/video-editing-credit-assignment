@@ -24,7 +24,7 @@ reported instead of silently renormalising the remaining weights.
 import argparse, json, os, subprocess, sys
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件）")
+    raise ImportError(f"{__file__} is a command-line script that writes files; it cannot be imported")
 
 from score_cli import add_task_arguments, validate_weights, task_paths, read_component, evaluate_tasks
 
@@ -72,8 +72,8 @@ def combine(task):
     if miss:
         return {"task": name, "final": None, "missing": miss,
                 "deterministic": d_detail,
-                "why": f"缺 {'、'.join(miss)}，不合成——"
-                       f"缺分项时不静默重归一化"}
+                "why": f"Missing {', '.join(miss)}; no aggregate is produced. "
+                       "Weights are not renormalized when components are missing."}
     if judge_only():
         VERSION = DIRECT_JUDGE_CONTRACT
     else:
@@ -103,16 +103,19 @@ def combine(task):
                              "detail": d_detail},
            "weight_sum": weight_sum,
            "spread": round(abs(b["score"] - r["score"]), 3),
-           "note": ("训练直接使用 blind/ref 初判，无额外一致性或产物合法性复核；" if judge_only() else
-                   "保留初判；blind/ref 分项经视频证据联合复核，blind 不按 reference 相似度修分；") +
-                   "deterministic 是提交 cuts 与 golden 入点/时长的任务 verifier 距离分"}
+           "note": ("Initial blind/reference judgments are used directly without an additional consistency review; "
+                    "submission validation follows the active policy. " if judge_only() else
+                    "Initial judgments are retained. Blind/reference components are jointly reviewed against video evidence; "
+                    "blind scores are not adjusted for similarity to the reference. ") +
+                   "The deterministic component is the task verifier's distance score comparing submitted cuts "
+                   "with the golden in-points and durations."}
     return out
 
 
 rows = evaluate_tasks(tasks, combine, lambda task: f"{task}/evidence/s3_final.json")
 ok = [x for x in rows if x["final"] is not None]
 if not A.quiet:
-    print(f'{"":<8}{"片段":<26}{"总分":>7}{"blind":>8}{"ref":>7}{"差":>6}')
+    print(f'{"":<8}{"Task":<26}{"Final":>7}{"blind":>8}{"ref":>7}{"Spread":>7}')
     for x in sorted(rows, key=lambda y: -(y["final"] if y["final"] is not None else -1)):
         if x.get("invalid_submission"):
             print(f'  {x["task"]} 0.000 invalid: {x["reason"]}')
@@ -120,23 +123,23 @@ if not A.quiet:
         if x["final"] is None:
             print(f'  {x["task"]:<32} —      {x["why"]}')
             continue
-        kind = "等长" if "s3_even" in x["task"] else "golden"
+        kind = "even" if "s3_even" in x["task"] else "golden"
         nm = x["task"].replace("/tmp/s3_even_", "").replace("/s_3", "")
         print(f'  {kind:<6}{nm:<24}{x["final"]:>7.3f}'
               f'{x["blind"]["score"]:>8.3f}{x["referenced"]["score"]:>7.3f}'
-              f'{x["spread"]:>6.3f}')
+              f'{x["spread"]:>7.3f}')
 if ok:
     import statistics as st
     g = [x["final"] for x in ok if "s3_even" not in x["task"]]
     e = [x["final"] for x in ok if "s3_even" in x["task"]]
     print()
     if g:
-        print(f"  golden   中位 {st.median(g):.3f}  分布 {min(g):.2f}–{max(g):.2f}  n={len(g)}")
+        print(f"  golden   median {st.median(g):.3f}  range {min(g):.2f}–{max(g):.2f}  n={len(g)}")
     if e:
-        print(f"  等长对照  中位 {st.median(e):.3f}  分布 {min(e):.2f}–{max(e):.2f}  n={len(e)}")
+        print(f"  equal-length control  median {st.median(e):.3f}  range {min(e):.2f}–{max(e):.2f}  n={len(e)}")
     if g and e:
-        print(f"  间隔     golden 最低 {min(g):.3f}  对照最高 {max(e):.3f}  "
-              + ("✅ 不重叠" if min(g) > max(e) else "⚠ 有重叠"))
+        print(f"  separation  golden minimum {min(g):.3f}  control maximum {max(e):.3f}  "
+              + ("No overlap" if min(g) > max(e) else "Warning: overlapping ranges"))
 
 if len(ok) != len(rows):
     print(f"Incomplete scoring: {len(rows) - len(ok)}/{len(rows)} task(s) have no final score", file=sys.stderr)

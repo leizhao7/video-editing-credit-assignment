@@ -8,13 +8,13 @@ import argparse, base64, json, os, re, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件、发请求）")
+    raise ImportError(f"{__file__} is a command-line script and cannot be imported because it writes files and sends requests")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from s4e_rubrics import RUBRICS, aggregate  # noqa: E402
 
 ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
-DEPLOY = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "")          # 部署名，不是 "gpt-5.5"
+DEPLOY = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "")          # Deployment name rather than a fixed model ID
 API_VERSION = "preview"
 
 P = argparse.ArgumentParser()
@@ -23,12 +23,12 @@ P.add_argument("--tasks")
 P.add_argument("-j", "--workers", type=int, default=4)
 P.add_argument("-m", "--model", default=DEPLOY)
 P.add_argument("--max-tokens", type=int, default=4000,
-               help="推理模型，可见回答之前还要花一部分在隐藏推理上，给宽一点")
+               help="Token budget includes hidden reasoning; allow enough for a visible response")
 P.add_argument("--timeout", type=int, default=180)
 P.add_argument("--no-images", action="store_true",
-               help="不传联络表，只看数字——用来对照『看得见画面』值多少")
+               help="Legacy diagnostic flag: omit contact sheets; rubrics requiring them remain unscored")
 P.add_argument("--suffix", default="",
-               help="写进 s4e_score<suffix>.json，别覆盖上一轮")
+               help="Write s4e_score<suffix>.json to preserve the previous run")
 P.add_argument("--quiet", action="store_true")
 A = P.parse_args()
 
@@ -37,7 +37,7 @@ KEY = os.environ.get("AZURE_AI_KEY")
 if PROVIDER == "azure" and not (KEY and ENDPOINT and A.model):
     sys.exit("Set AZURE_AI_KEY, AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT (or --model)")
 if PROVIDER == "gemini" and not os.environ.get("GOOGLE_AI_STUDIO_API_KEY"):
-    sys.exit("GOOGLE_AI_STUDIO_API_KEY 没设")
+    sys.exit("GOOGLE_AI_STUDIO_API_KEY is not set")
 
 
 def judge_identity():
@@ -74,9 +74,9 @@ def parse_band_response(value):
 def chat(messages, max_tokens):
     if os.environ.get("S12_JUDGE_PROVIDER", "gemini").lower() == "gemini":
         return chat_gemini(messages, max_tokens)
-    # ↓ 以下是 Azure/gpt-5.5 那条路
-    """Azure chat completions。gpt-5.5 是推理模型：用 max_completion_tokens，
-    不要动 temperature。429 退避重试。"""
+    # Legacy Azure/gpt-5.5 path below
+    """Azure chat completions: the reasoning model uses max_completion_tokens.
+    Leave temperature unset and retry HTTP 429 with backoff."""
     # Keep the optional seed explicit when the configured Azure backend supports it.
     _body = {"model": A.model, "messages": messages,
              "max_completion_tokens": max_tokens}
@@ -99,12 +99,12 @@ def chat(messages, max_tokens):
             ch = d["choices"][0]
             txt = ch["message"]["content"] or ""
             if not txt.strip():
-                # 推理模型把预算全花在隐藏推理上，可见回答是空的。这个失败原本无声无息：
-                # err 只在 `out` 非空时才写，所以 band=None 配 err="" 看着像没发生过。
+                # The model can spend its token budget on hidden reasoning and return no visible answer.
+                # Record an explicit error so band=None is not paired with an empty diagnostic.
                 u = d.get("usage", {})
-                return "", (f'空回答 finish_reason={ch.get("finish_reason")} '
-                            f'推理 {u.get("completion_tokens_details", {}).get("reasoning_tokens", "?")} tok '
-                            f'/ 上限 {max_tokens}')
+                return "", (f'Empty response finish_reason={ch.get("finish_reason")} '
+                            f'reasoning {u.get("completion_tokens_details", {}).get("reasoning_tokens", "?")} tokens '
+                            f'/ limit {max_tokens}')
             return txt, ""
         except urllib.error.HTTPError as e:
             body_txt = e.read().decode("utf-8", "replace")[:300]
@@ -124,14 +124,14 @@ PROSE = ("declared_note", "note", "why", "declared_reason", "music_bridge_becaus
 
 
 def strip(x):
-    """把作业自己写的说明全部摘掉，只留下做了什么。
+    """Remove submission-authored explanations while retaining declared edit choices.
 
-    量出来的：music 那条同一个入点数字，把平铺的 note 换成一段有论证的文字，十份的
-    band 从均 1.20 涨到 2.90，无一例外。判官在读文案，不在听音乐。作业的自述不是证据，
-    是主张——判官该看的是画面、声音和测量，自己判断剪得好不好。
+    In the recorded ten-case check, replacing a plain music note with a persuasive explanation
+    while keeping the same in-point raised mean bands from 1.20 to 2.90. Submission prose is a claim,
+    not evidence; the judge should assess pictures, sound, and measurements independently.
 
-    机械核对（reconcile）留着：那是拿声明的结构（cut / under / prelap 这些取值）去对
-    渲染，对的是事实不是文笔。摘掉的只有散文。
+    Retain mechanical reconciliation between declared structures (cut / under / prelap) and
+    the render. Only explanatory prose is removed.
     """
     if isinstance(x, dict):
         return {k: strip(v) for k, v in x.items() if k not in PROSE}
@@ -141,14 +141,14 @@ def strip(x):
 
 
 
-# ── Gemini（AI Studio）判分后端 ────────────────────────────────────────────
+# ── Gemini (AI Studio) grading backend ────────────────────────────────────────────
 # The Gemini backend uses its own sampling settings and payload format.
 #
-# 两边消息格式不同，这里做转换：
+# Convert between the provider message formats:
 #   system            -> systemInstruction
 #   {"type":"text"}   -> {"text": ...}
 #   image_url(data:)  -> {"inlineData": {"mimeType", "data"}}
-# Gemini 3 是思考模型，回复里可能混 thought 部件，只取非 thought 的 text。
+# Gemini 3 responses may include thought parts; retain only non-thought text.
 _GEMINI_MODEL = os.environ.get("S12_GEMINI_MODEL", "gemini-3.1-pro-preview")
 _GEMINI_HOST = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -163,10 +163,10 @@ def chat_gemini(messages, max_tokens):
     return gemini_chat(messages, max_tokens, model=A.model, timeout=A.timeout)
 
 def slice_evidence(ev, rid):
-    """只给这条 rubric 要的那部分。
+    """Include only evidence needed by this rubric.
 
-    判 bridge 的不需要读音乐包络，判音乐的不需要逐条 take 的文本。输入收窄，回答就不会
-    在四件事之间飘。
+    Bridge grading does not require the music envelope; music grading does not require each take transcript.
+    Narrow the inputs to keep each judgment focused.
     """
     from grading_judge import black_context
     base = {"task": ev["task"], "stretch_dur_s": ev["stretch_dur_s"],
@@ -221,10 +221,10 @@ def slice_evidence(ev, rid):
 
 
 def sheet_part(task, ev, r):
-    """把这条 rubric 该看的那张联络表做成 image_url 部件。
+    """Convert this rubric's contact sheet to an image_url part.
 
-    只挂一张。三张全给会让它在不该看的图里找证据——判 bridge 该不该有的那条要看接点
-    两侧，给它每镜一帧那张只会引它去谈内容。
+    Attach only the relevant sheet. Bridge grading needs evidence from both sides of a join;
+    a one-frame-per-shot sheet could redirect the judgment toward shot content.
     """
     sid = r.get("sheet")
     if sid == "music_timeline":
@@ -333,8 +333,8 @@ def call(task, ev, r):
         return {"rubric": r["id"], "title": r["title"], "band": None, "rows": "", "why": "",
                 "saw_image": img_ok, "saw_audio": False, "image_blocked": True,
                 "sec": round(time.time()-t0, 1), "err": "required media blocked; v5 forbids text-only downgrade"}
-    if not out and err.startswith("空回答"):
-        # 加图之后推理变长，4000 不够。翻倍再来一次比丢掉一整条 rubric 强得多。
+    if not out and err.startswith("Empty response"):
+        # Image processing can exhaust the initial 4000-token budget; retry once with twice the limit.
         messages = build_messages(task, ev, r, with_image=img_ok)
         out, err = request(messages, A.max_tokens * 2)
         retried_long = True
@@ -358,9 +358,9 @@ def call(task, ev, r):
             out, err = retry_out, retry_err
             band, rows, why = parse_band_response(out)
         elif retry_err:
-            err = f"格式重试失败 — {retry_err}"
+            err = f"Format retry failed — {retry_err}"
     if band is None and out:
-        err = f"回答不符合完整 BAND/ROWS/WHY 单行格式 — {out[-160:]}"
+        err = f"Response does not match the complete one-line BAND/ROWS/WHY format — {out[-160:]}"
     return {"rubric": r["id"], "title": r["title"], "band": band,
             "rows": rows[:120], "why": why, "retried_long": retried_long,
             "retried_format": retried_format,
@@ -375,16 +375,16 @@ def judge(task):
     ep = f"{task}/evidence/s4e_evidence.json"
     name = task.split("training_task/")[-1]
     if not os.path.exists(ep):
-        print(f"  {name:<30} ★ 没有 evidence，先跑 s4e_evidence.py", flush=True)
+        print(f"  {name:<30} ★ Missing evidence; run s4e_evidence.py first", flush=True)
         return None
     ev = json.load(open(ep))
     if not A.no_images and not ev.get("contact_sheets"):
-        print(f"  {name:<30} ⚠ evidence 里没有联络表，重跑 s4e_evidence.py 才有图",
+        print(f"  {name:<30} ⚠ Evidence has no contact sheets; rerun s4e_evidence.py to generate them",
               flush=True)
     with ThreadPoolExecutor(max_workers=4) as ex:
         res = list(ex.map(lambda r: call(task, ev, r), RUBRICS))
     agg = aggregate({x["rubric"]: x["band"] for x in res})
-    # 缺条目的分是用剩下几条重新归一化算的，不能跟完整的分并排比。标出来。
+    # Partial scores renormalize the answered weights; flag them and exclude them from complete-score statistics.
     W = {r["id"]: r["weight"] for r in RUBRICS}
     agg["weight_answered"] = round(sum(W[k] for k in (agg.get("per_rubric") or {})), 3)
     lost_images = [x["rubric"] for x in res if x.get("sheet") and not x.get("saw_image")]
@@ -398,7 +398,7 @@ def judge(task):
         s = agg["score"]
         print(f"  {name:<30} {('%.3f' % s) if s is not None else '  —  '}   " +
               "  ".join(f'{x["rubric"][:4]} {x["band"] if x["band"] is not None else "?"}'
-                        + ("" if x["saw_image"] or not x["sheet"] else "(无图)")
+                        + ("" if x["saw_image"] or not x["sheet"] else "(no image)")
                         for x in res), flush=True)
         for x in res:
             if x["why"]:
@@ -408,14 +408,14 @@ def judge(task):
         if agg.get("penalty"):
             print(f"      ⚠ {agg['penalty']}", flush=True)
         if agg["partial"]:
-            print(f"      ⚠ 缺 {'、'.join(agg['missing'])}，这个 {agg['score']} 只是"
-                  f"剩下 {agg['weight_answered']:.0%} 权重归一化来的，不入统计", flush=True)
+            print(f"      ⚠ Missing {', '.join(agg['missing'])}; {agg['score']} only reflects "
+                  f"the answered {agg['weight_answered']:.0%} of weight, renormalized; excluded from statistics", flush=True)
     return None if agg["partial"] else agg["score"]
 
 
 tasks = json.load(open(A.tasks)) if A.tasks else [A.task]
 _jid = judge_identity()
-print(f"评 {len(tasks)} 份 × 4 条 rubric   判官 {_jid['model']} "
+print(f"Grading {len(tasks)} submissions × 4 rubrics; judge {_jid['model']} "
       f"({_jid['provider']})\n", flush=True)
 with ThreadPoolExecutor(max_workers=A.workers) as ex:
     got = [x for x in ex.map(judge, tasks) if x is not None]
@@ -426,8 +426,8 @@ for t in tasks:
         d = json.load(open(f))
         blk += [f'{d["task"]}·{x["rubric"]}' for x in d["rubrics"] if x.get("image_blocked")]
 if blk:
-    print(f"\n图被内容过滤挡下 {len(blk)} 次，已退回纯数字重判：{'、'.join(blk)}", flush=True)
+    print(f"\nRequired media blocked in {len(blk)} rubric calls; affected rubrics remain unscored: {', '.join(blk)}", flush=True)
 if got:
     import statistics as st
-    print(f"\n完整评出 {len(got)}/{len(tasks)}   中位 {st.median(got):.3f}   "
-          f"分布 {min(got):.2f}–{max(got):.2f}")
+    print(f"\nComplete scores {len(got)}/{len(tasks)}; median {st.median(got):.3f}   "
+          f"range {min(got):.2f}–{max(got):.2f}")

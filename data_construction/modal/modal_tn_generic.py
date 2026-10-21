@@ -168,7 +168,7 @@ def detect(film: str, name: str, crop: float = 0.0, crop_expr: str = "",
         else: i += 1
     bounds = np.unique(np.concatenate([[0.0], np.array(b), [N / fps]]))
     d = np.diff(bounds)
-    print(f"\n{len(d)} shots @ thr={th}   中位 {np.median(d):.2f}s  最长 {d.max():.1f}s  "
+    print(f"\n{len(d)} shots @ thr={th}   median {np.median(d):.2f}s; longest {d.max():.1f}s  "
           f"<1s {int((d<1).sum())}  >10s {int((d>10).sum())}", flush=True)
     _write_json(_data_path(film, name + "_shots.json"),
                 {"fps": fps, "n": int(len(d)), "bounds": [round(x, 3) for x in bounds.tolist()]})

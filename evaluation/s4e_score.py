@@ -14,13 +14,13 @@ silently renormalising the remaining weight.
 import argparse, json, os, sys
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本（会写文件）")
+    raise ImportError(f"{__file__} is a command-line script that writes files")
 
 from score_cli import add_task_arguments, validate_weights, task_paths, read_component, evaluate_tasks
 
 P = argparse.ArgumentParser()
 add_task_arguments(P)
-P.add_argument("--suffix", default="", help="读 s4e_score<suffix>.json / s4e_score_ref<suffix>.json")
+P.add_argument("--suffix", default="", help="Read s4e_score<suffix>.json / s4e_score_ref<suffix>.json")
 P.add_argument("--w-blind", type=float, default=0.6)
 P.add_argument("--w-ref", type=float, default=0.4)
 P.add_argument("--quiet", action="store_true")
@@ -43,11 +43,12 @@ def combine(task):
     rp = f"{task}/evidence/s4e_score_ref{A.suffix}.json"
     b = read_component(bp)
     r = read_component(rp)
-    miss = [n for n, x in (("盲判", b), ("参照", r))
+    miss = [n for n, x in (("blind", b), ("referenced", r))
             if x is None or not valid_score(x.get("score")) or (x.get("partial") and not judge_only())]
     if miss:
         return {"task": name, "final": None, "missing": miss,
-                "why": f"缺 {'、'.join(miss)}，不合成——用单边的分冒充总分比没有分更糟"}
+                "why": f"Missing {', '.join(miss)}; no aggregate is produced. "
+                       "A single component cannot stand in for the final score."}
     if judge_only():
         VERSION = DIRECT_JUDGE_CONTRACT
     else:
@@ -71,15 +72,17 @@ def combine(task):
            "referenced": {"score": r["score"], "per_rubric": r.get("per_rubric"), "weight": A.w_ref},
            "weight_sum": weight_sum,
            "spread": round(abs(b["score"] - r["score"]), 3),
-           "note": ("训练直接使用 blind/ref 初判，无额外一致性或产物合法性复核" if judge_only() else
-                   "保留初判；blind/ref 分项经实际交付视频和音频联合复核，reference 仅作标定")}
+           "note": ("Initial blind/reference judgments are used directly without an additional consistency review; "
+                    "submission validation follows the active policy." if judge_only() else
+                    "Initial judgments are retained. Blind/reference components are jointly reviewed against the "
+                    "delivered video and audio; the reference is used only for calibration.")}
     return out
 
 
 rows = evaluate_tasks(tasks, combine, lambda task: f"{task}/evidence/s4e_final{A.suffix}.json")
 ok = [x for x in rows if x["final"] is not None]
 if not A.quiet:
-    print(f'  {"片段":<28}{"总分":>8}{"盲判":>8}{"参照":>8}{"差":>7}')
+    print(f'  {"Task":<28}{"Final":>8}{"Blind":>8}{"Ref":>8}{"Spread":>7}')
     for x in sorted(rows, key=lambda y: -(y["final"] if y["final"] is not None else -1)):
         if x.get("invalid_submission"):
             print(f'  {x["task"]} 0.000 invalid: {x["reason"]}')
@@ -92,8 +95,8 @@ if not A.quiet:
 if ok:
     import statistics as st
     v = [x["final"] for x in ok]
-    print(f'\n  完整 {len(ok)}/{len(rows)}   中位 {st.median(v):.3f}   '
-          f'分布 {min(v):.2f}–{max(v):.2f}   σ {st.pstdev(v):.3f}')
+    print(f'\n  Complete {len(ok)}/{len(rows)}   Median {st.median(v):.3f}   '
+          f'Range {min(v):.2f}–{max(v):.2f}   Standard deviation {st.pstdev(v):.3f}')
 
 if len(ok) != len(rows):
     print(f"Incomplete scoring: {len(rows) - len(ok)}/{len(rows)} task(s) have no final score", file=sys.stderr)

@@ -2,10 +2,10 @@
   {
     "path": "evaluation/s4e_judge.py",
     "source_arm": "prm_fixed",
-    "sha256": "88dc4f0f93e210603443642b2bac7d8337666a26a15d2fb5aa7375b915b00a6d",
+    "sha256": "654d9567413e790cab4b295e3a92f99a002b65eff5f8e91687e3f756ff01ff5d",
     "modified": true,
     "original_sha256": "51170a930f4720039f3738ad9432978c8594bc68d9c98103c5c72f11a9b6c44c",
-    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/grading_video.py",
@@ -16,18 +16,18 @@
   {
     "path": "evaluation/s4e_judge_ref.py",
     "source_arm": "prm_fixed",
-    "sha256": "110437189cc709b1a993107e673f115c6d68fe90311d8a7d51867177d1297cf7",
+    "sha256": "0c15a0bb5c51bcf504958e2788214f55a8c4e6442a9574944c23ff925c3fcd93",
     "modified": true,
     "original_sha256": "922c2c0ad24aeed18f1302aac4f35b8ff02745e78b12dde4f26abefcc64a598b",
-    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s4e_evidence.py",
     "source_arm": "prm_fixed",
-    "sha256": "6db2f868296106d34c5d90bfc0f7205d9f04cc598523e5b1e4c51535859efe92",
+    "sha256": "d493e1a9db4e6aaa2bdcfa7671a428222e8858bc4fbaab32edb3b316b442e60c",
     "modified": true,
     "original_sha256": "484b52f2438c0a232fdea84049980d2e0f8e9dca5932214790d23fc58c57f246",
-    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Remove remaining corpus-specific black-frame detector example from docstring."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Remove remaining corpus-specific black-frame detector example from docstring. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/rubrics_video.py",
@@ -38,10 +38,10 @@
   {
     "path": "evaluation/s4e_rubrics.py",
     "source_arm": "prm_fixed",
-    "sha256": "848b86c9fc96307b3656020f8e6effb54e6d283d5aeabbbf3d463e0f398ded70",
+    "sha256": "33217387366ecf28f14f6d9de58fdbbe1e8d66d2a52216fa2b0429e0f5b85119",
     "modified": true,
     "original_sha256": "e6637cfbd4ed68cda26daa05f6a2e31bbee23c4d1d40d23bca9b3471213f5b83",
-    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/repair_metadata.py",
@@ -52,38 +52,42 @@
   {
     "path": "evaluation/s4e_score.py",
     "source_arm": "prm_fixed",
-    "sha256": "ee8140e7df7d8725aa26982ef054b80a9ba7319ce74da312be746ab244489edc",
+    "sha256": "c9283b30c53a93cd109c9e1329e59015b32927adb7023d8802f2f2fdf6d1ff6c",
     "modified": true,
     "original_sha256": "a2f45fcaeec7d057aa6cfde760bc69c3976f0de2c36f8e7885ab3c5889235901",
-    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection, suffix and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing. Valid weighted formula/defaults unchanged."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection, suffix and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing. Valid weighted formula/defaults unchanged. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/grading_judge.py",
     "source_arm": "prm_fixed",
-    "sha256": "1960f7771f24dfc581b2654ffc6624173e7cb202cf26521dcb885a2267fcf798",
-    "modified": false
+    "sha256": "92d3ee4ac2412819b400525b790af96e3fcc35caa652dfc6ba962cb5226da9d9",
+    "modified": true,
+    "original_sha256": "1960f7771f24dfc581b2654ffc6624173e7cb202cf26521dcb885a2267fcf798",
+    "change": "Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s3_evidence.py",
     "source_arm": "prm_fixed",
-    "sha256": "1e516cca90afcd371b43245bb3851bbfa9becbec9642de61e88f05e7192ab810",
+    "sha256": "1df381ae027649cef9689f79f5ba2d5e4b272bab6671dc6453122d7bba1d1896",
     "modified": true,
     "original_sha256": "3555bc7720ed5e4319099a833b7f144c63dc7359fd02d5ef411696b2ff437b09",
-    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Judge-input explanatory text changed to remove corpus statistic; numeric calculations unchanged."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Judge-input explanatory text changed to remove corpus statistic; numeric calculations unchanged. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s12_task.py",
     "source_arm": "prm_fixed",
-    "sha256": "5a97f78381f69517f006e09916f096eae4928633e019e618c45cd6cf5e7190cc",
+    "sha256": "b7b4fd0819e04a8f167f1b0b33c48dafb7ced595f3cc6b273f980d8836d4dc81",
     "modified": true,
     "original_sha256": "3968514848182e003799bda397b05850f4e6fb9b04d8aa34404d28042ab65689",
-    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Reject unsuccessful, timed-out, malformed or out-of-range S1/S2 verifier results; preserve successful JSON and legacy numeric score output."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Reject unsuccessful, timed-out, malformed or out-of-range S1/S2 verifier results; preserve successful JSON and legacy numeric score output. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s4e_ref_rubrics.py",
     "source_arm": "prm_fixed",
-    "sha256": "35a16dada7faba7e2da975987bf10ec6fa51a23ec07e88f9bdcb1269fe02ef81",
-    "modified": false
+    "sha256": "ee867ab634638ec9bc3a877b8ee74e7b673ecec19b638395788c91357d90a038",
+    "modified": true,
+    "original_sha256": "35a16dada7faba7e2da975987bf10ec6fa51a23ec07e88f9bdcb1269fe02ef81",
+    "change": "Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/grading_contract.py",
@@ -94,24 +98,26 @@
   {
     "path": "evaluation/submission_policy.py",
     "source_arm": "prm_fixed",
-    "sha256": "1048244d86760c9d90c3ee207bf926623e10ca1ec466009cd47932cb0b07df37",
-    "modified": false
+    "sha256": "ea0e1a5975127e9fa9fb99395ca4157151fc9951556e918449f028e4d0e1c71e",
+    "modified": true,
+    "original_sha256": "1048244d86760c9d90c3ee207bf926623e10ca1ec466009cd47932cb0b07df37",
+    "change": "Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s3_judge_ref.py",
     "source_arm": "prm_fixed",
-    "sha256": "4f0ee414006420d5c92a72a1a9bf371f879672da2986f9abc139651145505dad",
+    "sha256": "4dee43eb3a8bb2111ad497c2480e9d72ab9263d5fb7b54fe11dae99fb2d4fb00",
     "modified": true,
     "original_sha256": "a5d6eba33292edf3d9ab064ce2297e1346b7d425b44f10286d069098d19f87a4",
-    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s3_judge.py",
     "source_arm": "prm_fixed",
-    "sha256": "5da0e77a98a0fc0d7bdc86baa031cb0b504d5940b0bf370fc8aafb92312e18e4",
+    "sha256": "2dcd7a399e34473d10860ed4692ee0d87347cf2b4f984afb96b3feb7e42276f9",
     "modified": true,
     "original_sha256": "e1368105c29ec65d23f81e9d9cf6f81e2292737f1e39319bf1d8c75c74197fe7",
-    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Replace historical Azure endpoint/deployment defaults with environment variables. Gemini judging logic unchanged. Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/grading_consistency.py",
@@ -130,24 +136,26 @@
   {
     "path": "evaluation/s3_score.py",
     "source_arm": "prm_fixed",
-    "sha256": "e6c1d58c5728cb0b6c69325e5aec06d1746e25676282d71a30ffabcd607c22eb",
+    "sha256": "9421174c9cce5ae0e566ea2a70b0da578c1f8db4d43a5459333e3a2e6e8005c3",
     "modified": true,
     "original_sha256": "c268cac9a16eb8df48ee1fc4baf02e7469f1e320488914da666e7019dd43f5c3",
-    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing; check bounded verifier completion and finite [0,1] scores. Valid weighted formula/defaults unchanged."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Validate task selection and weights before work; publish atomic explicit incomplete results and fail the CLI when a score is missing; check bounded verifier completion and finite [0,1] scores. Valid weighted formula/defaults unchanged. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/grade_s3.py",
     "source_arm": "prm_fixed",
-    "sha256": "025d5b2b6f226f60b2328bcbbe4fe83b148771a7ce8167fa2f542d52c15867f1",
-    "modified": false
+    "sha256": "2310c725fff56d45dede625d126d034f86c6b4f09e442f9ff3f3802f80ee6b69",
+    "modified": true,
+    "original_sha256": "025d5b2b6f226f60b2328bcbbe4fe83b148771a7ce8167fa2f542d52c15867f1",
+    "change": "Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/s3_rubrics.py",
     "source_arm": "prm_fixed",
-    "sha256": "59b3d69945765942a0ec1d8bf13ef524bf20685ca69ebb884c1c2ab165b8ab4c",
+    "sha256": "f0e586300e673571a4db3c21269d30fbccde7912c87e23e49848150b35419226",
     "modified": true,
     "original_sha256": "fae73f37545119fc41b39425c50d40ee8f4da37711de836db52cf3d3b5239fba",
-    "change": " Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings."
+    "change": "Remove corpus-specific names, examples, historical measurements and outcome tables from comments/docstrings. Translate user-facing instructions, messages and explanatory text into English; scoring formulas, thresholds and execution rules remain unchanged."
   },
   {
     "path": "evaluation/decay_overlay/grading_retry_rounds.py",

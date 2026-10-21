@@ -45,7 +45,7 @@ def feats(path, t0, dur, crop, W=320, H=180):
         e = loc > 25
         es.append(float(e.mean()))
         sh.append(float((loc[e] > 60).mean()) if e.any() else 0.0)
-        hd.append(float((loc > 60).mean()))     # 硬边密度（绝对量，不受背景稀释）
+        hd.append(float((loc > 60).mean()))     # Hard-edge density (absolute, not diluted by the background).
     mid = f[n // 2]
     q = (mid // 32).astype(int)
     idx = q[..., 0] * 64 + q[..., 1] * 8 + q[..., 2]
@@ -91,7 +91,7 @@ def main():
         n_card += kind == "card"; n_live += kind == "live"
 
     json.dump(out, open(f"{E}/card_class.json", "w"), ensure_ascii=False, indent=1)
-    print(f"{A.film}: 未匹配 {len(out)} 条 -> 字幕卡 {n_card} / 实拍 {n_live}")
+    print(f"{A.film}: {len(out)} unmatched shots -> title cards {n_card} / live action {n_live}")
     for k, v in out.items():
         print(f"  {k}  {v['kind']:<5} edge {v.get('edge','-'):<7} sharp {v.get('sharp','-'):<6} "
               f"lum {v.get('lum','-')}")

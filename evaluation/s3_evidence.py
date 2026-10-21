@@ -25,12 +25,12 @@ import argparse, hashlib, json, os, re, shutil, subprocess, sys, tempfile, warni
 from grading_video import clamped_time, frame_in_span, s3_videos, VIDEO_CONTRACT
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件、起子进程）")
+    raise ImportError(f"{__file__} is a command-line script, not an importable module (it writes files and starts subprocesses)")
 
 P = argparse.ArgumentParser()
 P.add_argument("--task")
-P.add_argument("--tasks", help="json 数组，里面是任务目录")
-P.add_argument("--asr", default="small.en", help="转录模型")
+P.add_argument("--tasks", help="JSON array of task directories")
+P.add_argument("--asr", default="small.en", help="Transcription model")
 P.add_argument("--force", action="store_true")
 A = P.parse_args()
 
@@ -141,15 +141,13 @@ def _publish_shared_words_cache(path, words):
 
 
 def words_of(path):
-    """整条 clip 的词级转录。切点落没落在词中间，只有这个能回答。
+    """Transcribe a full clip with word timings for cut-placement evidence.
 
-    优先读预计算缓存 `<clip>.asr.json` —— ASR 只依赖 clip 本身、和模型输出无关，
-    所以离线算一次就够。放在 rollout 里现算的代价太大：每条 s_3 轨迹 9 个 clip，
-    CPU 上 small.en 一个约 10 秒，等于给每条轨迹白加 90 秒。
-
-    缓存缺失时必须真正运行 ASR。依赖、模型初始化或转录失败都抛错，绝不能
-    伪装成“这条素材没有对白”；无词只有在一次成功转录后才是有效测量。
-    """
+    Prefer a precomputed <clip>.asr.json cache: ASR depends on the source clip,
+    not the policy output. Reuse avoids repeated transcription during rollouts.
+    A cache miss must run ASR. Dependency, initialization and transcription
+    failures propagate; they must not be represented as a dialogue-free clip.
+    An empty result is valid only after successful transcription."""
     from grading_contract import media_info
     if not any(s["codec_type"] == "audio" for s in media_info(path)["streams"]):
         # A genuinely silent video has no ASR input; do not confuse this with an
@@ -257,7 +255,7 @@ def words_of(path):
 
 
 def gray(path, w=48, h=27, ss=None, n=1, fps=None, bounds=None):
-    """取灰度帧。所有画面度量都从这里出来，尺寸统一，量纲才可比。"""
+    """Extract grayscale frames at a common size so picture measurements are comparable."""
     import numpy as np
     cmd = ["ffmpeg", "-v", "error"]
     if bounds is not None:
@@ -284,8 +282,8 @@ def gray(path, w=48, h=27, ss=None, n=1, fps=None, bounds=None):
 
 
 def motion_profile(path, fps=12):
-    """整条 clip 的逐帧变化量。切点处的运动强度要跟这条 clip 自己比，
-    不能跟全库比——手持长焦和三脚架固定机位的基线差一个数量级。"""
+    """Measure frame changes over a full clip. Compare cut-point motion against
+    this clip, not the corpus: handheld and fixed-camera baselines can differ greatly."""
     import numpy as np
     fr = gray(path, fps=fps)
     if fr is None or len(fr) < 2:
@@ -308,7 +306,7 @@ def at_motion(prof, t):
 
 
 def speech_at(words, t, edge):
-    """切点跟语音的关系。edge='in' 看它切进来时人是不是正在说话。"""
+    """Relate a cut to speech; edge='in' checks whether it enters during a spoken word."""
     inside = [w for w in words if w["s"] - 0.02 <= t <= w["e"] + 0.02]
     if inside:
         w = inside[0]
@@ -327,14 +325,11 @@ def speech_at(words, t, edge):
 
 
 def sheet(items, out_png, cols=6, w=320):
-    """一张联络表。文字量不出"这一刀看着顺不顺"，画面能。
+    """Create a labeled contact sheet for visual inspection of cuts.
 
-    每格左上角压一个标签（p03 IN / j05 pre 之类），判官才能把看到的画面跟证据里的行对上。
-
-    每帧单独抽好、统一裁到同一尺寸，再用 `tile` 拼。先前用 xstack 的 `w0*n_h0*n`
-    布局，各镜头宽高比不同导致瓦片高度不齐，整张静默失败——`frames_out.png` 一直
-    没生成就是这个原因。tile 要求输入等尺寸，所以 scale 后再 pad 到固定框。
-    """
+    Labels such as p03 IN and j05 pre link images to evidence records. Extract
+    each frame, scale and pad it to a fixed size, then tile. Equal-size inputs
+    prevent layout failures when source clips have different aspect ratios."""
     if not items:
         return None
     h = int(w * 9 / 16)
@@ -399,7 +394,7 @@ def build(task):
     man = json.load(open(f"{task}/initial_state/manifest.json"))
     sub_p = f"{task}/output/cuts.json"
     if not os.path.exists(sub_p):
-        return {"task": task, "error": "没有 output/cuts.json"}
+        return {"task": task, "error": "Missing output/cuts.json"}
     sub = json.load(open(sub_p))
     cuts = {c["clip"]: c for c in sub.get("cuts", [])}
     by = {c["id"]: c for c in man["clips"]}
@@ -413,7 +408,7 @@ def build(task):
         m = re.search(r"covers:\s*\n+>\s*(.+?)\n", open(tp).read())
         beat = m.group(1).strip() if m else None
 
-    # ---------------------------------------------------------------- 逐 clip
+    # ---------------------------------------------------------------- Per clip
     per, order = [], [c["id"] for c in man["clips"]]
     prof_cache, words_cache = {}, {}
     for cid in order:
@@ -440,10 +435,10 @@ def build(task):
             rec["motion"] = {
                 "clip_median": prof["median"], "clip_p90": prof["p90"],
                 "at_in": mi, "at_out": mo,
-                # 相对这条 clip 自己的基线。>1 说明切在动作里，<1 说明切在静止处。
+                # Relative to this clip's baseline: >1 suggests motion; <1 suggests a quieter moment.
                 "at_in_rel": round(mi / max(0.01, prof["median"]), 2) if mi is not None else None,
                 "at_out_rel": round(mo / max(0.01, prof["median"]), 2) if mo is not None else None}
-        # 被剪掉的台词：coverage 判分最要紧的一条证据
+        # Omitted dialogue is evidence for the coverage rubric.
         drop = [w for w in words if w["e"] <= i_s + 0.05 or w["s"] >= o_s - 0.05]
         keep = [w for w in words if not (w["e"] <= i_s + 0.05 or w["s"] >= o_s - 0.05)]
         rec["kept_words"] = " ".join(w["w"] for w in keep)[:300]
@@ -472,7 +467,7 @@ def build(task):
             "note": "CV and head-entry counts do not prove editing quality or whether material was screened."}
 
 
-    # ---------------------------------------------------------------- 逐接点
+    # ---------------------------------------------------------------- Per join
     joins = []
     # The actual assembled cut joins consecutive *submitted* clips.  Zipping
     # the full manifest silently skipped the new join created when a middle
@@ -499,7 +494,7 @@ def build(task):
                       bounds=(rb["in_s"], rb["out_s"]))
             if fb is not None:
                 break
-        # 基线：两条 clip 中点的帧。同机位素材本来就像，那是素材不是剪辑。
+        # Baseline: each clip's midpoint. Similar source setups are a property of the material, not the edit.
         ma = gray(pa, ss=by[a]["clip_dur_s"] / 2)
         mb = gray(pb, ss=by[b]["clip_dur_s"] / 2)
 
@@ -517,13 +512,13 @@ def build(task):
                       "clip_baseline": sim(ma, mb),
                       "leaving_out_s": ra["out_s"], "arriving_in_s": rb["in_s"]})
 
-    # ---------------------------------------------------------------- 联络表
+    # ---------------------------------------------------------------- Contact sheets
     # Group navigational contact sheets by the evidence each rubric needs.
     sheets = {}
     P_ = lambda r: f"{task}/initial_state/{by[r['clip']]['file']}"
-    # ① 留下的那一截长什么样：按时长采样，给 coverage 判。
-    # 三帧对 0.4 秒的镜头够，对 1.5 秒的不够——brief 点名的动作可能就发生在没采到的
-    # 那一段里。改成大约每 0.28 秒一帧，短镜头保底 3 帧，长镜头封顶 8 帧。
+    # 1. Sample retained footage across its duration for coverage evidence.
+    # Three frames can miss a requested action in a 1.5-second shot, even if enough for 0.4 seconds.
+    # Sample about every 0.28 seconds, with at least 3 frames and at most 8 per shot.
     kept = []
     for r in per:
         if not r.get("given"):
@@ -540,9 +535,9 @@ def build(task):
             "note": "the kept span of each shot, sampled across its duration. A label "
                     "like `p03·2/5` is frame 2 of 5 from what p03 kept. This sheet "
                     "answers whether the pictures the brief describes are still there"}
-    # ② 入点出点，各带一帧"被扔掉的那侧"：给 placement 判"切在哪儿"。
-    # 只看留下的那一帧，判不出"该不该在这儿切"——得看见扔掉的是什么。
-    # 入点前 0.3 秒和出点后 0.3 秒各一帧，四格一组。
+    # 2. Show in/out points with discarded context for placement evidence.
+    # Retained frames alone cannot show whether the discarded context matters.
+    # Add a frame 0.3 seconds before the in-point and after the out-point: four tiles per shot.
     edges = []
     for r in per:
         if not r.get("given"):
@@ -562,25 +557,25 @@ def build(task):
                     "`post-out` are the material that was thrown away, and without them "
                     "there is no way to judge whether the cut belongs where it was put — "
                     "the kept frames alone cannot answer that"}
-    # ③ 接点两侧：给 jumpcut 判"这一刀跳不跳"
+    # 3. Show both sides of each join for jump-cut evidence.
     pairs = []
     for j in joins:
         ra, rb = next((x for x in per if x["clip"] == j["leaving"]), None), \
                  next((x for x in per if x["clip"] == j["arriving"]), None)
         if not (ra and rb and ra.get("given") and rb.get("given")):
             continue
-        # 每侧两帧。一帧只说"这两格像不像"，两帧还能说出运动方向——同机位但主体
-        # 在动，那是接得住的切；两侧都静止且构图一致，才是跳切。
-        pairs.append((P_(ra), clamped_time(ra["out_s"] - .28, ra["in_s"], ra["out_s"]), f"j{j['join']}前-2", (ra["in_s"], ra["out_s"])))
-        pairs.append((P_(ra), clamped_time(ra["out_s"] - .08, ra["in_s"], ra["out_s"]), f"j{j['join']}前-1", (ra["in_s"], ra["out_s"])))
-        pairs.append((P_(rb), rb["in_s"], f"j{j['join']}后+1", (rb["in_s"], rb["out_s"])))
-        pairs.append((P_(rb), clamped_time(rb["in_s"] + .20, rb["in_s"], rb["out_s"]), f"j{j['join']}后+2", (rb["in_s"], rb["out_s"])))
+        # Two frames per side provide motion direction as well as composition.
+        # Motion can support a cut between similar setups; static matching compositions can expose a jump.
+        pairs.append((P_(ra), clamped_time(ra["out_s"] - .28, ra["in_s"], ra["out_s"]), f"j{j['join']} pre-2", (ra["in_s"], ra["out_s"])))
+        pairs.append((P_(ra), clamped_time(ra["out_s"] - .08, ra["in_s"], ra["out_s"]), f"j{j['join']} pre-1", (ra["in_s"], ra["out_s"])))
+        pairs.append((P_(rb), rb["in_s"], f"j{j['join']} post+1", (rb["in_s"], rb["out_s"])))
+        pairs.append((P_(rb), clamped_time(rb["in_s"] + .20, rb["in_s"], rb["out_s"]), f"j{j['join']} post+2", (rb["in_s"], rb["out_s"])))
     if sheet(pairs, f"{ev_dir}/frames_joins.png", cols=4, w=300):
         sheets["join_frames"] = {
             "file": "evidence/frames_joins.png",
-            "note": "the frames either side of each cut, laid out in pairs. `j05 pre` "
-                    "sits next to `j05 post` — how alike those two look is whether the "
-                    "cut reads as a jump"}
+            "note": "Frames on either side of each cut: `j5 pre-2`, `j5 pre-1`, "
+                    "`j5 post+1`, `j5 post+2`. Compare composition and motion across "
+                    "the two sides to inspect whether the cut reads as a jump."}
 
     # An empty model submission is a valid negative example, not grader
     # infrastructure failure.  Only require images when there is submitted
@@ -630,12 +625,12 @@ tasks = json.load(open(A.tasks)) if A.tasks else [A.task]
 for t in tasks:
     if (not A.force and os.path.exists(f"{t}/evidence/s3_evidence.json")
             and json.load(open(f"{t}/evidence/s3_evidence.json")).get("continuous_video", {}).get("contract") == VIDEO_CONTRACT):
-        print(f"  {t.split('training_task/')[-1]:<28} 已有，跳过", flush=True)
+        print(f"  {t.split('training_task/')[-1]:<28} Already available; skipped", flush=True)
         continue
     e = build(t)
     if e.get("error"):
         print(f"  {t.split('training_task/')[-1]:<28} ★ {e['error']}", flush=True)
         continue
-    print(f"  {e['task']:<28} {e['n_given']}/{e['n_clips']} 段  "
-          f"{e['assembled_duration_s']}s / 目标 {e['target_duration_s']}s  "
-          f"{len(e['joins'])} 接点", flush=True)
+    print(f"  {e['task']:<28} {e['n_given']}/{e['n_clips']} clips  "
+          f"{e['assembled_duration_s']}s / target {e['target_duration_s']}s  "
+          f"{len(e['joins'])} joins", flush=True)

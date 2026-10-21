@@ -116,8 +116,8 @@ def main():
     json.dump({"stage": "S3", "film": FILM, "fps": FPS,
                "counts": {"source": nmatch, "card": ncard, "golden_only": nlive},
                "units": units}, open(f"{OUT}/s3_units.json", "w"), ensure_ascii=False, indent=1)
-    print(f"{len(units)} 单元： source {nmatch} · card {ncard} · golden_only {nlive}")
-    print(f"卡片静帧 {len(os.listdir(f'{OUT}/cards'))} 张")
+    print(f"{len(units)} units: source {nmatch} · card {ncard} · golden_only {nlive}")
+    print(f"Card stills: {len(os.listdir(f'{OUT}/cards'))}")
 
     # ---------------- optional Resolve project export ----------------
     if not _ARGS.export_resolve:
@@ -126,7 +126,7 @@ def main():
         raise RuntimeError("Set VIDEO_EDITING_RESOLVE_MCP_ROOT for --export-resolve")
     media = [PROXY] + [f"{OUT}/golden_only/{u['media']}" for u in units if u["kind"] == "golden_only"] \
             + [f"{OUT}/cards_mp4/{m}" for u in units if u["kind"] == "card" for m in u["movs"]]
-    print(f"\n导入 {len(media)} 个媒体…")
+    print(f"\nImporting {len(media)} media files...")
     PROJ = f"{FILM.upper()}_S3"
     TL_H = int(round(1920 / (_pb["crop"] or (_pb["gold"]["w"] / _pb["gold"]["h"])) / 2)) * 2
 
@@ -143,7 +143,7 @@ def main():
                    ("timelineOutputResolutionWidth", "1920"),
                    ("timelineOutputResolutionHeight", str(TL_H))]:
         rv(f'result = bridge.project_set_setting(name="{k_}", value="{v_}")')
-    print(f"项目设置: {PROJ}  {FPS:.3f}fps 1920x{TL_H}")
+    print(f"Project settings: {PROJ}  {FPS:.3f}fps 1920x{TL_H}")
     print(rv(f'result = bridge.media_import(paths={json.dumps(media)})'))
     print(rv('result = bridge.timeline_create(name="S3_ROUGH")'))
 
@@ -157,8 +157,8 @@ def main():
             clips.append({"clip": u["media"], "start_frame": 0, "end_frame": n})
         else:
             for m in u["movs"]:
-                clips.append({"clip": m})          # 已按精确帧数渲好，整条用
-    print(f"铺 {len(clips)} 个片段…")
+                clips.append({"clip": m})          # Already rendered to the exact frame count; use the whole clip
+    print(f"Arranging {len(clips)} clips...")
     for i in range(0, len(clips), 25):
         r = rv(f'result = bridge.timeline_append(clips={json.dumps(clips[i:i+25])})')
         if isinstance(r, dict) and r.get("err"): print("  !", r["err"][:200]); break
@@ -167,7 +167,7 @@ def main():
     print(info)
     n_items = ((info or {}).get("tracks", {}).get("video") or [{}])[0].get("items", 0)
     if n_items != len(clips):
-        sys.exit(f"时间线只有 {n_items} 个片段，应为 {len(clips)}")
+        sys.exit(f"Timeline has {n_items} clips; expected {len(clips)}")
 
     # Save the project before exporting; ExportProject serializes persisted database contents.
 
@@ -185,8 +185,8 @@ def main():
     _got = sum(len(_re.findall(r"<Sm2TiVideoClip\b", _zz.read(n).decode("utf8", "replace")))
                for n in _seq)
     if _got != len(clips):
-        sys.exit(f"导出的 .drp 里只有 {_got} 个片段，应为 {len(clips)}（时间线 {len(_seq)} 条）")
-    print(f"\n-> {drp}   {_got} 个片段  {len(_seq)} 条时间线")
+        sys.exit(f"Exported .drp has {_got} clips; expected {len(clips)} ({len(_seq)} timelines)")
+    print(f"\n-> {drp}   {_got} clips  {len(_seq)} timelines")
 
 
 if __name__ == "__main__":

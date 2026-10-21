@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/cut_takes.py [options]\n\n  --film\n  --all\n  --handle  台词前后各留几秒\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/cut_takes.py [options]\n\n  --film\n  --all\n  --handle  Seconds of context before and after each line\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 
@@ -61,7 +61,7 @@ def main():
     P = argparse.ArgumentParser()
     P.add_argument("--film")
     P.add_argument("--all", action="store_true")
-    P.add_argument("--handle", type=float, default=3.0, help="台词前后各留几秒")
+    P.add_argument("--handle", type=float, default=3.0, help="Seconds of context before and after each line")
     A = P.parse_args()
     require_target(P, A)
 
@@ -70,7 +70,7 @@ def main():
 
 
     def speech_spans(path):
-        """文件里实际有人说话的区间。定位窗口只覆盖匹配上的那一句，不够用。"""
+        """Return actual speech intervals; the matching window alone omits spoken context."""
         warnings.filterwarnings("ignore")
         try:
             if not _ASR:
@@ -139,8 +139,8 @@ def main():
             n_cut += 1
             rows.append({"id": pid, "file": f"takes/{pid}.m4a",
                          "speech_spans_s": spans,
-                         # 预告片里那句话说了什么，和它在成片里的位置 —— 出题时不给 agent，
-                         # 这是建题用的账
+                         # Trailer dialogue and its timeline position are private construction metadata;
+                         # do not expose these reference fields to the task agent.
                          "trailer_text": ln["text"],
                          "trailer_s": ln["s"], "trailer_e": ln["e"],
                          "film_s": round(s, 3), "film_e": round(e, 3),
@@ -166,13 +166,13 @@ def main():
     for slug in films:
         r = cut_takes(slug)
         if not r:
-            print(f"  {slug:<24} 缺 line_origins 或正片，跳过")
+            print(f"  {slug:<24} Missing line_origins or source film; skipped")
             continue
         n, tot = r
         T += tot
         O += n
-        print(f"  {slug:<24} 切出 {n:3d} 条原始录音 / {tot:3d} 句", flush=True)
-    print(f"\n合计 {O}/{T}")
+        print(f"  {slug:<24} Extracted {n:3d} source recordings / {tot:3d} lines", flush=True)
+    print(f"\nTotal {O}/{T}")
 
 
 if __name__ == "__main__":

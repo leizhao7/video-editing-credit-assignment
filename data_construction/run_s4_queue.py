@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/run_s4_queue.py [options]\n\n  --film\n  --films  文本文件，每行一个 slug；只跑这些\n  --wait  等机械队列跑完再开始\n  -j, --workers  同时跑几部片。S4 不碰 Resolve/Modal，各片只写自己的目录，\n                         唯一共享的是速率窗口 —— 撞上会各自等到重置\n  --all  Process all inputs explicitly\n  --redo  Reinspect completed S4 cuts; archive the previous draft.\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/run_s4_queue.py [options]\n\n  --film\n  --films  Text file with one film slug per line; process only those films\n  --wait  Wait for the preprocessing queue to finish\n  -j, --workers  Number of films to process concurrently. S4 uses separate film directories;\n                         only the rate-limit window is shared; each worker waits for its reset\n  --all  Process all inputs explicitly\n  --redo  Reinspect completed S4 cuts; archive the previous draft.\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 try:
@@ -40,9 +40,9 @@ TOOLS = ("Read,Write,Edit,Glob,Grep,"
 MEASURE = re.compile(r"signalstats|blackdetect|scdet|gt\(scene|metadata=print|rawvideo|"
                      r"scenedetect|cv2|ssim|psnr|histogram", re.I)
 NEED = ["cutlist", "acuts", "s3"]
-STALL_S = 20 * 60        # 没有任何工具调用超过这么久 = 卡死
-TRIES = 2                # 一次偶发失败不该永久丢掉一部片
-MAX_WAITS = 3            # 最多为限流等三次窗口，避免无限挂着
+STALL_S = 20 * 60        # Stop after this long without tool activity.
+TRIES = 2                # Allow one retry for an intermittent failure.
+MAX_WAITS = 3            # Bound the number of rate-limit waits.
 
 
 def prep(slug):
@@ -57,7 +57,7 @@ def prep(slug):
     # FileExistsError on the link that is sitting right there.
     g = os.path.abspath(f"{pb['dir']}/{pb['golden']}")
     if not os.path.exists(g):
-        raise FileNotFoundError(f"参考带不存在: {g}")
+        raise FileNotFoundError(f"Reference edit is missing: {g}")
     ref = f"{T}/reference/golden.mp4"
     if os.path.lexists(ref):
         cur = os.path.realpath(ref)
@@ -84,9 +84,9 @@ def prep(slug):
 
 def check(slug, T):
     p = f"{T}/stages/s4_cuts.json"
-    if not os.path.exists(p): return ["s4_cuts.json 未生成"]
+    if not os.path.exists(p): return ["s4_cuts.json was not generated"]
     try: d = json.load(open(p))
-    except Exception as e: return [f"JSON 解析失败: {e}"]
+    except Exception as e: return [f"JSON parsing failed: {e}"]
     try:
         inputs = {key: json.loads((Path(T) / "stages" / filename).read_bytes())
                   for key, filename in INPUT_FILES.items()}
@@ -213,7 +213,7 @@ def _claude_once(slug, name, T, n, runs, st, mcp, why=None, resume=True):
             manifest = json.loads(Path(visuals["manifest_path"]).read_bytes())
             template = (Path(CODE_ROOT) / "prompts/PROMPT_S4.md").read_text()
             # Keep shared vocabulary headings/tables, omitting the whole-film output instruction.
-            vocabulary = template[template.index("### 一、"):template.index("## Review")]
+            vocabulary = template[template.index("### Transition vocabulary"):template.index("## Review")]
             while len(draft["cuts"]) < len(inputs["cut_list"]["cuts"]) and not errors:
                 start = len(draft["cuts"])
                 stop = min(len(inputs["cut_list"]["cuts"]), (start // CUT_BATCH_SIZE + 1) * CUT_BATCH_SIZE)
@@ -330,16 +330,16 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
     out_p = f"{T}/stages/s4_cuts.json"
     pre_m = os.path.getmtime(out_p) if os.path.exists(out_p) else 0.0
     prompt = open(f"{CODE_ROOT}/prompts/PROMPT_S4.md").read()
-    prompt += f"\n\n## 本片\n\n《{name}》，共 **{n} 个切点**。\n"
+    prompt += f"\n\n## Current film\n\n{name}: **{n} cut boundaries**.\n"
     if why:
         # An identical retry repeats the identical failure. Tell it what was rejected.
-        prompt += ("\n## 上一次这部片被打回了\n\n原因：\n- " + "\n- ".join(why[:5]) +
-                   "\n\n这次务必避开。特别注意：把初判占位表原样交上去不算完成，"
-                   "必须逐刀回头看画面、给出真实的手法判断。\n")
+        prompt += ("\n## Previous attempt failed validation\n\nReasons:\n- " + "\n- ".join(why[:5]) +
+                   "\n\nAddress these failures. Submitting unchanged preliminary placeholders is incomplete;"
+                   " inspect the pictures at every boundary and ground each technique label in the evidence.\n")
     open(f"{runs}/PROMPT.md", "w").write(prompt)
 
     t0 = time.time()
-    print(f"  [{name}] {n} 切点 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
+    print(f"  [{name}] Starting {n} cut boundaries{' (retry)' if attempt else ''} → {runs}/progress.log",
           flush=True)
     command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT, mcp_config=mcp)
     if command.backend == "claude":
@@ -376,7 +376,7 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
                     prog.flush()
         returncode = p.wait()
     cost, rl = events.cost, [events.rate_limit]
-    if killed: print(f"  [{name}] ⚠ 静默超过 {STALL_S//60} 分钟，已终止", flush=True)
+    if killed: print(f"  [{name}] Stopped after more than {STALL_S//60} minutes without activity", flush=True)
     dt = time.time() - t0
 
     bad = events.failures() + check(slug, T)
@@ -385,7 +385,7 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
     if killed:
         bad.insert(0, "Annotation process exceeded its inactivity limit")
     if not bad and (not os.path.exists(out_p) or os.path.getmtime(out_p) <= pre_m):
-        bad = ["s4_cuts.json 没被本次运行写过 —— 是上次遗留的文件"]
+        bad = ["s4_cuts.json was not written by this attempt; it is left over from a previous run"]
     meas = _measured_ref(f"{runs}/session.jsonl", command.backend)
     if os.path.exists(f"{T}/stages/s4_cuts.json"):
         shutil.copy(f"{T}/stages/s4_cuts.json", f"{runs}/s4_cuts.json")
@@ -399,13 +399,13 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
         rb = subprocess.run([sys.executable, "-W", "ignore", f"{CODE_ROOT}/build_report.py",
                              "--film", slug], capture_output=True, text=True)
         if rb.returncode:
-            print(f"  [{name}] ⚠ 报告生成失败: {rb.stderr.strip()[-200:]}", flush=True)
-            bad = bad + [f"报告生成失败: {rb.stderr.strip()[-160:]}"]
+            print(f"  [{name}] ⚠ Report generation failed: {rb.stderr.strip()[-200:]}", flush=True)
+            bad = bad + [f"Report generation failed: {rb.stderr.strip()[-160:]}"]
     st["s4"].update(ok=not bad, errors=bad[:5])
     json.dump(st, open(f"{E}/state.json", "w"), ensure_ascii=False, indent=1)
     tag = "✓" if not bad else f"✗ {bad[0][:60]}"
-    print(f"  [{name}] {dt/60:.1f}分 {ntool}次" + (f" ${cost:.2f}" if cost else "") +
-          f"  {tag}" + (f"  ⚠测量参考带 {meas}" if meas else ""), flush=True)
+    print(f"  [{name}] {dt/60:.1f} min, {ntool} tool calls" + (f" ${cost:.2f}" if cost else "") +
+          f"  {tag}" + (f"  reference measurement issue: {meas}" if meas else ""), flush=True)
     return (not bad, rl[0], bad)
 
 
@@ -431,7 +431,7 @@ def run(slug, name, redo=False):
     try:
         return _film(slug, name, redo=redo)
     except Exception as e:
-        print(f"  [{name}] ✗ 未捕获异常: {type(e).__name__}: {str(e)[:160]}", flush=True)
+        print(f"  [{name}] ✗ Unhandled exception: {type(e).__name__}: {str(e)[:160]}", flush=True)
         try:
             sf = f"{ROOT}/exports/{slug}/state.json"
             st = json.load(open(sf))
@@ -439,7 +439,7 @@ def run(slug, name, redo=False):
                         "errors": [f"{type(e).__name__}: {str(e)[:200]}"]}
             json.dump(st, open(sf, "w"), ensure_ascii=False, indent=1)
         except (OSError, ValueError) as state_error:
-            print(f"  [{name}] 无法记录失败状态: {state_error}", file=sys.stderr, flush=True)
+            print(f"  [{name}] Could not record failure state: {state_error}", file=sys.stderr, flush=True)
         return False
 
 
@@ -448,9 +448,9 @@ def _film(slug, name, redo=False):
     st = json.load(open(f"{E}/state.json"))
     miss = [s for s in NEED if not st.get(s, {}).get("ok")]
     if miss:
-        print(f"  跳过 {name}: 机械阶段未完成 {miss}", flush=True); return False
+        print(f"  Skipping {name}: preprocessing is incomplete {miss}", flush=True); return False
     if st.get("s4", {}).get("ok") and not redo:
-        print(f"  跳过 {name}: S4 已完成", flush=True); return True
+        print(f"  Skipping {name}: S4 is complete", flush=True); return True
     T, n = prep(slug)
     attempt = waits = 0
     why = None
@@ -463,11 +463,11 @@ def _film(slug, name, redo=False):
         # remaining film the same way, marking the lot failed inside a few minutes.
         if rl.get("status") not in (None, "allowed") and waits < MAX_WAITS:
             wake = (rl.get("resetsAt") or (time.time() + 900)) + 60
-            print(f"  [{name}] 触到 {rl.get('rateLimitType')} 限流，等到 "
-                  f"{time.strftime('%H:%M', time.localtime(wake))} 再试", flush=True)
+            print(f"  [{name}] Rate limited ({rl.get('rateLimitType')}); retry at "
+                  f"{time.strftime('%H:%M', time.localtime(wake))}", flush=True)
             while time.time() < wake: time.sleep(60)
             waits += 1
-            continue                  # 不消耗重试次数
+            continue                  # Rate-limit waits do not consume an attempt.
         attempt += 1
     return False
 
@@ -478,11 +478,11 @@ def main():
     P.add_argument("--redo", action="store_true", help="Reinspect completed S4 cuts; archive the previous draft")
     # A film list limits the selected inputs while allowing independent per-film jobs to run concurrently.
 
-    P.add_argument("--films", help="文本文件，每行一个 slug；只跑这些")
+    P.add_argument("--films", help="Text file with one film slug per line; process only those films")
     P.add_argument("--wait", action="store_true",
-                                             help="等机械队列跑完再开始")
+                                             help="Wait for the preprocessing queue to finish")
     P.add_argument("-j", "--workers", type=int, default=1,
-                   help="同时跑几部片。S4 不碰 Resolve/Modal，各片只写自己的目录，\n                         唯一共享的是速率窗口 —— 撞上会各自等到重置")
+                   help="Number of films to process concurrently. S4 uses separate film directories;\n                         only the rate-limit window is shared; each worker waits for its reset")
     P.add_argument("--all", action="store_true", help="Process all inputs explicitly")
     A = P.parse_args()
     require_target(P, A)
@@ -497,7 +497,7 @@ def main():
             if result.returncode != 0:
                 raise RuntimeError(f"Cannot check pipeline status: pgrep exited {result.returncode}")
             time.sleep(120)
-        print("机械队列已结束，开始 S4\n", flush=True)
+        print("Preprocessing queue finished; starting S4\n", flush=True)
 
     films = {}
     for p in sorted(glob.glob(f"{ROOT}/exports/*/probe.json")):
@@ -508,15 +508,15 @@ def main():
         films = select_films(films, A)
     except ValueError as exc:
         P.error(str(exc))
-    print(f"S4 队列: {len(films)} 部\n", flush=True)
+    print(f"S4 queue: {len(films)} films\n", flush=True)
     if A.workers > 1:
-        print(f"并行 {A.workers} 路（各片互不共享文件；共享的只有速率窗口）\n", flush=True)
+        print(f"Using {A.workers} workers (separate film files; shared rate-limit window)\n", flush=True)
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             ok = sum(bool(r) for r in ex.map(lambda kv: run(*kv, redo=A.redo), films.items()))
     else:
         ok = sum(bool(run(slug, name, redo=A.redo)) for slug, name in films.items())
-    print(f"\nS4 完成 {ok}/{len(films)}")
-    _clear_sentinel(films)          # 全部重判完才清；否则哨兵留着
+    print(f"\nS4 completed {ok}/{len(films)} films")
+    _clear_sentinel(films)          # Clear the sentinel only after every pending film has been reinspected.
     if ok != len(films):
         raise SystemExit(1)
 
@@ -538,10 +538,10 @@ def _clear_sentinel(done_films):
                 or not os.path.exists(f"{ROOT}/edit/task_{slug}/stages/s4_cuts.json")):
             left.append(slug)
     if left:
-        print(f"  · 仍有 {len(left)} 部未重判，哨兵保留: {left[:4]}", flush=True)
+        print(f"  · {len(left)} films still need reinspection; retaining sentinel: {left[:4]}", flush=True)
     else:
         os.remove(p)
-        print("  · 全部重判完成，已清除 edit/S4_PENDING.json", flush=True)
+        print("  · Reinspection complete; cleared edit/S4_PENDING.json", flush=True)
 
 
 if __name__ == "__main__":

@@ -130,12 +130,12 @@ def transcribe(slug: str, model: str = "large-v3"):
     src = _data_path(slug, "source_audio.opus")
     out = _data_path(slug, "source_transcript.json")
     if not os.path.exists(src):
-        return {"slug": slug, "ok": False, "why": "没有 source_audio.opus"}
+        return {"slug": slug, "ok": False, "why": "Missing source_audio.opus"}
     if os.path.exists(out) and os.path.getsize(out) > 10000:
         with open(out, encoding="utf-8") as stream:
             cached = json.load(stream)
         if cached.get("model") == model and cached.get("film") == slug and isinstance(cached.get("segments"), list):
-            return {"slug": slug, "ok": True, "why": "已有，跳过", "words": cached.get("n_words", 0)}
+            return {"slug": slug, "ok": True, "why": "Already available; skipped", "words": cached.get("n_words", 0)}
 
     from faster_whisper import WhisperModel
     from tempfile import TemporaryDirectory
@@ -161,7 +161,7 @@ def transcribe(slug: str, model: str = "large-v3"):
                          "segments": o})
         vol.commit()
         dt = (time.time() - t0) / 60
-        print(f"[{slug}] {dt:.1f}分  {len(o)} 段 / {nw} 词  覆盖 {dur/60:.0f} 分钟", flush=True)
+        print(f"[{slug}] {dt:.1f} min; {len(o)} segments / {nw} words; covering {dur/60:.0f} min", flush=True)
         return {"slug": slug, "ok": True, "segments": len(o), "words": nw, "min": round(dt, 1)}
 
 
@@ -183,12 +183,12 @@ def main(model: str = "large-v3", only: str = ""):
         slugs = [s for s in slugs if only == s]
     if not slugs:
         raise RuntimeError("No source_audio.opus inputs match; extract and upload the intended inputs first")
-    print(f"转录 {len(slugs)} 部正片  模型 {model}\n")
+    print(f"Transcribing {len(slugs)} source films; model {model}\n")
     res = list(transcribe.starmap([(s, model) for s in slugs]))
     ok = sum(1 for r in res if r.get("ok"))
-    print(f"\n成功 {ok}/{len(res)}")
+    print(f"\nSucceeded {ok}/{len(res)}")
     for r in sorted(res, key=lambda x: -(x.get("words") or 0)):
-        print(f"  {r['slug']:<24} " + (f"{r.get('words',0):>6} 词  {r.get('min','—')}分"
+        print(f"  {r['slug']:<24} " + (f"{r.get('words',0):>6} words; {r.get('min','—')} min"
                                        if r.get("ok") else f"★ {r.get('why')}"))
     if ok != len(res):
         raise RuntimeError(f"Source transcription failed for {len(res) - ok} input(s)")
@@ -263,7 +263,7 @@ def _local_main(argv=None):
         with ThreadPoolExecutor(max_workers=a.j) as ex:
             res = list(ex.map(one, inputs))
         tot = sum(r[1] for r in res)
-        print(f"\n{sum(1 for r in res if r[2])}/{len(res)} 部，共 {tot/1e6:.0f} MB")
+        print(f"\n{sum(1 for r in res if r[2])}/{len(res)} films; total {tot/1e6:.0f} MB")
     elif a.upload:
         _require_volume()
         paths = [CACHE / f"{a.film}.opus"] if a.film else sorted(CACHE.glob("*.opus"))
@@ -279,7 +279,7 @@ def _local_main(argv=None):
         for slug, p in inputs:
             subprocess.run(["modal", "volume", "put", "--force", VOLUME_NAME,
                             str(p), f"/{slug}/source_audio.opus"], check=True)
-            print(f"  {slug} 传完", flush=True)
+            print(f"  {slug} uploaded", flush=True)
     elif a.fetch:
         _require_volume()
         inputs = probes()
@@ -292,7 +292,7 @@ def _local_main(argv=None):
                             f"/{slug}/source_transcript.json",
                             str(output)],
                            capture_output=True, check=True)
-        print(f"取回 {len(outputs)} 份正片转录")
+        print(f"Fetched {len(outputs)} source-film transcripts")
     return 0
 
 

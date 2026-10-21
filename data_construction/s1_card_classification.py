@@ -17,28 +17,42 @@ import re
 
 POLICY_VERSION = "s1-card-correction-v1"
 
+# Bilingual evidence patterns preserve compatibility with historical annotations.
+_EN_CARD = (r"(?:(?:pure|full[- ]screen|standalone)\s+)?"
+            r"(?:title|text|release[- ]date|end|closing|studio|logo|credit|credits)\s+card")
+_EN_ACTUAL = r"\b(?:is\s+actually|actually\s+is|is\s+in\s+fact|this\s+is)\s+(?:a\s+)?"
 _LIVE = re.compile(
     r"(?:实际是|其实是|这是一个|而是)[^。；，：]{0,14}实拍"
     r"|本镜画面本身是实拍"
     r"|不是独立字幕卡，是镜头内"
     r"|是镜头内显示器上的字而非字幕卡"
-    r"|(?:is actually|actually is) (?:a )?live.action", re.I)
+    r"|" + _EN_ACTUAL + r"live[- ]action\b"
+    r"|\b(?:text|lettering)\s+on\s+an?\s+in[- ]shot\s+display\b", re.I)
 _TRUE_CARD = re.compile(
     r"(?:实际是|其实是|实际是一张|其实是一张)[^。；，：]{0,8}"
     r"(?:纯字幕卡|纯文字卡|纯字卡|全屏字幕卡|整屏文字卡|整屏片名卡"
     r"|主片名字幕卡|主片名卡|片名卡|字幕卡|尾卡字幕|上映日期卡|出品方标志卡)"
     r"|(?:实际是|其实是)纯黑底白字的标语卡"
-    r"|(?:实际是|其实是)[A-Z ]{1,30}厂标卡")
-_BLACK = re.compile(r"(?:实际是|其实是|全程是)(?:纯黑|纯白|全黑|全白)(?:过场|画面|帧|场)")
+    r"|(?:实际是|其实是)[A-Z ]{1,30}厂标卡"
+    r"|" + _EN_ACTUAL + _EN_CARD + r"\b", re.I)
+_BLACK = re.compile(
+    r"(?:实际是|其实是|全程是)(?:纯黑|纯白|全黑|全白)(?:过场|画面|帧|场)"
+    r"|" + _EN_ACTUAL + r"(?:pure|solid|all)[- ](?:black|white)\s+(?:frames?|shot|transition)\b"
+    r"|\b(?:the\s+)?(?:entire|whole)\s+shot\s+is\s+(?:pure|solid|all)[- ](?:black|white)\b", re.I)
 _MIXED = re.compile(
     r"(?:白卡|字幕卡|字卡|卡)[^。]{0,55}(?:中间夹|交替|再切到)[^。]{0,30}实拍"
     r"|(?:白卡|字幕卡|字卡|卡)[^。]{0,30}实拍[^。]{0,30}(?:交替|混合)"
     r"|(?:中间夹|夹着)\s*\d*\s*帧实拍"
-    r"|先闪\s*\d*\s*帧[^。]{0,20}白卡再切")
+    r"|先闪\s*\d*\s*帧[^。]{0,20}白卡再切"
+    r"|\b" + _EN_CARD + r"s?\b[^.;\n]{0,70}\b(?:alternat\w*|intercut\w*|mixed|followed\s+by)"
+    r"[^.;\n]{0,40}\blive[- ]action\b"
+    r"|\blive[- ]action\b[^.;\n]{0,70}\b(?:alternat\w*|intercut\w*|mixed)"
+    r"[^.;\n]{0,40}\b" + _EN_CARD + r"s?\b", re.I)
 _CARD_DESCRIPTION = re.compile(
     r"^(?:(?:纯黑|纯白|纯色|黑|白)底的?)?(?:全屏|整屏)?"
     r"(?:字幕卡|字卡|文字卡|标语卡|片名卡|主片名卡|上映日期卡|档期卡|厂标卡"
-    r"|演职员表|演职员卡|信息卡|尾卡)(?:[：:，、。]|$)")
+    r"|演职员表|演职员卡|信息卡|尾卡)(?:[：:，、。]|$)"
+    r"|^(?:(?:a|the)\s+)?" + _EN_CARD + r"(?:[\s:,.]|$)", re.I)
 
 
 def _number(value):
@@ -190,7 +204,8 @@ def correct_s1_classification(script, raw_inputs, legacy_inputs, p2, slug,
             review, reason = True, "mixed_card_footage_requires_review"
         elif (label == "card_description_requires_review"
               or (label == "card" and override is None and legacy_kind != "card"
-                  and re.search(r"实拍|叠|压在|为背景", desc))):
+                  and re.search(r"实拍|叠|压在|为背景|\blive[- ]action\b|\boverla(?:y|id)\b"
+                                r"|\bsuperimposed\b", desc, re.I))):
             review, reason = True, "card_overlay_or_description_requires_review"
         elif label in {"card", "featureless"}:
             shot["kind"] = "card"

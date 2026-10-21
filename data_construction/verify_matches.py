@@ -35,7 +35,7 @@ def main():
     require_target(P, A)
 
     FRACS = (0.1, 0.3, 0.5, 0.7, 0.9)
-    FLAT = 3.0          # 标准差低于此值的帧当作纯色，不参与比较
+    FLAT = 3.0          # Frames below this standard deviation are treated as flat and excluded.
 
 
     def gray(src, t, crop):
@@ -80,7 +80,7 @@ def main():
             if f1 is None or f2 is None:
                 continue
             if f1.std() < FLAT or f2.std() < FLAT:
-                continue                       # 任一边是纯色，这个取样点没有可比的内容
+                continue                       # A flat frame on either side leaves no comparable content.
             c = corr(f1, f2)
             if c is not None:
                 best = max(best, c)
@@ -114,7 +114,7 @@ def main():
         raise SystemExit("No eligible source matches to compare. Check p2_refined.csv and script_inputs.json; "
                          "no match-confidence evidence was produced.")
 
-    print(f"  {len(jobs)} 个有匹配的镜头，{A.workers} 路并发", flush=True)
+    print(f"  {len(jobs)} matched shots; {A.workers} workers", flush=True)
     out = {}
     with ThreadPoolExecutor(max_workers=A.workers) as ex:
         for n, (k, v) in enumerate(ex.map(score, jobs), 1):
@@ -124,16 +124,16 @@ def main():
     json.dump(out, open(A.out, "w"), indent=0)
 
     vals = sorted(v for v in out.values() if v is not None)
-    print(f"\n  写出 {A.out}")
+    print(f"\n  Wrote {A.out}")
     if not vals:
         raise SystemExit("No measurable comparisons: frames could not be decoded or were too flat for correlation. "
                          f"Saved {len(out)} null measurements to {A.out}; no match-confidence evidence is available.")
-    print(f"  可测的 {len(vals)} 个: 中位 {vals[len(vals)//2]:.3f}  "
-          f"10% {vals[len(vals)//10]:.3f}  最低 {vals[0]:.3f}")
+    print(f"  Measured {len(vals)} shots: median {vals[len(vals)//2]:.3f}  "
+          f"10% {vals[len(vals)//10]:.3f}  minimum {vals[0]:.3f}")
     for thr in (0.5, 0.6, 0.7):
-        print(f"  低于 {thr}: {sum(1 for x in vals if x < thr)} 个 "
+        print(f"  Below {thr}: {sum(1 for x in vals if x < thr)} shots "
               f"({100*sum(1 for x in vals if x < thr)/len(vals):.1f}%)")
-    print(f"  测不了的（抽帧失败或双方全是纯色）: {sum(1 for v in out.values() if v is None)} 个")
+    print(f"  Unmeasurable (frame extraction failed or no non-flat frame pair): {sum(1 for v in out.values() if v is None)}")
 
 
 if __name__ == "__main__":

@@ -89,7 +89,7 @@ def split(film: str, name: str = "golden", model: str = "htdemucs"):
         got = sorted(os.listdir(d))
         if set(got) != {"vocals.wav", "drums.wav", "bass.wav", "other.wav"}:
             raise RuntimeError("Demucs did not produce the expected four stems")
-        print(f"分离出 {got}   {time.time()-t0:.0f}s", flush=True)
+        print(f"Separated {got}   {time.time()-t0:.0f}s", flush=True)
 
         dst = _data_path(film, name + "_stems")
         os.makedirs(dst, exist_ok=True)

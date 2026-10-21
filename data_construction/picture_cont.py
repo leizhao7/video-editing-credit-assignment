@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/picture_cont.py [options]\n\n  --film\n  --margin  跨切点比基线低这么多才算真换镜\n  --floor  绝对下限：连续的边界两侧本来就该长得像\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/picture_cont.py [options]\n\n  --film\n  --margin  Maximum similarity drop from the within-shot baseline for continuity\n  --floor  Minimum cross-boundary similarity for continuity\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 def main():
@@ -28,9 +28,9 @@ def main():
     P = argparse.ArgumentParser()
     P.add_argument("--film", required=True)
     P.add_argument("--margin", type=float, default=0.25,
-                   help="跨切点比基线低这么多才算真换镜")
+                   help="Maximum similarity drop from the within-shot baseline for continuity")
     P.add_argument("--floor", type=float, default=0.60,
-                   help="绝对下限：连续的边界两侧本来就该长得像")
+                   help="Minimum cross-boundary similarity for continuity")
     A = P.parse_args()
 
     E, T = f"{ROOT}/exports/{A.film}", f"{ROOT}/edit/task_{A.film}"
@@ -67,8 +67,8 @@ def main():
     rows, n_cont = [], 0
     for c in cuts:
         t = c["timeline_s"]
-        x, y = frame(t - 5 / FPS), frame(t - 3 / FPS)          # 同一镜头内，隔 2 帧
-        a, b = frame(t - 1.5 / FPS), frame(t + 0.5 / FPS)      # 跨切点，隔 2 帧
+        x, y = frame(t - 5 / FPS), frame(t - 3 / FPS)          # Within one shot, two frames apart.
+        a, b = frame(t - 1.5 / FPS), frame(t + 0.5 / FPS)      # Across the boundary, two frames apart.
         if any(z is None for z in (x, y, a, b)):
             rows.append({"idx": c["idx"], "continuous": None}); continue
         base, base_flat = sim(x, y)
@@ -79,14 +79,14 @@ def main():
              "baseline": round(base, 3), "across": round(cross, 3)}
         if base_flat or cross_flat:
             r["flat"] = {"baseline": base_flat, "across": cross_flat}
-            r["note"] = "有一侧是纯色画面（黑场/闪白），相关系数无从计算，数值是哨兵不是测量"
+            r["note"] = "At least one frame is flat (black/white). Correlation is undefined; the value is a sentinel, not a measurement."
         rows.append(r)
 
     out = f"{T}/stages/picture_measured.json"
-    json.dump({"note": "实测：画面是否跨切点连续。continuous=true 才可以写 no_change",
+    json.dump({"note": "Measured picture continuity across boundaries. no_change requires continuous=true.",
                "margin": A.margin, "n": len(rows), "n_continuous": n_cont, "cuts": rows},
               open(out, "w"), ensure_ascii=False, indent=1)
-    print(f"{A.film}: {len(rows)} 切点，画面连续 {n_cont} 处 -> {out}")
+    print(f"{A.film}: {len(rows)} boundaries; picture continuous at {n_cont} -> {out}")
 
 
 if __name__ == "__main__":

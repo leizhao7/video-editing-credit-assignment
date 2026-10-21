@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/build_s1_tasks.py [options]\n\n  --film\n  --all\n  -j, --workers\n  --text-only  只按当前 script.json 重写提示词，不重切素材\n  --skip-existing  已经建好且素材完整的作业段直接跳过\n  --repair-cards  仅 S1：应用有证据的实拍/字幕卡纠错并记录私有分类审计；需要完整重建\n  --card-overrides  私有 JSON：{film_slug: {shot_id: {classification, evidence}}}\n  --gc  清掉无人引用的缓存片段后退出\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/build_s1_tasks.py [options]\n\n  --film\n  --all\n  -j, --workers\n  --text-only  Rewrite prompts from the current script.json without recutting media\n  --skip-existing  Skip complete tasks whose media are intact\n  --repair-cards  S1 only: apply evidenced footage/card corrections and record a private audit; requires a full rebuild\n  --card-overrides  Private JSON: {film_slug: {shot_id: {classification, evidence}}}\n  --gc  Remove unreferenced cached clips and exit\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 try:
@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = DATA_ROOT
 OUT = f"{ROOT}/training_task"
-N_DISTRACT = 20            # 每个作业段的干扰项目标数
+N_DISTRACT = 20            # Target number of distractors per task chunk
 
 
 def sh(cmd):
@@ -224,18 +224,32 @@ def cut(src, t0, dur, crop, dst, w=854, h=480, mute=False, independent_silence=F
     return ok
 
 
+# Retain Chinese patterns for historical annotations and accept new English logs.
+_EN_CARD_MARK = (r"\b(?:(?:title|text|release[- ]date|opening|closing|end|credit|credits|"
+                 r"information|quote|studio|logo)\s+cards?|studio\s+logo|logo)\b"
+                 r"|\b(?:full[- ]screen|white)\s+(?:text|lettering)\s+on\s+black\b")
 _CARD_MARK = (r"字幕卡|片名卡|档期卡|标题卡|演职员|片头卡|厂标|信息卡|引语卡|logo|LOGO"
-              r"|纯色底.{0,6}字|黑底.{0,4}字|全屏.{0,4}字|黑场字幕")
-_CARD_POS = re.compile(r"(?:" + _CARD_MARK + r")(?:之后|之前|后的|后接|前的)")
-_CARD_OVER = re.compile(r"叠|压在|覆盖|上方叠")
+              r"|纯色底.{0,6}字|黑底.{0,4}字|全屏.{0,4}字|黑场字幕|" + _EN_CARD_MARK)
+_CARD_NEGATED = re.compile(
+    r"\b(?:not|isn['’]t|wasn['’]t|no)\s+(?:(?:actually|really)\s+)?"
+    r"(?:(?:a|an|the)\s+)?(?:(?:actual|standalone|full[- ]screen|pure)\s+)?"
+    r"(?:" + _EN_CARD_MARK + r")", re.I)
+_CARD_POS = re.compile(
+    r"(?:" + _CARD_MARK + r")(?:之后|之前|后的|后接|前的)"
+    r"|\b(?:before|after|following|preceded\s+by)\s+(?:(?:a|the)\s+)?(?:" + _EN_CARD_MARK + r")"
+    r"|(?:" + _EN_CARD_MARK + r")\s+(?:before|after|followed\s+by)\b", re.I)
+_CARD_OVER = re.compile(
+    r"叠|压在|覆盖|上方叠|\b(?:overlay|overlaid|superimposed)\b"
+    r"|\b(?:text|lettering|title)\b[^.;\n]{0,40}\b(?:over|on\s+top\s+of)\b"
+    r"[^.;\n]{0,20}\b(?:footage|live[- ]action|scene|shot)\b", re.I)
 _LUMA = None
 
 # Use the same luminance sampling policy for construction and verification.
 # Selecting the brightest sample prevents a fade-up from being classified by its dark midpoint alone.
 
 
-LUMA_SAMPLES = (0.2, 0.5, 0.8)      # 取样位置（占镜头长度的比例）
-LUMA_FLAT_STD = 8.0                 # 标准差低于此值 = 画面里没有可判断的内容
+LUMA_SAMPLES = (0.2, 0.5, 0.8)      # Sampling positions as fractions of shot duration
+LUMA_FLAT_STD = 8.0                 # Contrast below this threshold is treated as insufficient for visual judgment
 
 
 def featureless(luma):
@@ -245,7 +259,7 @@ def featureless(luma):
     return bool(luma) and luma[1] < LUMA_FLAT_STD
 
 
-too_dark = featureless          # 旧名，仍被引用
+too_dark = featureless          # Legacy alias retained for existing callers
 
 
 def mark_cards(script, inputs, slug):
@@ -256,15 +270,18 @@ def mark_cards(script, inputs, slug):
         q = f"{ROOT}/shot_luma.json"
         _LUMA = json.load(open(q)) if os.path.exists(q) else {}
         if not _LUMA:
-            print("  ★★ 找不到 shot_luma.json —— 黑场不会被剔除，"
-                  "本次构建与已交付的语料不一致。先跑: python3 shot_luma.py", flush=True)
+            print("  ★★ Missing shot_luma.json; featureless shots will not be excluded. "
+                  "This build differs from the recorded dataset construction. Run data_construction/shot_luma.py --all first.", flush=True)
     desc = {s["id"]: (s.get("desc") or "") for s in script.get("shots", [])}
     n = 0
     for s in inputs["shots"]:
         if s.get("kind") == "card":
             continue
         d = desc.get(s["id"], "")
-        if re.search(_CARD_MARK, d) and not _CARD_POS.search(d) and not _CARD_OVER.search(d):
+        # Exclude only negated English mentions; a separate positive declaration
+        # can still establish a card. Historical Chinese matching is unchanged.
+        positive_description = _CARD_NEGATED.sub("", d)
+        if re.search(_CARD_MARK, positive_description, re.I) and not _CARD_POS.search(d) and not _CARD_OVER.search(d):
             s["kind"] = "card"
             n += 1
             continue
@@ -299,9 +316,9 @@ def drop_weak_matches(slug, p2, thr=None):
             # Warn when this measured build input is absent; weak-match filtering then cannot be applied.
             
             
-            print("  ★★ 找不到 match_confidence.json —— 弱匹配不会被剔除，"
-                  "本次构建与已交付的语料不一致。", flush=True)
-            print("     先跑: python3 verify_matches.py", flush=True)
+            print("  ★★ Missing match_confidence.json; weak matches will not be excluded. "
+                  "This build differs from the recorded dataset construction.", flush=True)
+            print("     First run data_construction/verify_matches.py --all.", flush=True)
     if not _CONF:
         return 0
     n = 0
@@ -346,7 +363,7 @@ def build_id():
                     h.update(ast.dump(ast.parse(raw)).encode())
                     continue
                 except SyntaxError:
-                    pass                  # 解析不了就退回原文，宁可多重建
+                    pass                  # Fall back to the original text if parsing fails, allowing a conservative rebuild
             h.update(raw)
         h.update(RECIPE.encode())
         # The graders are copied into every task, so editing one and then running
@@ -387,7 +404,7 @@ def source_shots(slug):
     return [(float(r["start_s"]), float(r["end_s"])) for r in rows]
 
 
-MAX_CLIP_S = 45.0          # 单个候选最长多少秒
+MAX_CLIP_S = 45.0          # Maximum candidate duration in seconds
 
 
 def cover(a, b, use_from, use_dur, film_dur, cap=MAX_CLIP_S):
@@ -400,7 +417,7 @@ def cover(a, b, use_from, use_dur, film_dur, cap=MAX_CLIP_S):
     pad = min(1.5, max(0.0, (cap - (hi - lo)) / 2))
     lo = max(0.0, lo - pad)
     hi = min(film_dur, hi + pad)
-    if hi - lo > cap:                      # 还是太长：围绕用到的那段收窄
+    if hi - lo > cap:                      # Still too long: narrow the window around the used segment
         lo = max(0.0, min(need_a - 1.0, hi - cap))
         hi = min(film_dur, max(need_b + 1.0, lo + cap))
     # The use can run past the end of the film — the matched in-point carries a frame
@@ -447,7 +464,7 @@ def pick_distractors(home, shots, need, exclude=()):
                 if len(out) >= need or not (0 <= j < len(shots)) or j in taken:
                     continue
                 a, b = shots[j]
-                if b - a < 0.5:          # 太短的镜头看不出内容，当不了干扰项
+                if b - a < 0.5:          # Shots this short cannot provide useful distractor content
                     continue
                 taken.add(j)
                 out.append(j)
@@ -464,7 +481,7 @@ def match_short(true, ids, a, z, by_id, gold, gcrop, shots, home, srcpath,
     
     
     if not (isinstance(a, int) and isinstance(z, int) and 0 <= a <= z < len(ids)):
-        raise ValueError(f"作业段索引区间不合法: a={a!r} z={z!r} 共 {len(ids)} 个镜头")
+        raise ValueError(f"Invalid task-chunk index range: a={a!r}, z={z!r}, {len(ids)} shots total")
     # Match distractor durations to every true candidate, including both source routes,
     # so unusually short or long clips do not identify the target set by duration alone.
 
@@ -529,9 +546,9 @@ def _cut_all(cands, cdir, mute=False, strict=False):
             # Fail explicitly when a candidate cannot be cut; silently dropping it can desynchronize task stages.
 
 
-            print(f"    ★ 切片失败，候选被丢弃: {os.path.basename(c['src'])} "
+            print(f"    ★ Clip extraction failed; candidate discarded: {os.path.basename(c['src'])} "
                   f"@{c['t0']:.2f}+{c['dur']:.2f}s "
-                  f"({'正确项' if c['answer'] else '干扰项'})", flush=True)
+                  f"({'answer' if c['answer'] else 'distractor'})", flush=True)
             continue
         made.append({"id": cid, "file": f"clips/{cid}.mp4", "dur_s": round(c["dur"], 3)})
         if c["answer"]:
@@ -614,14 +631,14 @@ def build_chunk(slug, film_name, ch, script, inputs, p2, units, shots, pb, srcpa
                          "src_shot": None})
 
     if len(true) < (1 if repair_cards else 3):
-        return None, f"{ch['id']}: 只有 {len(true)} 个可用镜头，太少"
+        return None, f"{ch['id']}: only {len(true)} usable shots; too few for a task"
     # A chunk with no source-film anchor cannot supply neighbouring distractors.
     # Skip it instead of creating a select-all task.
 
 
     if len(home) < 2 and not repair_cards:
-        return None, (f"{ch['id']}: 只有 {len(home)} 个镜头锚在正片上"
-                      f"（{len(true)-len(home)} 个是片头片尾图形），不构成选素材任务")
+        return None, (f"{ch['id']}: only {len(home)} shots are anchored to the source film"
+                      f" ({len(true)-len(home)} are opening/closing graphics); insufficient for clip selection")
 
     # ---- distractors: neighbouring film shots, own boundaries ------------
     drng = random.Random(int(hashlib.sha1(f"short/{slug}/{ch['id']}".encode())
@@ -680,7 +697,7 @@ def build_chunk(slug, film_name, ch, script, inputs, p2, units, shots, pb, srcpa
                            exclude=protected | {s["src_shot"] for s in short
                                                 if s.get("src_shot") is not None})
     if repair_cards and len(short) + len(dis) < max(3, len(true)):
-        return None, f"{ch['id']}: 只有 {len(short) + len(dis)} 个有效干扰项，不足以构成选片任务"
+        return None, f"{ch['id']}: only {len(short) + len(dis)} valid distractors; insufficient for clip selection"
     cands = [{**t, "answer": True} for t in true] + short + \
             [{"src": srcpath, "t0": bound(*shots[j])[0], "dur": bound(*shots[j])[1],
               "crop": scrop, "origin": "film", "shot": None, "src_shot": j,
@@ -717,7 +734,7 @@ def build_chunk(slug, film_name, ch, script, inputs, p2, units, shots, pb, srcpa
         stale = (not os.path.exists(bid)
                  or json.load(open(bid)).get("build") != s1_build_id(repair_cards, card_decisions))
         if stale:
-            pass                       # 用别的代码建的，重建
+            pass                       # Built by different code; rebuild
         elif os.path.exists(mf) and os.path.exists(av):
             existing = json.load(open(mf))["candidates"]
             listed = {m["id"] for m in existing}
@@ -752,7 +769,7 @@ def build_chunk(slug, film_name, ch, script, inputs, p2, units, shots, pb, srcpa
         
         
         if not os.path.exists(f"{tdir}/initial_state/manifest.json"):
-            return None, f"{ch['id']}: 还没建过，不能只重写文本"
+            return None, f"{ch['id']}: task has not been built; cannot rewrite text only"
         mf = json.load(open(f"{tdir}/initial_state/manifest.json"))
         made = mf["candidates"]
         answer = json.load(open(f"{tdir}/verifier/answer.json"))["answer"]
@@ -760,14 +777,14 @@ def build_chunk(slug, film_name, ch, script, inputs, p2, units, shots, pb, srcpa
     else:
         made, answer, keymap = _cut_all(cands, cdir, mute=repair_cards, strict=repair_cards)
     if not text_only and len(answer) < (1 if repair_cards else 3):
-        return None, f"{ch['id']}: 正确项只切出 {len(answer)} 个"
+        return None, f"{ch['id']}: only {len(answer)} answer clips were extracted"
     if not text_only:
         # what the agent can see must be exactly what the manifest lists
         on_disk = {os.path.basename(f)[:-4] for f in glob.glob(f"{cdir}/*.mp4")}
         listed = {m["id"] for m in made}
         if on_disk != listed:
-            return None, (f"{ch['id']}: clips 目录与清单不一致，"
-                          f"多出 {sorted(on_disk-listed)[:3]} 缺 {sorted(listed-on_disk)[:3]}")
+            return None, (f"{ch['id']}: clips directory does not match the manifest: "
+                          f"extra {sorted(on_disk-listed)[:3]}, missing {sorted(listed-on_disk)[:3]}")
 
     # ---- task files ------------------------------------------------------
     tid = f"{slug}_s1_{ch['id']}"
@@ -834,7 +851,7 @@ Just the ids you picked, in any order.
 """)
     open(f"{tdir}/output/.gitkeep", "w").write("")
 
-    # ---- verifier （agent 看不到） ----------------------------------------
+    # ---- verifier (hidden from the task-solving agent) ----------------------------------------
     if not text_only:
         json.dump({"task": tid, "answer": sorted(answer),
                    "n_candidates": len(made), "n_answer": len(answer),
@@ -843,31 +860,31 @@ Just the ids you picked, in any order.
                   open(f"{tdir}/verifier/answer.json", "w"), ensure_ascii=False, indent=1)
     json.dump({"id": tid, "deliverable_kind": "json_set",
                "verifier_class": "mechanical",
-               "golden_semantics": "answer_key（机械导出，golden 自评 1.0）",
-               "reward": "F1(选中集合, 正确集合)；pass 门槛 0.8",
+               "golden_semantics": "answer_key (programmatically derived; reference self-score 1.0)",
+               "reward": "F1(selected set, answer set); pass threshold 0.8",
                "source_evidence": ("S1 isolated repair: see s1_card_classification.json and "
                                   "s1_shadow_provenance.json for reviewed source spans, "
                                   "reference fallback and old/new candidate mapping. "
                                   "Mechanical key consistency alone is not semantic approval."
-                                  if repair_cards else f"{slug} 作业段 {ch['id']}：正确项是 p2_refined 把预告镜头"
-                                  f"匹配回正片后、包含该时刻的那条正片镜头（按 source_manifest "
-                                  f"的边界切）；干扰项是正片里相邻的镜头，同样按自身边界切"),
+                                  if repair_cards else f"{slug} chunk {ch['id']}: answer clips are source-film shots containing the trailer moments "
+                                  f"matched by p2_refined, cut at source_manifest "
+                                  f"boundaries; distractors are neighbouring source-film shots cut at their own boundaries"),
                "leak_controls": ("Uniform silent encoding and shuffled IDs; known same-take "
                                  "aliases excluded from distractors. Duration balancing is "
                                  "heuristic, not a guarantee of zero statistical leakage. "
                                  "Final public-task-only quality review is required."
                                  if repair_cards else
-                                 "全部候选都是正片自然镜头，时长无信号；统一转码/去声/打乱编号；"
-                                 "字幕卡整体剔除")},
+                                 "All candidates use natural source-film shots; durations are not intended as answer cues. Uniform encoding, silent audio, and shuffled IDs; "
+                                 "title cards are excluded")},
               open(f"{tdir}/verifier/task_meta.json", "w"), ensure_ascii=False, indent=1)
-    json.dump({"task": tid, "type": "mechanical — 集合比对",
-               "formula": "读 output/selection.json 的 selected；F1 = 2PR/(P+R)，"
-                          "P=|选中∩正确|/|选中|，R=|选中∩正确|/|正确|；pass 0.8",
+    json.dump({"task": tid, "type": "mechanical — set comparison",
+               "formula": "Read selected from output/selection.json; F1 = 2PR/(P+R), "
+                          "P=|selected intersection answer|/|selected|, R=|selected intersection answer|/|answer|; pass 0.8",
                "n_answer": len(answer), "n_candidates": len(made),
                "golden_score": 1.0,
                "controls": [
-                   {"name": "全选", "expect_f1": round(2 * len(answer) / (len(made) + len(answer)), 3)},
-                   {"name": "空集", "expect_f1": 0.0}]},
+                   {"name": "select all", "expect_f1": round(2 * len(answer) / (len(made) + len(answer)), 3)},
+                   {"name": "empty set", "expect_f1": 0.0}]},
               open(f"{tdir}/verifier/rubric.json", "w"), ensure_ascii=False, indent=1)
     shutil.copy(f"{CODE_ROOT}/grade_s1.py", f"{tdir}/verifier/grade.py")
     # LAST. This file is what --skip-existing trusts, so it must not exist until
@@ -910,7 +927,7 @@ def build_film(slug, name, text_only=False, skip_existing=False, repair_cards=Fa
                   open(f"{audit_dir}/{slug}.json", "w"), ensure_ascii=False, indent=1)
         pending = sum(row["review_required"] for row in card_decisions)
         if pending:
-            print(f"  [{name}] S1 分类有 {pending} 个镜头需复核，见 {audit_dir}/{slug}.json",
+            print(f"  [{name}] S1 classification has {pending} shots requiring review; see {audit_dir}/{slug}.json",
                   flush=True)
     units = {u["id"]: u for u in json.load(open(f"{T}/s3_units.json"))["units"]}
     pb = json.load(open(f"{E}/probe.json"))
@@ -929,13 +946,13 @@ def build_film(slug, name, text_only=False, skip_existing=False, repair_cards=Fa
                              srcpath, text_only, skip_existing, repair_cards, card_decisions)
         (rows.append(r) if r else errs.append(err))
         if err and os.path.isdir(f"{OUT}/{slug}/s_1/{ch['id']}"):
-            shutil.rmtree(f"{OUT}/{slug}/s_1/{ch['id']}")   # 别留半个任务
+            shutil.rmtree(f"{OUT}/{slug}/s_1/{ch['id']}")   # Do not leave a partial task
     nsk = sum(1 for r in rows if r.get("skipped"))
-    print(f"  [{name}] {len(rows)}/{len(script['chunks'])} 个任务"
-          + (f"（跳过已建 {nsk}）" if nsk else "") + "  "
-          f"候选中位 {sorted(r['n'] for r in rows)[len(rows)//2] if rows else 0}  "
-          f"正确项中位 {sorted(r['answer'] for r in rows)[len(rows)//2] if rows else 0}"
-          + (f"  跳过 {len(errs)}: {errs[0][:60]}" if errs else ""), flush=True)
+    print(f"  [{name}] {len(rows)}/{len(script['chunks'])} tasks"
+          + (f" (skipped {nsk} existing tasks)" if nsk else "") + "  "
+          f"median candidates {sorted(r['n'] for r in rows)[len(rows)//2] if rows else 0}  "
+          f"median answer clips {sorted(r['answer'] for r in rows)[len(rows)//2] if rows else 0}"
+          + (f"  skipped {len(errs)}: {errs[0][:60]}" if errs else ""), flush=True)
     return len(rows)
 
 
@@ -954,8 +971,8 @@ def gc_cache():
     # worse, opens a path another thread is writing.
     if subprocess.run(["pgrep", "-f", "build_s1_tasks|build_s23_tasks"],
                       capture_output=True).stdout.decode().split():
-        sys.exit("拒绝清理：正在构建。构建过程中大量缓存会暂时无人引用，"
-                 "此时清理等于删掉马上要用的片段。")
+        sys.exit("Cleanup refused: a build is running. Many cached clips are temporarily unreferenced during construction; "
+                 "cleaning now would delete clips needed by the build.")
     # Track every media hardlink under the task tree, including verifier references,
     # so garbage collection does not discard cache entries still used outside candidate folders.
 
@@ -964,7 +981,7 @@ def gc_cache():
         try:
             return os.stat(f).st_ino
         except OSError:
-            return None          # 构建正在写，枚举与 stat 之间文件可能消失
+            return None          # A concurrent build can remove a file between listing and stat
 
     live = {i for i in (_ino(f) for f in
                         glob.glob(f"{OUT}/*/s_*/*/**/*.mp4", recursive=True)) if i}
@@ -974,18 +991,18 @@ def gc_cache():
 
 
     if cached and not live:
-        sys.exit(f"拒绝清理：{CACHE} 里有 {len(cached)} 个片段，但 {OUT} 下一个在用的都没找到。"
-                 f"\n  任务树是空的，还是路径不对？确认后再跑。")
+        sys.exit(f"Cleanup refused: {CACHE} has {len(cached)} clips, but no references were found under {OUT}."
+                 f"\n  Check whether the task tree is empty or the path is incorrect before retrying.")
     doomed = [c for c in cached if os.stat(c).st_ino not in live]
     if cached and len(doomed) > 0.9 * len(cached):
-        sys.exit(f"拒绝清理：{len(doomed)}/{len(cached)} 个片段被判为孤儿（超过九成）。"
-                 f"\n  重建到一半时这是正常的，但也可能是判断存活的方式坏了。"
-                 f"\n  确实要清就先补齐任务树，或手动删 {CACHE}。")
+        sys.exit(f"Cleanup refused: {len(doomed)}/{len(cached)} clips appear unreferenced (over 90%)."
+                 f"\n  This can occur during a rebuild or indicate an incorrect reference scan."
+                 f"\n  Complete the task tree before cleanup, or explicitly remove {CACHE} yourself.")
     freed = 0
     for c in doomed:
         freed += os.path.getsize(c)
         os.remove(c)
-    print(f"  清理缓存 {len(doomed)} 个孤儿片段，释放 {freed/2**20:.0f} MB")
+    print(f"  Removed {len(doomed)} unreferenced cached clips; freed {freed/2**20:.0f} MB")
 
 
 def main():
@@ -993,19 +1010,19 @@ def main():
     P.add_argument("--film"); P.add_argument("--all", action="store_true")
     P.add_argument("-j", "--workers", type=int, default=1)
     P.add_argument("--text-only", action="store_true",
-                   help="只按当前 script.json 重写提示词，不重切素材")
+                   help="Rewrite prompts from the current script.json without recutting media")
     P.add_argument("--skip-existing", action="store_true",
-                   help="已经建好且素材完整的作业段直接跳过")
+                   help="Skip complete tasks whose media are intact")
     P.add_argument("--repair-cards", action="store_true",
-                   help="仅 S1：应用有证据的实拍/字幕卡纠错并记录私有分类审计；需要完整重建")
-    P.add_argument("--card-overrides", help="私有 JSON：{film_slug: {shot_id: {classification, evidence}}}")
-    P.add_argument("--gc", action="store_true", help="清掉无人引用的缓存片段后退出")
+                   help="S1 only: apply evidenced footage/card corrections and record a private audit; requires a full rebuild")
+    P.add_argument("--card-overrides", help="Private JSON: {film_slug: {shot_id: {classification, evidence}}}")
+    P.add_argument("--gc", action="store_true", help="Remove unreferenced cached clips and exit")
     A = P.parse_args()
     require_target(P, A)
     if A.repair_cards and A.text_only:
-        P.error("--repair-cards 不能与 --text-only 合用：素材和答案必须同步重建")
+        P.error("--repair-cards cannot be combined with --text-only: media and answers must be rebuilt together")
     if A.card_overrides and not A.repair_cards:
-        P.error("--card-overrides 需要 --repair-cards")
+        P.error("--card-overrides requires --repair-cards")
     overrides = json.load(open(A.card_overrides)) if A.card_overrides else {}
     if A.gc:
         gc_cache(); return
@@ -1018,10 +1035,10 @@ def main():
     if A.film:
         films = {k: v for k, v in films.items() if k == A.film}
         if not films:
-            sys.exit(f"{A.film} 的场记表还没做好")
+            sys.exit(f"The shot log for {A.film} is not complete")
     if not films:
-        sys.exit("还没有片子完成场记表")
-    print(f"建 S1 任务: {len(films)} 部\n", flush=True)
+        sys.exit("No film has a complete shot log")
+    print(f"Building CS tasks for {len(films)} films\n", flush=True)
     if A.workers > 1:
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             n = sum(ex.map(lambda kv: build_film(*kv, A.text_only, A.skip_existing,
@@ -1029,7 +1046,7 @@ def main():
     else:
         n = sum(build_film(s, v, A.text_only, A.skip_existing, A.repair_cards,
                            overrides.get(s)) for s, v in films.items())
-    print(f"\n共 {n} 个任务 -> {OUT}/")
+    print(f"\n{n} tasks total -> {OUT}/")
 
 
 if __name__ == "__main__":

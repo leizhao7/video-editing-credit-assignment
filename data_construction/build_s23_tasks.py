@@ -26,8 +26,8 @@ from build_s1_tasks import (cut, source_shots, shot_index, bound, cover,
 
 FPS_DEFAULT = 24000 / 1001
 IN_TOL_MIN = 6             # Existing minimum, in source-video frames.
-DUR_TOL = 4                # 出点/时长容差（帧）
-MIN_SLACK = 0.6            # 互裁后每个 clip 至少要留的余量（秒）；见 separate()
+DUR_TOL = 4                # Out-point/duration tolerance in frames
+MIN_SLACK = 0.6            # Minimum remaining handle per clip after mutual cropping, in seconds; see separate()
 
 
 def chunk_members(ch, inputs):
@@ -91,10 +91,10 @@ def separate(seq):
     for a, b in zip(fam, fam[1:]):
         if a["clip_t0"] + a["clip_dur"] <= b["clip_t0"] + 1e-6:
             continue
-        a_keep = a["in_s"] + a["use_dur"]      # a 必须留到这里
-        b_reach = b["in_s"]                    # b 必须在这之前开始
+        a_keep = a["in_s"] + a["use_dur"]      # Clip a must extend at least this far
+        b_reach = b["in_s"]                    # Clip b must start no later than this
         if a_keep > b_reach - 1e-6:
-            continue                           # 用到的画面本身重叠，裁不开
+            continue                           # The required footage overlaps and cannot be separated
         # A gap, not a shared boundary. Cutting both at one point leaves the clips
         # exactly abutting, and the last frame of one is still the frame before the
         # first of the other — continuity a solver can read even with no shared
@@ -149,7 +149,7 @@ def build_s2(slug, name, ch, seq, pb, tdir):
         os.makedirs(d, exist_ok=True)
     ids, made = write_clips(seq, cdir, "k", f"s2/{slug}/{ch['id']}")
     if not ids:
-        return None, f"{ch['id']}: 切片失败 ({made})"
+        return None, f"{ch['id']}: clip extraction failed ({made})"
     tid = f"{slug}_s2_{ch['id']}"
     json.dump({"id": tid, "seed": "clip_ordering", "stage": "s2/ordering",
                "film": slug, "chunk": ch["id"], "beat": ch.get("beat"),
@@ -245,7 +245,7 @@ def inpoint_tolerance(clip, source_fps, reference_fps):
 
 
 def build_s3(slug, name, ch, seq, cards, pb, tdir):
-    fps = pb["gold"]["fps"]        # 预告片：镜头长度量在这个帧率下
+    fps = pb["gold"]["fps"]        # Trailer frame rate used to measure shot duration
     src_fps = pb["src"]["fps"]     # Native source FPS sets only the minimum tolerance.
     cdir = f"{tdir}/initial_state/clips"
     for d in (cdir, f"{tdir}/output", f"{tdir}/verifier"):
@@ -255,14 +255,14 @@ def build_s3(slug, name, ch, seq, cards, pb, tdir):
     for n, c in enumerate(seq, 1):
         cid = f"p{n:02d}"
         if not cut(c["src"], c["clip_t0"], c["clip_dur"], c["crop"], f"{cdir}/{cid}.mp4"):
-            return None, (f"{ch['id']}: 切片失败 "
+            return None, (f"{ch['id']}: clip extraction failed "
                           f"({os.path.basename(c['src'])} @ {c['clip_t0']:.3f}s "
                           f"+{c['clip_dur']:.3f}s)")
         ids.append(cid)
         made.append({"id": cid, "file": f"clips/{cid}.mp4", "position": n,
                      "clip_dur_s": round(c["clip_dur"], 3)})
 
-    target = sum(c["use_dur"] for c in seq)          # 已天然不含字幕卡
+    target = sum(c["use_dur"] for c in seq)          # Cards are already excluded
     tid = f"{slug}_s3_{ch['id']}"
     json.dump({"id": tid, "seed": "rough_cut", "stage": "s3/rough_cut",
                "film": slug, "chunk": ch["id"], "beat": ch.get("beat"),
@@ -404,7 +404,7 @@ def build_film(slug, name):
         seq, cards = collect(ch, inputs, p2, shots, pb, srcpath, gold, scrop, gcrop)
         anchored = sum(1 for c in seq if c["origin"] == "film")
         if len(seq) < 3 or anchored < 2:
-            errs.append(f"{ch['id']}: {len(seq)} 镜 / {anchored} 个锚在正片上，跳过")
+            errs.append(f"{ch['id']}: {len(seq)} shots / {anchored} source-film anchors; skipped")
             continue
         for stage, fn in (("s_2", build_s2), ("s_3", build_s3)):
             d = f"{OUT}/{slug}/{stage}/{ch['id']}"
@@ -417,8 +417,8 @@ def build_film(slug, name):
                 n2 += 1
             else:
                 n3 += 1
-    print(f"  [{name}] S2 {n2} 个 / S3 {n3} 个"
-          + (f"  跳过 {len(errs)}: {errs[0][:52]}" if errs else ""), flush=True)
+    print(f"  [{name}] NS {n2} tasks / RC {n3} tasks"
+          + (f"  skipped {len(errs)}: {errs[0][:52]}" if errs else ""), flush=True)
     return n2 + n3
 
 
@@ -437,16 +437,16 @@ def main():
     if A.film:
         films = {k: v for k, v in films.items() if k == A.film}
         if not films:
-            sys.exit(f"{A.film} 的场记表还没做好")
+            sys.exit(f"The shot log for {A.film} is not complete")
     if not films:
-        sys.exit("还没有片子完成场记表")
-    print(f"建 S2/S3 任务: {len(films)} 部\n", flush=True)
+        sys.exit("No film has a complete shot log")
+    print(f"Building NS/RC tasks for {len(films)} films\n", flush=True)
     if A.workers > 1:
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             n = sum(ex.map(lambda kv: build_film(*kv), films.items()))
     else:
         n = sum(build_film(s, v) for s, v in films.items())
-    print(f"\n共 {n} 个任务 -> {OUT}/")
+    print(f"\n{n} tasks total -> {OUT}/")
 
 
 if __name__ == "__main__":

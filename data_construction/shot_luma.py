@@ -25,7 +25,7 @@ def main():
 
     ROOT = DATA_ROOT
     sys.path.insert(0, CODE_ROOT)
-    from build_s1_tasks import LUMA_SAMPLES, featureless   # 同一套判据，见 build_s1_tasks
+    from build_s1_tasks import LUMA_SAMPLES, featureless   # Use the same criteria as build_s1_tasks.
     P = argparse.ArgumentParser()
     P.add_argument("-j", "--workers", type=int, default=8)
     P.add_argument("--out", default=f"{ROOT}/shot_luma.json")
@@ -92,7 +92,7 @@ def main():
             raise SystemExit("No shots to measure in script_inputs.json. Check preprocessing and rerun "
                              "python data_construction/run_script_queue.py --film <slug> --prep-only.")
 
-        print(f"  {len(jobs)} 个预告片镜头，{A.workers} 路并发", flush=True)
+        print(f"  {len(jobs)} trailer shots; {A.workers} workers", flush=True)
         out = {}
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             for n, (k, v) in enumerate(ex.map(measure, jobs), 1):
@@ -103,12 +103,12 @@ def main():
 
         vals = [v for v in out.values() if v]
         dark = [v for v in vals if featureless(v)]
-        print(f"\n  写出 {A.out}")
+        print(f"\n  Wrote {A.out}")
         if not vals:
             raise SystemExit("No measurable shot frames: all frame extractions failed or returned invalid data. "
                              f"Saved {len(out)} null measurements to {A.out}; no luminance evidence is available.")
-        print(f"  可测 {len(vals)} 个，无内容 {len(dark)} 个 ({100*len(dark)/len(vals):.1f}%)")
-        print(f"  测不了的 {sum(1 for v in out.values() if not v)} 个")
+        print(f"  Measured {len(vals)} shots; featureless {len(dark)} ({100*len(dark)/len(vals):.1f}%)")
+        print(f"  Unmeasurable shots: {sum(1 for v in out.values() if not v)}")
 
 
     # Run the scan only through the explicit command-line entry point.

@@ -21,19 +21,19 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 每个 clip 抽几帧。s_2 的候选少但要判顺序，多给一帧看动作的接续。
-# s_3/s_4e 的产出名取自各任务 task.json 的 deliverables，这里是兜底默认值。
+# Initial frames per clip; NS gets an extra frame to inspect action continuity.
+# RC/FC output names come from task.json deliverables; these are fallback defaults.
 FRAMES_PER_CLIP = {"s_1": 2, "s_2": 3, "s_3": 3, "s_4e": 3}
 DELIVERABLE = {"s_1": "selection.json", "s_2": "order.json",
                "s_3": "cuts.json", "s_4e": "edit.json"}
-# 判分方式：s_1/s_2 有 verifier/grade.py 直接算分；s_3/s_4e 没有 grade.py，
-# 要先跑 evidence 脚本（ffmpeg 渲染 + 联络表）再让配置的 LLM 按 rubric 打分。
-# 当前 RL/SFT launcher 显式选择 Gemini 3.1 Pro；Azure gpt-5.5 只是兼容后端。
-# 完整评分链是**四步**，不是两步：
-#   evidence  → 机械证据
+# CS/NS use verifier/grade.py directly; RC/FC use the configured judge chain.
+# Generate evidence (FFmpeg rendering and contact sheets) before rubric judging.
+# The recorded RL/SFT launchers select Gemini 3.1 Pro; Azure gpt-5.5 is a compatibility backend.
+# The full chain requires evidence, blind judging, referenced judging, and aggregation.
+#   evidence -> measured/rendered evidence
 #   S3: 0.2×blind/non-reference + 0.4×referenced
 #       + 0.4×task-verifier deterministic golden distance
-#   S4E: 保留 0.6×blind + 0.4×referenced
+#   S4E: 0.6 * blind + 0.4 * referenced
 #
 # Aggregate all required components; a blind score alone is not the final reward.
 # The referenced judgement uses the reference edit as supporting evidence.
@@ -62,54 +62,54 @@ def validate_deliverable_data(root, stage: str) -> None:
         nonlocal nodes
         nodes += 1
         if nodes > 20_000:
-            raise ValueError("JSON 节点超过 20000")
+            raise ValueError("JSON exceeds 20000 nodes")
         if depth > 32:
-            raise ValueError("JSON 嵌套超过 32 层")
+            raise ValueError("JSON nesting exceeds 32 levels")
         if isinstance(value, dict):
             if len(value) > 2_000:
-                raise ValueError("单个 JSON object 字段过多")
+                raise ValueError("Too many fields in a JSON object")
             for key, child in value.items():
                 if not isinstance(key, str) or len(key) > 256:
-                    raise ValueError("JSON key 非字符串或超过 256 字符")
+                    raise ValueError("JSON key is not a string or exceeds 256 characters")
                 walk(child, depth + 1)
         elif isinstance(value, list):
             if len(value) > 2_000:
-                raise ValueError("单个 JSON array 项过多")
+                raise ValueError("Too many items in a JSON array")
             for child in value:
                 walk(child, depth + 1)
         elif isinstance(value, str):
             if len(value) > 65_536:
-                raise ValueError("JSON 字符串超过 65536 字符")
+                raise ValueError("JSON string exceeds 65536 characters")
         elif isinstance(value, float):
             if not math.isfinite(value) or abs(value) > 1e6:
-                raise ValueError(f"JSON 数值越界: {value!r}")
+                raise ValueError(f"JSON number is out of bounds: {value!r}")
         elif isinstance(value, int) and not isinstance(value, bool):
             if abs(value) > 1_000_000:
-                raise ValueError(f"JSON 整数越界: {value!r}")
+                raise ValueError(f"JSON integer is out of bounds: {value!r}")
         elif value is not None and not isinstance(value, bool):
-            raise ValueError(f"JSON 包含不支持的类型: {type(value).__name__}")
+            raise ValueError(f"JSON contains an unsupported type: {type(value).__name__}")
 
     walk(root)
     if not isinstance(root, dict):
-        raise ValueError("交付物顶层必须是 JSON object")
+        raise ValueError("Submission must be a JSON object")
 
     if stage == "s_1":
         selected = root.get("selected")
         if not isinstance(selected, list) or not all(
                 isinstance(item, str) and 0 < len(item) <= 128 for item in selected):
-            raise ValueError("s_1 交付物必须包含字符串数组 selected")
+            raise ValueError("CS submission must contain a selected array of strings")
     elif stage == "s_2":
         order = root.get("order")
         if not isinstance(order, list) or not all(
                 isinstance(item, str) and 0 < len(item) <= 128 for item in order):
-            raise ValueError("s_2 交付物必须包含字符串数组 order")
+            raise ValueError("NS submission must contain an order array of strings")
     elif stage == "s_3":
         cuts = root.get("cuts")
         if not isinstance(cuts, list) or len(cuts) > 512:
-            raise ValueError("s_3 交付物必须包含至多 512 项的 cuts")
+            raise ValueError("RC submission must contain a cuts array with at most 512 entries")
         for cut in cuts:
             if not isinstance(cut, dict) or not isinstance(cut.get("clip"), str):
-                raise ValueError("s_3 的每项 cut 必须包含字符串 clip")
+                raise ValueError("Each RC cut must contain a clip string")
             start, end = cut.get("in_s"), cut.get("out_s")
             if (isinstance(start, bool) or isinstance(end, bool)
                     or not isinstance(start, (int, float))
@@ -117,14 +117,14 @@ def validate_deliverable_data(root, stage: str) -> None:
                     or not math.isfinite(float(start))
                     or not math.isfinite(float(end))
                     or start < 0 or end <= start or end > 1_000_000):
-                raise ValueError("s_3 的 in_s/out_s 必须是有限且递增的非负秒数")
+                raise ValueError("RC in_s/out_s must be finite, nonnegative seconds with out_s greater than in_s")
     elif stage == "s_4e":
         for key in ("dialogue", "joins", "production_sound", "cards"):
             if key in root and (not isinstance(root[key], list) or len(root[key]) > 512):
-                raise ValueError(f"s_4e 的 {key} 必须是数组")
+                raise ValueError(f"FC {key} must be an array")
         music = root.get("music")
         if music is not None and not isinstance(music, dict):
-            raise ValueError("s_4e 的 music 必须是 object")
+            raise ValueError("FC music must be an object")
 
         def number(row, key, *, minimum=None, required=True):
             value = row.get(key)
@@ -132,66 +132,66 @@ def validate_deliverable_data(root, stage: str) -> None:
                 return None
             if (isinstance(value, bool) or not isinstance(value, (int, float))
                     or not math.isfinite(float(value))):
-                raise ValueError(f"s_4e 的 {key} 必须是有限数")
+                raise ValueError(f"FC {key} must be a finite number")
             value = float(value)
             if minimum is not None and value < minimum:
-                raise ValueError(f"s_4e 的 {key} 必须 >= {minimum}")
+                raise ValueError(f"FC {key} must be >= {minimum}")
             return value
 
         if music is not None and music.get("starts_at_s") is not None:
             number(music, "starts_at_s", minimum=0)
         for line in root.get("dialogue") or []:
             if not isinstance(line, dict) or not isinstance(line.get("take"), str):
-                raise ValueError("s_4e dialogue 每项必须含字符串 take")
+                raise ValueError("Each FC dialogue entry must contain a take string")
             start = number(line, "in_s", minimum=0)
             end = number(line, "out_s", minimum=0)
             number(line, "at_s", minimum=-60)
             if end <= start:
-                raise ValueError("s_4e dialogue 的 out_s 必须大于 in_s")
+                raise ValueError("FC dialogue out_s must be greater than in_s")
             if line.get("gain_db") is not None:
                 number(line, "gain_db", minimum=-120)
         seen_joins = set()
         for join in root.get("joins") or []:
             if not isinstance(join, dict):
-                raise ValueError("s_4e joins 每项必须是 object")
+                raise ValueError("Each FC joins entry must be an object")
             index = join.get("join")
             if isinstance(index, bool) or not isinstance(index, int) or index <= 0:
-                raise ValueError("s_4e join 必须是正整数")
+                raise ValueError("FC join must be a positive integer")
             if index in seen_joins:
-                raise ValueError(f"s_4e join 重复: {index}")
+                raise ValueError(f"Duplicate FC join: {index}")
             seen_joins.add(index)
             if join.get("picture") not in ("cut", "dip_to_black", "dissolve", "other"):
-                raise ValueError(f"s_4e join {index} 的 picture 无效")
+                raise ValueError(f"FC join {index} has an invalid picture value")
             if join.get("sound") not in ("hard", "carries_over", "prelap", "under"):
-                raise ValueError(f"s_4e join {index} 的 sound 无效")
+                raise ValueError(f"FC join {index} has an invalid sound value")
             for field in ("black_hold_s", "fade_in_s", "fade_out_s", "dur_s"):
                 if join.get(field) is not None:
                     number(join, field, minimum=0)
         for sound in root.get("production_sound") or []:
             if not isinstance(sound, dict) or not isinstance(sound.get("shot"), str):
-                raise ValueError("s_4e production_sound 每项必须含字符串 shot")
+                raise ValueError("Each FC production_sound entry must contain a shot string")
             timed = [sound.get(k) is not None for k in ("in_s", "out_s", "at_s")]
             if any(timed) and not all(timed):
-                raise ValueError("s_4e production_sound 的 in_s/out_s/at_s 必须一起出现")
+                raise ValueError("FC production_sound in_s/out_s/at_s must be provided together")
             if all(timed):
                 start = number(sound, "in_s", minimum=0)
                 end = number(sound, "out_s", minimum=0)
                 number(sound, "at_s", minimum=-60)
                 if end <= start:
-                    raise ValueError("s_4e production_sound 的 out_s 必须大于 in_s")
+                    raise ValueError("FC production_sound out_s must be greater than in_s")
             if sound.get("gain_db") is not None:
                 number(sound, "gain_db", minimum=-120)
         for card in root.get("cards") or []:
             if not isinstance(card, dict) or not isinstance(card.get("shot"), str):
-                raise ValueError("s_4e cards 每项必须含字符串 shot")
+                raise ValueError("Each FC cards entry must contain a shot string")
     else:
-        raise ValueError(f"不支持的 stage: {stage!r}")
+        raise ValueError(f"Unsupported stage: {stage!r}")
 
 
 def load_and_validate_deliverable(path: str, stage: str):
     """Parse strict JSON and apply :func:`validate_deliverable_data`."""
     def reject_constant(value: str):
-        raise ValueError(f"非有限 JSON 数值 {value}")
+        raise ValueError(f"Non-finite JSON number {value}")
 
     with open(path, encoding="utf-8") as fh:
         root = json.load(fh, parse_constant=reject_constant)
@@ -204,7 +204,7 @@ def n_frames(stage: str) -> int:
 
 
 def gold_count(task_dir: str) -> int:
-    """s_1 的答案数。取不到就返回 0，调用方据此决定告不告知。"""
+    """Return the CS target count, or 0 if unavailable; the caller decides whether to disclose it."""
     try:
         with open(f"{task_dir}/verifier/answer.json", encoding="utf-8") as fh:
             return len(json.load(fh)["answer"])
@@ -232,27 +232,27 @@ def visual_items(task_dir: str, stage: str, manifest: dict) -> list:
     elif stage == "s_4e":
         raw = manifest.get("shots")
     else:
-        raise ValueError(f"不支持的 stage: {stage!r}")
+        raise ValueError(f"Unsupported stage: {stage!r}")
     if not isinstance(raw, list) or not raw:
-        raise ValueError(f"{stage} manifest 缺少非空素材数组")
+        raise ValueError(f"{stage} manifest requires a nonempty media array")
 
     out, seen = [], set()
     for index, original in enumerate(raw):
         if not isinstance(original, dict):
-            raise ValueError(f"{stage} 第 {index} 个素材不是 object")
+            raise ValueError(f"{stage} media item {index} must be an object")
         item = dict(original)
         item_id = item.get("id")
         if not isinstance(item_id, str) or not item_id:
-            raise ValueError(f"{stage} 第 {index} 个素材缺少 id")
+            raise ValueError(f"{stage} media item {index} is missing an id")
         if item_id in seen:
-            raise ValueError(f"{stage} manifest 含重复素材 id: {item_id}")
+            raise ValueError(f"{stage} manifest contains a duplicate media id: {item_id}")
         seen.add(item_id)
 
         if stage == "s_4e" and not item.get("file"):
             item["file"] = f"shots/{item_id}.mp4"
         rel = item.get("file")
         if not isinstance(rel, str) or not rel:
-            raise ValueError(f"{stage} 素材 {item_id} 缺少 file")
+            raise ValueError(f"{stage} media item {item_id} is missing file")
         path = os.path.join(task_dir, "initial_state", rel)
         if os.path.isfile(path):
             out.append(item)
@@ -269,9 +269,9 @@ def visual_items(task_dir: str, stage: str, manifest: dict) -> list:
                  or item.get("origin") == "to_build")
         )
         if not planned_card:
-            raise FileNotFoundError(f"{stage} 素材文件不存在: {rel}")
+            raise FileNotFoundError(f"{stage} media file is missing: {rel}")
     if not out:
-        raise ValueError(f"{stage} 没有任何可看的视频素材")
+        raise ValueError(f"{stage} has no viewable video assets")
     return out
 
 
@@ -286,7 +286,7 @@ def _duration(item: dict, probed: str) -> tuple:
         if math.isfinite(value) and value > 0:
             return value, ("ffprobe" if index == 0 else "manifest")
     raise ValueError(
-        f"素材 {item.get('id')} 没有有限正 duration: "
+        f"Media item {item.get('id')} has no finite positive duration: "
         f"ffprobe={probed!r} manifest="
         f"{item.get('dur_s', item.get('clip_dur_s'))!r}"
     )
@@ -364,7 +364,7 @@ def _decoded_frame_count(src: str) -> int:
     if counted.returncode != 0 or value <= 0:
         detail = (counted.stderr or counted.stdout or "")[-300:]
         raise RuntimeError(
-            f"视频没有可解码画面: file={os.path.basename(src)!r} "
+            f"Video has no decodable frames: file={os.path.basename(src)!r} "
             f"rc={counted.returncode} frames={raw!r}: {detail}"
         )
     return value
@@ -378,12 +378,11 @@ def _frame_error_detail(rendered) -> str:
 
 
 def extract_frames(task_dir: str, items: list, nf: int) -> list:
-    """容器统一抽帧，不让 agent 自己抽。
+    """Prepare a bounded initial frame set in the task workspace.
 
-    前两次都死在同一个地方：agent 给每个 clip 抽了十几帧，然后一句
-    "let me view the detailed frames for each clip" 把七八十张图一起塞进
-    上下文，请求在 90k–120k token 处断流。用提示词劝它克制没有用 ——
-    把能力拿掉才有用。
+    Earlier rollouts requested dozens of frames together and exceeded practical
+    context limits. Centralized initial sampling bounds that input; later media
+    inspection remains subject to the harness's tool and context limits.
     """
     fdir = f"{task_dir}/frames"
     shutil.rmtree(fdir, ignore_errors=True)
@@ -392,7 +391,7 @@ def extract_frames(task_dir: str, items: list, nf: int) -> list:
     for it in items:
         src = f'{task_dir}/initial_state/{it["file"]}'
         if not os.path.isfile(src):
-            raise FileNotFoundError(f"素材文件不存在: {it['file']}")
+            raise FileNotFoundError(f"Media file is missing: {it['file']}")
         probe_result = _run_bounded(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration",
              "-of", "csv=p=0", src],
@@ -455,7 +454,7 @@ def extract_frames(task_dir: str, items: list, nf: int) -> list:
                 else:
                     fallback_detail = _frame_error_detail(fallback)
                     raise RuntimeError(
-                        f"抽帧失败: stage item={it.get('id')} t={t:.3f}s "
+                        f"Frame extraction failed: stage item={it.get('id')} t={t:.3f}s "
                         f"primary_rc={rendered.returncode} "
                         f"primary={primary_detail!r}; "
                         f"fallback_index={frame_index}/{decoded_frames} "
@@ -463,8 +462,8 @@ def extract_frames(task_dir: str, items: list, nf: int) -> list:
                     )
             if not _frame_ok(out):
                 raise RuntimeError(
-                    f"抽帧失败: stage item={it.get('id')} t={t:.3f}s "
-                    f"生成了空文件"
+                    f"Frame extraction failed: stage item={it.get('id')} t={t:.3f}s "
+                    f"produced an empty file"
                 )
             made.append(os.path.basename(out))
     return made
@@ -472,10 +471,10 @@ def extract_frames(task_dir: str, items: list, nf: int) -> list:
 
 def build_prompt(task_dir: str, stage: str, nf: int, n_made: int,
                  n_gold: int = 0) -> str:
-    """task_prompt.md 加上这套 harness 的具体交代。
+    """Extend task_prompt.md with this harness's instructions.
 
-    告知数量时，原文里那条"数量不给"的要求必须先拿掉 —— 留着就是两句
-    互相打架的指令，模型要么忽略其中一句，要么在答案里纠结数量该不该自己定。
+    If the target count is disclosed, remove the original statement that the
+    count is unspecified so the prompt does not contain conflicting instructions.
     """
     with open(f"{task_dir}/task_prompt.md", encoding="utf-8") as fh:
         base = fh.read()
@@ -566,13 +565,13 @@ def build_prompt(task_dir: str, stage: str, nf: int, n_made: int,
         + f"Write your answer to `output/{out_name(stage)}`.")
 
 
-# judge 脚本所在目录。镜像里放在 /opt/s12tools，本地开发时退回仓库根目录。
+# Judge script directory: /opt/s12tools in the image, with a local checkout fallback.
 TOOLS = os.environ.get("S12_TOOLS_DIR", os.path.dirname(os.path.abspath(__file__)))
 
-# 同时进行判分的 rollout 上限。每条 s_3/s_4e judge chain 的 blind/ref
-# 脚本还会各自并发 3~4 条 rubric 请求，因此这里限制的是 chain，不是单请求。
-# 远端 API 请求集中在生成器主进程内，线程闸门即可限制下游请求雪崩；本地
-# evidence 则会跨 Ray 进程运行，下面另用真正的跨进程闸门。
+# Limit concurrent rollout grading chains. Each RC/FC blind/referenced phase
+# can issue 3-4 rubric requests concurrently, so this limit applies to whole chains.
+# Remote API requests originate in the generator process and use a thread gate.
+# Local evidence work can span Ray processes and uses a separate process-shared gate.
 _JUDGE_SLOTS = int(os.environ.get("S12_JUDGE_CONCURRENCY", "8"))
 _JUDGE_GATE = threading.BoundedSemaphore(_JUDGE_SLOTS)
 # Evidence generation and first-time frame extraction are CPU/ffmpeg-heavy.
@@ -657,18 +656,16 @@ _EVIDENCE_GATE = _ProcessSharedSemaphore(
 
 
 def _grade_judged(task_dir: str, stage: str) -> tuple:
-    """s_3/s_4e：没有 grade.py，靠 rubric + LLM judge 打分。
+    """Run the complete RC/FC grading chain.
 
-    四步，缺一不可（见 JUDGED 上面那段）：
-      1) evidence  读 agent 的产出，跑 ffmpeg 渲染成片/联络表/黑段检测
-      2) judge     blind：按 rubric 各打一次，没看过成片
-      3) judge_ref referenced：同样的问题，但成片在手边
-      4) score     S3 再加入 task verifier 的确定性 golden 距离分；
-                   S4E 保持原有 0.6×blind + 0.4×ref
+    1. Build evidence from the current submitted output with FFmpeg.
+    2. Judge each blind rubric without access to the reference edit.
+    3. Judge the referenced rubrics with the reference edit available.
+    4. Aggregate all required components: RC also includes its deterministic
+       verifier score; FC uses 0.6 * blind + 0.4 * referenced.
 
-    每条 rollout 都要走一遍，所以这是**判分侧的主要开销**（ffmpeg + 两轮各
-    数次带图的 API 调用）。evidence 必须现场生成 —— 它读的是这一条 rollout 刚
-    写出来的 output/，不是预置的。
+    Each rollout needs fresh evidence from its own output/ directory. Rendering
+    and multiple media-bearing judge requests account for much of grading cost.
     """
     return _run_judge_chain(task_dir, *JUDGED[stage])
 
@@ -869,7 +866,7 @@ def _run_judge_chain(task_dir, ev_py, judge_py, ref_py, score_py,
         return 0.0, json.dumps(detail)
     ev_dir = f"{task_dir}/evidence"
     os.makedirs(ev_dir, exist_ok=True)
-    # 上一条 rollout 的残留会让判分打在旧产出上，先清掉
+    # Remove stale grading output from an earlier rollout.
     _blind = final_name.replace("_final", "_score")
     _ref = final_name.replace("_final", "_score_ref")
     _review = final_name.replace("_final", "_consistency")
@@ -908,14 +905,14 @@ def _run_judge_chain(task_dir, ev_py, judge_py, ref_py, score_py,
                 return None, health_error
     sp = f"{ev_dir}/{final_name}"
     if not os.path.exists(sp):
-        return None, f"合成器没产出 {final_name}"
+        return None, f"Score aggregator did not produce {final_name}"
     try:
         with open(sp, encoding="utf-8") as fh:
             d = json.load(fh)
     except Exception as e:  # noqa: BLE001
-        return None, f"{final_name} 解析失败: {e}"
-    # 取 final，不是 score —— 合成器缺任一半就把 final 置 None 并写明 missing，
-    # 这是它有意为之，不要绕过去用单边的分。
+        return None, f"Could not parse {final_name}: {e}"
+    # Use final, not score: missing required components make final None with details.
+    # Do not substitute a partial channel score.
     sc = d.get("final")
     from grading_contract import valid_score
     return (float(sc) if valid_score(sc) else None), json.dumps(
@@ -977,9 +974,9 @@ def _validate_evidence_health(task_dir: str, ev_name: str):
 
 
 def grade(task_dir: str, stage: str) -> tuple:
-    """跑任务自带的 grade.py。返回 (score, 原始输出)。
+    """Run the task-specific grade.py and return (score, raw output).
 
-    s_3/s_4e 没有 grade.py，转交 _grade_judged 走 rubric + LLM judge。
+    RC/FC delegate to _grade_judged for rubric-based model judging.
     """
     deliverable = f"{task_dir}/output/{out_name(stage)}"
     if not os.path.exists(deliverable):
@@ -992,7 +989,7 @@ def grade(task_dir: str, stage: str) -> tuple:
 
 
 def prepare(task_dir: str, stage: str, tell_n: bool) -> tuple:
-    """抽帧 + 组 prompt。返回 (prompt, n_made, n_gold)。"""
+    """Extract frames and build the prompt; return (prompt, n_made, n_gold)."""
     with open(f"{task_dir}/initial_state/manifest.json", encoding="utf-8") as fh:
         man = json.load(fh)
     items = visual_items(task_dir, stage, man)

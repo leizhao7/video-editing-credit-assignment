@@ -73,7 +73,7 @@ async def test_terminal_error_or_retry_after_does_not_loop(monkeypatch, kind):
         out, error = await judge._gemini_request({}, model='test', key='key', budget=.2, url=url)
         assert not out and error and len(calls) == 1
         if kind == 'prohibited':
-            assert error.startswith('无 candidates: ') and 'PROHIBITED_CONTENT' in error
+            assert error.startswith('No candidates: ') and 'PROHIBITED_CONTENT' in error
         if kind == '429':
             assert 'remaining grading budget' in error
     finally:

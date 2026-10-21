@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/build_s4_tasks.py [options]\n\n  --film\n  --chunk\n  --all\n  --handle\n  --pad  音乐段两端各多留几秒\n  --keep-plain  保留一刀都不用动的段落——创作题里那是克制力测试\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/build_s4_tasks.py [options]\n\n  --film\n  --chunk\n  --all\n  --handle\n  --pad  Extra seconds to retain at each end of the music segment\n  --keep-plain  Keep chunks requiring no changed joins, allowing editorial restraint\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 
@@ -104,17 +104,20 @@ def main():
     P.add_argument("--film"); P.add_argument("--chunk"); P.add_argument("--all", action="store_true")
     # Audio handle length in seconds.
     P.add_argument("--handle", type=float, default=4.0)
-    P.add_argument("--pad", type=float, default=2.0, help="音乐段两端各多留几秒")
+    P.add_argument("--pad", type=float, default=2.0, help="Extra seconds to retain at each end of the music segment")
     P.add_argument("--keep-plain", action="store_true",
-                   help="保留一刀都不用动的段落——创作题里那是克制力测试")
+                   help="Keep chunks requiring no changed joins, allowing editorial restraint")
     A = P.parse_args()
     require_target(P, A)
 
-    # 画面转场归并到 4 类：agent 要选的是"做什么"，不是复述我们的词表
+    # Map picture transitions to four classes: the agent chooses an edit, not our original annotation wording
     PIC = {"cut": "cut", "no_change": "cut",
            "dip_to_black": "dip_to_black", "mid_dip": "dip_to_black",
            "dissolve": "dissolve"}
     TAGS = {"dip_to_black": "经过黑", "dissolve": "叠化", "other": "其他画面效果"}
+    # Keep historical internal labels; emit English descriptions in new task metadata.
+    TAG_LABELS = {"声音桥": "sound bridge", "经过黑": "dip through black", "叠化": "dissolve",
+                  "其他画面效果": "other picture effect", "字幕卡进出": "card entry or exit"}
 
 
     def sh(cmd):
@@ -122,7 +125,7 @@ def main():
 
 
     def chunk_cuts(slug, chunk):
-        """这一段内部的切点，以及每一刀的答案"""
+        """Return the joins within this chunk and their reference annotations"""
         T = f"{ROOT}/edit/task_{slug}"
         key = json.load(open(f"{TT}/{slug}/s_3/{chunk}/verifier/answer.json"))
         order = [c["trailer_shot"] for c in key["cuts"]]
@@ -133,7 +136,7 @@ def main():
         pos = {u: i for i, u in enumerate(ids)}
         lo, hi = pos[order[0]], pos[order[-1]]
 
-        # S3 自己标了 origin 的镜头：非 film 的，素材只能从预告片切，带成品混音
+        # Use RC origin labels: non-film footage comes from the trailer and contains its finished mix
         s3_film = {c["trailer_shot"]: c.get("origin") == "film" for c in key["cuts"]}
 
         out = []
@@ -190,13 +193,13 @@ def main():
     }
 
     DESC = {
-        "J-cut": "**J-cut** —— 下一镜的声音先进来，画面还没换",
-        "L-cut": "**L-cut** —— 上一镜的声音拖过切点，画面已经换了",
-        "声音桥": "**声音桥** —— 画面硬切、台词也断，靠一条跨过切点不变的声音把两镜连住",
-        "经过黑": "**经过黑** —— 画面沉到黑再起来；黑压多久、两侧斜坡多长要给出来",
-        "叠化": "**叠化** —— 两个画面重叠渐变",
-        "其他画面效果": "**其他画面效果** —— 甩镜、闪白、闪光一类",
-        "字幕卡进出": "**字幕卡进出** —— 这一段有切进或切出字幕卡的地方",
+        "J-cut": "**J-cut** — the arriving shot's sound starts before its picture",
+        "L-cut": "**L-cut** — the leaving shot's sound continues after the picture changes",
+        "声音桥": "**sound bridge** — continuous sound connects shots across a picture cut and dialogue break",
+        "经过黑": "**dip through black** — specify the black hold and the fade duration on each side",
+        "叠化": "**dissolve** — the two pictures overlap and blend",
+        "其他画面效果": "**other picture effect** — a whip, flash, or flare",
+        "字幕卡进出": "**card entry or exit** — this chunk cuts to or from a title card",
     }
 
 
@@ -251,7 +254,7 @@ def main():
         os.makedirs(f"{dst}/initial_state/handles", exist_ok=True)
 
         def handle_for(uid, pid, dur):
-            """入点前后各切 --handle 秒的正片声音；片头片尾不够就有多少给多少"""
+            """Extract source sound with --handle seconds on each side of the in-point, limited by source boundaries"""
             r = p2.get(uid) or {}
             if not r.get("refined_src_s"):
                 return None
@@ -276,8 +279,8 @@ def main():
             out = f"{dst}/initial_state/shots/{pid}.mp4"
             rec = {"id": pid, "unit": uid, "dur_s": round(u["dur"], 3), "kind": u["kind"]}
             if u["kind"] == "card":
-                # 字幕卡不给素材 —— 任务的一部分就是把它做出来。它在时间线上的位置、
-                # 说什么、什么底色、几个文字状态，都写进提示词。
+                # Cards have no supplied media because creating them is part of the task. Their timeline positions,
+                # text, backgrounds, and text states are specified in the prompt.
                 rec["origin"] = "to_build"; rec["build_it"] = True
                 cards.append((n, uid, u))
                 shots.append(rec)
@@ -339,7 +342,7 @@ def main():
         tags = tags_for(rows)
         n = len(rows)
 
-        # 这一段的散文描述，从 S3 的提示词里取 —— 同一段材料，同一句话，别再造一版
+        # Reuse the RC prompt description for the same chunk rather than writing another version
         beat = ""
         p3 = f"{src3}/task_prompt.md"
         if os.path.exists(p3):
@@ -347,7 +350,7 @@ def main():
             if m:
                 beat = " ".join(m.group(1).split())
 
-        # 要 agent 自己做的字幕卡
+        # Cards the agent must create
         ct = f"{ROOT}/exports/{slug}/card_text.json"
         ctext = json.load(open(ct))["cards"] if os.path.exists(ct) else {}
         card_specs = []
@@ -387,8 +390,8 @@ def main():
         L.append("\n## What you can do at a join\n\n")
         L.append("Most joins are a straight cut and want nothing done to them. Where more is "
                  "wanted, these are the moves:\n\n")
-        # 声音桥不在这张表里：它不是接点上的动作，是音乐床铺对之后自然成立的性质，
-        # 交付格式里也写不出来（audio 只有 hard/J/L）。当成背景讲，不当成手法讲。
+        # A sound bridge is not a per-join action; it emerges from a correctly placed music bed.
+        # The audio field only accepts hard/J/L. Describe a bridge as context, not a separate action.
         for tg in tags:
             if tg == "声音桥":
                 continue
@@ -477,10 +480,10 @@ def main():
         fps = key3["fps"]
         ans = {"task": f"{slug}_s4_{chunk}", "fps": fps, "n_cuts": n,
                "tol": {"audio_offset_s": 0.35, "picture_param_s": 0.20},
-               "tags_given": tags,
+               "tags_given": [TAG_LABELS.get(tag, tag) for tag in tags],
                "cuts": [{k: v for k, v in r.items() if not k.startswith("_")} |
                         {"carried_by_sound": r["_bridge"],
-                         # 一侧是 golden_only 的接点，素材带的是成片原声，J/L 听得出来
+                         # A golden_only side contains the finished mix, so J/L timing is already audible
                          "scored": "golden_only" not in r["_kinds"]} for r in rows]}
         json.dump(ans, open(f"{dst}/verifier/answer.json", "w"), ensure_ascii=False, indent=1)
 
@@ -495,17 +498,17 @@ def main():
                               "answer carries is inside tolerance; score = hits/n; pass 0.7",
                    "n_cuts": n, "golden_score": 1.0,
                    "tolerances": {"audio_offset_s": 0.35, "picture_param_s": 0.20},
-                   "scoring_status": "PROVISIONAL — 画面和声音两类判定权重相同，参数只在类型判对时才查。"
-                                     "是否该给部分分（类型对、参数差）未定。",
-                   "controls": [{"name": "全部答 cut + hard", "expect": f"约 {sum(1 for r in rows if r['picture']=='cut' and r['audio']=='hard')}/{n}"},
-                                {"name": "每刀都加转场", "expect": "低"}]},
+                   "scoring_status": "PROVISIONAL — picture and sound types have equal weight; parameters are checked only when the type is correct. "
+                                     "Partial credit for correct types with inaccurate parameters is not specified.",
+                   "controls": [{"name": "Predict cut + hard for every join", "expect": f"approximately {sum(1 for r in rows if r['picture']=='cut' and r['audio']=='hard')}/{n}"},
+                                {"name": "Add a transition at every join", "expect": "low"}]},
                   open(f"{dst}/verifier/rubric.json", "w"), ensure_ascii=False, indent=1)
         json.dump({"deliverable_kind": "json_treatments", "verifier_class": "mechanical",
-                   "golden_semantics": "answer_key — 成片在这一刀实际做的处理；golden 1.0",
-                   "source_evidence": "picture 来自 s4_cuts.json（agent 判读+实测校验过）；"
-                                      "audio 来自 audio_measured.json（转录词级时间戳+分轨实测）",
-                   "leak_controls": "音乐轨两端各留 2 秒且不给对齐位置；正片原声未经剪辑，"
-                                    "J/L 的编辑点不在素材里；提示词只列这一段用到的手法，不指明哪一刀"},
+                   "golden_semantics": "answer_key — the finished trailer treatment at this join; reference self-score 1.0",
+                   "source_evidence": "picture comes from s4_cuts.json (agent interpretation with measurement checks); "
+                                      "audio comes from audio_measured.json (word timestamps and measurements of separated stems)",
+                   "leak_controls": "Music retains two seconds of padding on each side without its alignment position; source sound is unedited, "
+                                    "so J/L edit points are not embedded in it. The prompt lists chunk-level techniques without assigning joins"},
                   open(f"{dst}/verifier/task_meta.json", "w"), ensure_ascii=False, indent=1)
         # Keep build provenance and answer content hashes separate: the build identifies construction inputs,
         # while answer_hash identifies this task reference.
@@ -568,8 +571,8 @@ def main():
             n = build(slug, c, names.get(slug, slug))
             if n:
                 made.append(f"{c}:{n}"); tot += n
-        print(f"  {slug:<24} {len(made):2d} 段  {' '.join(made)}", flush=True)
-    print(f"\n  共 {tot} 个接点")
+        print(f"  {slug:<24} {len(made):2d} chunks  {' '.join(made)}", flush=True)
+    print(f"\n  {tot} joins total")
 
 
 if __name__ == "__main__":

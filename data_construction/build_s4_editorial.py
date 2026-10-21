@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print("Usage: python data_construction/build_s4_editorial.py [options]\n\n  --film\n  --all\n  --music-pad  音乐窗口两端各留几秒。宽一点，让'从哪进来'仍是决定\n  --distractors  干扰台词条数 = 本段用到的条数 × 这个倍数\n  --force  重建已存在的题（output/ 里的作业会保留）\n  --keep-transitions  Keep black/fade transition units; removed by default to avoid embedding answers in input media.\n  --explore  探索版：不告诉他 take 里说了什么，自己听。产物落到 s_4x/\n  --stage  输出到哪个阶段目录，默认按 --explore 决定\n  -h, --help  Show this static help without loading optional dependencies.\n")
+        print("Usage: python data_construction/build_s4_editorial.py [options]\n\n  --film\n  --all\n  --music-pad  Seconds of music padding on each side; a wider window preserves the alignment decision\n  --distractors  Dialogue distractor count = used dialogue count multiplied by this factor\n  --force  Rebuild existing tasks while preserving submissions in output/\n  --keep-transitions  Keep black/fade transition units; removed by default to avoid embedding answers in input media.\n  --explore  Exploratory variant: omit take transcripts so the agent must listen; outputs go to s_4x/\n  --stage  Output stage directory; defaults according to --explore\n  -h, --help  Show this static help without loading optional dependencies.\n")
         raise SystemExit(0)
 
 
@@ -59,16 +59,16 @@ def main():
     P.add_argument("--film")
     P.add_argument("--all", action="store_true")
     P.add_argument("--music-pad", type=float, default=20.0,
-                   help="音乐窗口两端各留几秒。宽一点，让'从哪进来'仍是决定")
+                   help="Seconds of music padding on each side; a wider window preserves the alignment decision")
     P.add_argument("--distractors", type=float, default=1.5,
-                   help="干扰台词条数 = 本段用到的条数 × 这个倍数")
+                   help="Dialogue distractor count = used dialogue count multiplied by this factor")
     P.add_argument("--force", action="store_true",
-                   help="重建已存在的题（output/ 里的作业会保留）")
+                   help="Rebuild existing tasks while preserving submissions in output/")
     P.add_argument("--keep-transitions", action="store_true",
                    help="Keep black/fade transition units. By default they are removed to avoid embedding transition answers in input media.")
     P.add_argument("--explore", action="store_true",
-                   help="探索版：不告诉他 take 里说了什么，自己听。产物落到 s_4x/")
-    P.add_argument("--stage", default=None, help="输出到哪个阶段目录，默认按 --explore 决定")
+                   help="Exploratory variant: omit take transcripts so the agent must listen; outputs go to s_4x/")
+    P.add_argument("--stage", default=None, help="Output stage directory; defaults according to --explore")
     A = P.parse_args()
     require_target(P, A)
 
@@ -78,24 +78,24 @@ def main():
 
 
     def remap_joins(all_shots, kept, gold, dropped):
-        """把成片的逐刀答案映射到"摘掉过渡之后"的接点表上。
+        """Map reference join annotations to the sequence after transition units are removed.
 
-        原来 A|T|B（T 是过渡单元）是两刀，现在 A|B 是一刀。那一刀成片做的事就是
-        "黑一下"，黑多久等于被摘掉的 T 有多长——这正是要 agent 自己判断的量。
+        A|T|B, with transition unit T, originally has two joins; removing T leaves one join A|B.
+        The removed transition duration becomes the black hold the agent must choose.
         """
         kept_ids = [s["id"] for s in kept]
         idx = {s["id"]: i for i, s in enumerate(all_shots)}
         out = []
         for i in range(len(kept_ids) - 1):
             a, b = kept_ids[i], kept_ids[i + 1]
-            # 原表里 a 和 b 之间隔了哪些单元
+            # Units between a and b in the original sequence
             between = [s["id"] for s in all_shots[idx[a] + 1: idx[b]]]
             hold = sum(dropped.get(x, 0.0) for x in between)
             if hold > 0.01:
                 out.append({"cut": i + 1, "picture": "dip_to_black",
                             "black_hold_s": round(hold, 3),
                             "audio": (gold[idx[a]]["audio"] if idx[a] < len(gold) else "hard"),
-                            "note": f"原来这里躺着 {'+'.join(between)}，是过渡素材本身"})
+                            "note": f"Removed transition media at this join: {'+'.join(between)}"})
             else:
                 g = gold[idx[a]] if idx[a] < len(gold) else {"picture": "cut", "audio": "hard"}
                 out.append({**{k: v for k, v in g.items() if k != "cut"}, "cut": i + 1})
@@ -219,7 +219,7 @@ def main():
 
         # Widen the music window so choosing its entry point remains an editing decision.
         
-        # 每题的头部余量随机，且不写进 manifest —— 固定值等于把对齐答案直接给出去
+        # Randomize leading padding per task and omit it from the manifest; a fixed value reveals the alignment
         random.seed(zlib.crc32(f"music/{slug}/{chunk}".encode()))
         # Record the actual clamped head padding used by ffmpeg, not merely the requested padding.
         
@@ -233,7 +233,7 @@ def main():
             _write_media(["ffmpeg", "-v", "error", "-ss", f"{cut_from:.3f}",
                           "-t", f"{head_pad + (t1 - t0) + tail_pad:.3f}", "-i", mus, "-y", mo], mo, "audio")
 
-        # ---- 对白池：本段用到的 + 干扰项
+        # ---- Dialogue pool: used takes plus distractors
         used = [x for x in tk if x["trailer_e"] > t0 and x["trailer_s"] < t1]
         rest = [x for x in tk if x not in used]
         random.seed(zlib.crc32(f"{slug}/{chunk}".encode()))
@@ -258,19 +258,19 @@ def main():
                 _require_media(p, "audio")
                 shutil.copy(p, q)
             lines.append({"id": did, "file": f"takes/{did}.m4a",
-                          # 文件里实际有人说话的每一段。只给定位窗口的话 agent 摸不清
-                          # 余量里还有什么，用了反而被判违规。
+                          # Include every detected speech span in the file; the matched window alone does not reveal
+                          # other dialogue in the handles and could cause valid choices to be rejected.
                           "speech_spans_s": x.get("speech_spans_s") or [],
                           "words_start_at_s": x["words_start_at_s"],
                           "words_dur_s": x["words_dur_s"],
                           "take_dur_s": x["take_dur_s"],
-                          # 说的是什么给他 —— 听得出来的东西藏起来只是浪费他的时间
+                          # Provide audible dialogue content to avoid unnecessary transcription work
                           "text": x["film_text"],
-                          # 这一条是不是成片用过的，不给
+                          # Do not reveal whether the reference uses this take
                           "_used_in_golden": x in used,
                           "_trailer_s": x["trailer_s"]})
 
-        # ---- 接点表
+        # ---- Join table
         fps = json.load(open(f"{ROOT}/exports/{slug}/probe.json")).get("fps") or key4["fps"]
         joins, t = [], 0.0
         for i in range(len(shots_all) - 1):
@@ -287,20 +287,20 @@ def main():
         json.dump({"taskId": f"{slug}_s4e_{chunk}", "fps": round(fps, 6),
                    "n_shots": len(shots_all), "n_joins": len(joins),
                    "stretch_dur_s": round(t1 - t0, 3),
-                   # muted 是从 S4 manifest 继承的：那边预告片素材留原声，这边静音了，
-                   # 照抄过来就是在说假话。按本任务的实际情况重写。
+                   # The S4 manifest retained audio for trailer-only footage, whereas this variant mutes it.
+                   # Update muted metadata to describe the actual media supplied in this task.
                    "shots": [{**{k: v for k, v in s.items() if not k.startswith("_")},
                               "has_sound": s.get("origin") == "film"}
                              for s in ({k: v for k, v in x.items() if k != "muted"}
                                        for x in shots_all)],
                    "joins": joins,
-                   # 探索版把内容描述拿掉：听素材是剪辑师的第一件活，喂给他就等于替他做了。
-                   # 校验用的那份仍然存在，挪到 verifier/ 去。
+                   # The exploratory variant omits content descriptions so the agent must inspect the audio.
+                   # Keep the validation copy privately under verifier/.
                    "dialogue": [{k: v for k, v in l.items()
                                  if not k.startswith("_")
                                  and (not A.explore or k in ("id", "file", "take_dur_s"))}
                                 for l in lines],
-                   # 余量数值不给：head_pad 恰好等于正确对齐位置
+                   # Omit padding duration because head_pad equals the reference alignment position
                    "music": {"file": "music.wav",
                              "window_is_wider_than_stretch": True,
                              "note": "The trailer's music. The window runs wider than "
@@ -309,10 +309,10 @@ def main():
                                      "in is your call."}},
                   open(f"{dst}/initial_state/manifest.json", "w"), ensure_ascii=False, indent=1)
 
-        # ---- 答案：成片当初怎么做的。不是唯一解，是参照。
+        # ---- Reference answers: the finished trailer provides one valid edit, not a unique solution.
         json.dump({"task": f"{slug}_s4e_{chunk}", "fps": round(fps, 6),
-                   "grading": "rubric — 成片是一个合理答案，不是唯一答案。"
-                              "使用 rubric 评价剪辑质量，而非要求与参照精确匹配。",
+                   "grading": "rubric — the finished trailer is one valid solution, not the only solution. "
+                              "Assess editing quality with the rubric rather than requiring an exact reference match.",
                    "n_joins": len(joins),
                    # Renumber joins after transition units are removed; combine their duration into the reference hold.
                    
@@ -337,16 +337,16 @@ def main():
         
         
         json.dump({"task": tid, "hard_checks": {
-            "joins_complete": f"joins 必须给满 {len(joins)} 条，编号 1..{len(joins)}",
-            "no_invented_takes": "dialogue 里的 take 必须来自素材池",
-            "no_repicture": "不得改动镜头顺序或时长——那是 S3 定死的",
+            "joins_complete": f"Provide all {len(joins)} joins, numbered 1..{len(joins)}",
+            "no_invented_takes": "Every dialogue take must come from the supplied pool",
+            "no_repicture": "Do not change shot order or duration; these are fixed by RC",
             "distractors_are_wrong":
-                f"这几条 take 匹配到的主台词，成片没用："
-                f"{[l['id'] for l in lines if not l['_used_in_golden']]}。"
-                f"取到它们的主台词区间（manifest 的 words_start_at_s 起算）算错；"
-                f"取同一文件里余量段的**别的**话不算错——那些话成片可能真用过。"},
+                f"The reference does not use the matched main lines of these takes: "
+                f"{[l['id'] for l in lines if not l['_used_in_golden']]}. "
+                f"Selecting their matched main-line interval (starting at manifest words_start_at_s) is incorrect; "
+                f"other speech in the same file handles is not automatically incorrect because the reference may use it."},
             "reference": {
-                "note": "成片是一个合理答案，不是唯一答案。不要按精确匹配判。",
+                "note": "The finished trailer is one valid solution, not the only one. Do not grade by exact match.",
                 "golden_dialogue_ids": gold_ids,
                 "distractor_ids": [l["id"] for l in lines if not l["_used_in_golden"]],
                 "golden_music_align_s": round(head_pad, 3),
@@ -354,12 +354,12 @@ def main():
             open(f"{dst}/verifier/_rubric_seed.json", "w"), ensure_ascii=False, indent=1)
 
         json.dump({"stage": "s4e/editorial_fine_cut",
-                   "golden_semantics": "reference — 成片当初的做法；不是唯一解",
-                   "source_evidence": "对白 take 来自正片转录定位；音乐来自预告片分轨；"
-                                      "接点位置来自 S3（与成片逐帧一致）",
-                   "leak_controls": "不给成片混音/画面/人声轨；音乐窗口余量随机且不公布；"
-                                    "预告片专有素材静音（其成品混音含音乐，可反推对齐）；"
-                                    "对白池含干扰项，顺序确定化且正解不前置"},
+                   "golden_semantics": "reference — the original finished edit, not a unique solution",
+                   "source_evidence": "Dialogue takes are located using the source-film transcript; music comes from separated trailer stems; "
+                                      "join positions come from RC and follow the reference frame boundaries",
+                   "leak_controls": "Do not supply the finished mix, picture, or vocal stem; music padding is randomized and undisclosed; "
+                                    "trailer-only footage is muted because its music could reveal alignment; "
+                                    "the dialogue pool includes distractors in deterministic order without putting answers first"},
                   open(f"{dst}/verifier/task_meta.json", "w"), ensure_ascii=False, indent=1)
 
 
@@ -390,10 +390,10 @@ def main():
                                 beat = re.sub(re.escape(f), "[a title card]", beat,
                                               flags=re.I)
         if A.explore:
-            # 探索版的 manifest 把 speech_spans_s / text / words_* 拿掉了（见上面按
-            # A.explore 过滤字段那处），agent 得自己听。但检查器仍要按这些校验，
-            # 所以原样存一份到 verifier/——那是答案目录，不会给到 agent。
-            json.dump({"note": "探索版把这些从 manifest 拿掉了，检查器仍按它校验",
+            # The exploratory manifest omits speech_spans_s / text / words_* (see the
+            # A.explore filtering above), requiring the agent to listen. Validation still needs these fields,
+            # so retain an unchanged private copy in verifier/, which is hidden from the task-solving agent.
+            json.dump({"note": "These fields are omitted from the exploratory manifest but retained for validation",
                        "takes": [{k: v for k, v in l.items() if not k.startswith("_")}
                                  for l in lines]},
                       open(f"{dst}/verifier/takes_content.json", "w"),
@@ -529,9 +529,9 @@ def main():
         
         L.append("On each join:\n\n")
         L.append("- `picture` — one of `cut` / `dip_to_black` / `dissolve` / `other`\n")
-        # 名字要给。carries_over / prelap 是这里造的词；L-cut / J-cut 是行话，模型见过，
-        # 知道什么时候用、为什么用。给名字是给词汇表，不是给答案——说"L-cut 是让上一镜的
-        # 声音拖过去"，和说"第 3 刀用 L-cut"是两回事。这一段用了几个、在哪几刀，仍然不说。
+        # Define carries_over / prelap using the established L-cut / J-cut terminology.
+        # Explaining a technique gives vocabulary rather than assigning an answer to a join.
+        # Do not reveal how many joins use each technique or which joins use it.
         L.append("- `sound` — one of these four, and give it on **every** join:\n"
                  "  - `hard` — the sound breaks where the picture breaks\n"
                  "  - `carries_over` — something belonging to the leaving shot runs past it. "
@@ -582,8 +582,8 @@ def main():
             tot += r
             n_task += 1
         if got:
-            print(f"  {slug:<24} {len(got):2d} 段  " + " ".join(got[:12]), flush=True)
-    print(f"\n{n_task} 道创作题，共 {tot} 个接点")
+            print(f"  {slug:<24} {len(got):2d} chunks  " + " ".join(got[:12]), flush=True)
+    print(f"\n{n_task} creative editing tasks, {tot} joins total")
 
 
 if __name__ == "__main__":

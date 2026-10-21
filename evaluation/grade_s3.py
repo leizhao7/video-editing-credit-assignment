@@ -42,32 +42,32 @@ except InvalidSubmission as exc:
 
 p = f"{T}/output/cuts.json"
 if not os.path.exists(p):
-    fail("output/cuts.json 不存在")
+    fail("output/cuts.json is missing")
 try:
     got = json.load(open(p)).get("cuts")
 except Exception as e:
-    fail(f"JSON 解析失败: {e}")
+    fail(f"JSON parsing failed: {e}")
 if not isinstance(got, list):
-    fail("cuts 不是数组")
+    fail("cuts must be an array")
 
 mine = {}
 for c in got:
     try:
         cid = str(c["clip"]).strip()
         if not cid:
-            fail("clip id 为空")
+            fail("clip ID is empty")
         if cid in mine:
-            fail(f"clip 重复: {cid}")
+            fail(f"Duplicate clip: {cid}")
         a, b = float(c["in_s"]), float(c["out_s"])
         if not (math.isfinite(a) and math.isfinite(b)):
-            fail(f"clip {cid} 的 in_s/out_s 不是有限数")
+            fail(f"clip {cid} in_s/out_s must be finite numbers")
         mine[cid] = (a, b)
     except Exception:
-        fail(f"条目缺 clip/in_s/out_s: {str(c)[:60]}")
+        fail(f"Entry is missing clip/in_s/out_s: {str(c)[:60]}")
 miss = [c for c in gold if c not in mine]
 extra = [c for c in mine if c not in gold]
 if miss or extra:
-    fail(f"编号对不上：缺 {miss[:4]} 多 {extra[:4]}")
+    fail(f"Clip IDs do not match: missing {miss[:4]}, extra {extra[:4]}")
 
 rows, hit, scored = [], 0, 0
 tot_dur = 0.0
@@ -79,8 +79,8 @@ for cid, g in gold.items():
         # every shot it was unsure of — out_s <= in_s — and score 100% on the remainder.
         # The out-of-range half matters for the same reason: an out point past the end of
         # the clip is a duration the agent cannot actually deliver.
-        why = ("出点不在入点之后" if b <= a
-               else "入点为负" if a < 0 else f"出点超过素材长度 {lim.get(cid)}s")
+        why = ("out_s must be greater than in_s" if b <= a
+               else "in_s must be nonnegative" if a < 0 else f"out_s exceeds clip duration {lim.get(cid)}s")
         rows.append({"clip": cid, "scored": bool(g["scored"]), "hit": False, "error": why})
         scored += bool(g["scored"])
         continue
@@ -95,7 +95,7 @@ for cid, g in gold.items():
     rows.append({"clip": cid, "scored": True, "hit": ok,
                  "in_err_s": round(din, 4), "in_tol_s": g["in_tol_s"],
                  "dur_err_s": round(ddur, 4), "dur_tol_s": DTOL_S,
-                 "in_err_frames": round(din * FPS, 1),      # 仅供阅读
+                 "in_err_frames": round(din * FPS, 1),      # For readability only.
                  "plateau_frames": g["plateau_frames"]})
 
 # Every shot unscored means the chunk is all alternate takes — there was nothing to get

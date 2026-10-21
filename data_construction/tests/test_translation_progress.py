@@ -153,7 +153,7 @@ class TranslationProgressTests(unittest.TestCase):
             self.assertEqual({p.name for p in directory.iterdir()},
                              {"PROMPT.md", "session.jsonl", "progress.log", "stderr.log"})
             self.assertIn("validated translation", (directory / "progress.log").read_text())
-            self.assertIn("原文可能已经是英文", (directory / "PROMPT.md").read_text())
+            self.assertIn("The source may already be in English", (directory / "PROMPT.md").read_text())
             self.assertIn("synthetic stderr marker", (directory / "stderr.log").read_text())
 
     def test_valid_output_without_completion_is_rejected_for_every_backend(self):

@@ -4,6 +4,8 @@ This is a generic prompt rewritten for the public code release. It preserves the
 
 Work in the task directory supplied by the queue. Read `stages/script_inputs.json` and inspect `reference/golden.mp4`; use `cards/` for the listed card stills and `work/` for temporary inspection frames. The inputs supply ordered shot IDs, `start_s`, `dur_s`, `kind`, timed speech, per-shot `line`, and measured music events. Preserve measured values; annotate visible content from the reference. Do not invent dialogue or infer visual content solely from a title. Do not delegate to other agents.
 
+Write all newly authored descriptions, explanations, and editing briefs in English. Preserve supplied dialogue, visible card text, IDs, and proper names in their original form.
+
 Write one JSON object to `stages/script.json`. The following table specifies fields, not a complete sample annotation.
 
 | Location | Required content |

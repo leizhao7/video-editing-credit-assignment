@@ -204,6 +204,9 @@ def build_cut_prompt(batch_dir, output_path, vocabulary):
     paths = "\n".join(f"- {json.dumps(str(directory / filename))}" for filename in INPUT_FILES.values())
     return f"""# Inspect one bounded batch of fine-cut boundaries
 
+Write all newly authored notes and explanations in English. Preserve IDs,
+supplied dialogue, visible card text, and proper names in their original form.
+
 Read these frozen measured inputs for THIS batch only:
 {paths}
 Read the visual manifest at {json.dumps(str(directory / 'manifest.json'))}.

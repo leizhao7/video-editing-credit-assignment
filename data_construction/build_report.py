@@ -70,27 +70,29 @@ def main():
 
 
     def _vocab(md):
-        """the two closed-ish tables in PROMPT_S4.md, parsed rather than copied
+        """Read vocabulary tables from the prompt used for this annotation run.
 
-        A hardcoded duplicate of the prompt's vocabulary rots the moment the prompt gains
-        a row, and it rots silently — every term the agent used correctly starts reading
-        as a coinage."""
+        Keep legacy Chinese heading aliases for previously generated private
+        reports. New prompts and report labels use English.
+        """
         out = {}
-        for key, head in [("transition", "### 一、"), ("technique", "### 二、")]:
-            i = md.find(head)
-            if i < 0: continue
-            m = re.search(r"^#{2,3} ", md[i + 4:], re.M)      # 下一个标题，不论几级
-            seg = md[i:i + 4 + m.start()] if m else md[i:]
-            out[key] = set(re.findall(r"^\|\s*`([a-z_]+)`", seg, re.M))
-
-        # Stop vocabulary tables at the next heading; keep shared extensions distinct from built-in labels.
-
-
-        i = md.find("## 前面几部片已经造过的词")
-        if i >= 0:
-            m = re.search(r"^#{2,3} ", md[i + 4:], re.M)
-            seg = md[i:i + 4 + m.start()] if m else md[i:]
-            out["shared"] = set(re.findall(r"^\|\s*`([a-z_]+)`", seg, re.M))
+        aliases = {
+            "transition": ("### Transition vocabulary", "### 一、"),
+            "technique": ("### Technique vocabulary", "### 二、"),
+            "shared": ("## Shared vocabulary", "## 前面几部片已经造过的词"),
+        }
+        for key, headings in aliases.items():
+            positions = [md.find(head) for head in headings if md.find(head) >= 0]
+            if not positions:
+                continue
+            start = md.find("\n", min(positions))
+            if start < 0:
+                continue
+            # Keep shared extensions distinct from built-in labels, and stop
+            # each vocabulary table at the next section or subsection heading.
+            following = re.search(r"^#{2,3} ", md[start + 1:], re.M)
+            end = start + 1 + following.start() if following else len(md)
+            out[key] = set(re.findall(r"^\|\s*`([a-z_]+)`", md[start:end], re.M))
         return out
 
 
@@ -143,7 +145,7 @@ def main():
                 subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0.0, tt):.3f}", "-i", G,
                                 "-frames:v", "1", "-vf", CROP + "scale=320:-2",
                                 "-q:v", "5", "-y", o], check=False)
-                if not os.path.exists(o):        # 退一帧再抓，仍失败则报出来
+                if not os.path.exists(o):        # Retry earlier; report any frame still missing.
                     subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0.0, tt - 0.20):.3f}",
                                     "-i", G, "-frames:v", "1", "-vf", CROP + "scale=320:-2",
                                     "-q:v", "5", "-y", o], check=False)
@@ -179,27 +181,27 @@ def main():
     JS = JS.replace("__ROWS__", json.dumps(rows, ensure_ascii=False)) \
            .replace("__NOVEL__", json.dumps(sorted(NOVEL))) \
            .replace("__NOVELTR__", json.dumps(sorted(NOVEL_TR)))
-    btn = [('all', f'全部 {len(rows)}'), ('J', f'J-cut ({sp["J"]})'), ('L', f'L-cut ({sp["L"]})'),
-           ('hit', f'音乐重音 ({mu["hit"]})'), ('change', f'音乐换段 ({mu["change"]})'),
-           ('bridge', f'音乐贯穿 ({mu["bridge"]})'), ('dip', f'非硬切 ({len(rows)-tr["cut"]})'),
-           ('pc', f'画面连续 ({sum(1 for r in rows if r["pc"])})')]
-    if NOVEL: btn.append(('nv', f'自造手法 ({sum(tc[k] for k in NOVEL)})'))
-    if NOVEL_TR: btn.append(('nvt', f'自造转场 ({sum(tr[k] for k in NOVEL_TR)})'))
-    html = (f'<meta charset="utf-8"><title>{A.film} · {len(rows)} 个切点</title>\n<style>\n{CSS}\n</style>\n'
-            f'<header><h1>{A.film} · {len(rows)} 个切点手法报告</h1>\n<div class="s">'
-            f'语音 hard <b>{sp["hard"]}</b> · J <b>{sp["J"]}</b> · L <b>{sp["L"]}</b> &nbsp;|&nbsp; '
-            f'音乐 hit <b>{mu["hit"]}</b> · change <b>{mu["change"]}</b> · '
+    btn = [('all', f'All {len(rows)}'), ('J', f'J-cut ({sp["J"]})'), ('L', f'L-cut ({sp["L"]})'),
+           ('hit', f'Music accents ({mu["hit"]})'), ('change', f'Music changes ({mu["change"]})'),
+           ('bridge', f'Music bridges ({mu["bridge"]})'), ('dip', f'Other transitions ({len(rows)-tr["cut"]})'),
+           ('pc', f'Continuous picture ({sum(1 for r in rows if r["pc"])})')]
+    if NOVEL: btn.append(('nv', f'New techniques ({sum(tc[k] for k in NOVEL)})'))
+    if NOVEL_TR: btn.append(('nvt', f'New transitions ({sum(tr[k] for k in NOVEL_TR)})'))
+    html = (f'<meta charset="utf-8"><title>{A.film} · {len(rows)} cut boundaries</title>\n<style>\n{CSS}\n</style>\n'
+            f'<header><h1>{A.film} · Cut analysis: {len(rows)} boundaries</h1>\n<div class="s">'
+            f'Speech hard <b>{sp["hard"]}</b> · J <b>{sp["J"]}</b> · L <b>{sp["L"]}</b> &nbsp;|&nbsp; '
+            f'Music hit <b>{mu["hit"]}</b> · change <b>{mu["change"]}</b> · '
             f'swell <b>{mu["swell"]}</b> · bridge <b>{mu["bridge"]}</b>'
-            + (f' &nbsp;|&nbsp; 手法 {len(tc)} 种' if tc else ' &nbsp;|&nbsp; <i>S4 未跑，只有音频维度</i>')
+            + (f' &nbsp;|&nbsp; {len(tc)} techniques' if tc else ' &nbsp;|&nbsp; <i>No S4 annotations; audio analysis only</i>')
             + '</div>\n<div class="f">'
             + "".join(f'<button{" class=on" if k=="all" else ""} data-f="{k}">{l}</button>' for k, l in btn)
             + '</div></header>\n<div class="grid" id="g"></div>\n<script>\n' + JS + '\n</script>')
     open(f"{E}/cuts_report.html", "w").write(html)
-    print(f"{A.film}: {len(rows)} 切点  语音 J{sp['J']}/L{sp['L']}/hard{sp['hard']}  "
-          f"音乐 hit{mu['hit']}/change{mu['change']}/bridge{mu['bridge']}"
-          + (f"  手法 {len(tc)} 种" if tc else "  (无 S4)"))
+    print(f"{A.film}: {len(rows)} cut boundaries; speech J={sp['J']}/L={sp['L']}/hard={sp['hard']}; "
+          f"music hit={mu['hit']}/change={mu['change']}/bridge={mu['bridge']}"
+          + (f"; {len(tc)} techniques" if tc else "; no S4 annotations"))
     if MISSING:
-        print(f"★ 抽帧失败 {len(MISSING)} 张: {MISSING[:6]}")
+        print(f"Warning: could not extract {len(MISSING)} frames: {MISSING[:6]}")
     print(f"-> {E}/cuts_report.html")
 
 

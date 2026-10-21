@@ -98,8 +98,8 @@ async def _gemini_request(payload, *, model, key, timeout=HTTP_TIMEOUT_S,
                         provider_receipt(data)
                         candidates = data.get('candidates') or []
                         if not candidates:
-                            # Preserve the trusted refusal format; never retry it.
-                            last = f'无 candidates: {json.dumps(data)[:200]}'
+                            # Retain provider refusal details; never retry them.
+                            last = f'No candidates: {json.dumps(data)[:200]}'
                             record.update(status='provider_refusal', retryable=False,
                                           promptFeedback=data.get('promptFeedback'))
                             return '', last
@@ -107,7 +107,7 @@ async def _gemini_request(payload, *, model, key, timeout=HTTP_TIMEOUT_S,
                         content = (candidate.get('content') or {}).get('parts') or []
                         answer = ''.join(p.get('text', '') for p in content if not p.get('thought'))
                         record.update(status='completed', finish_reason=candidate.get('finishReason'))
-                        return answer, '' if answer else f"空回复 finish={candidate.get('finishReason')}"
+                        return answer, '' if answer else f"Empty response finish={candidate.get('finishReason')}"
             except (aiohttp.ClientError, TimeoutError, ValueError) as exc:
                 # Do not stringify network exceptions: URLs/headers can contain credentials.
                 last = type(exc).__name__
@@ -131,7 +131,7 @@ async def _gemini_request(payload, *, model, key, timeout=HTTP_TIMEOUT_S,
 def gemini_chat(messages, max_tokens, *, model=None, timeout=HTTP_TIMEOUT_S):
     key = os.environ.get('GOOGLE_AI_STUDIO_API_KEY')
     if not key:
-        return '', 'GOOGLE_AI_STUDIO_API_KEY 没设'
+        return '', 'GOOGLE_AI_STUDIO_API_KEY is not set'
     payload = gemini_payload(messages)
     payload['generationConfig'] = {'temperature': float(os.environ.get('S12_JUDGE_TEMP', '0')),
                                    'maxOutputTokens': max_tokens}

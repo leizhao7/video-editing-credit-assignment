@@ -29,19 +29,19 @@ def main():
 
     p = f"{T}/output/order.json"
     if not os.path.exists(p):
-        fail("output/order.json 不存在")
+        fail("output/order.json is missing")
     try:
         got = json.load(open(p)).get("order")
     except Exception as e:
-        fail(f"JSON 解析失败: {e}")
+        fail(f"JSON parsing failed: {e}")
     if not isinstance(got, list):
-        fail("order 不是数组")
+        fail("order must be an array")
     got = [str(x).strip() for x in got]
     if len(set(got)) != len(got):
-        fail("有重复编号")
+        fail("Duplicate clip IDs")
     if set(got) != set(gold):
         miss = sorted(set(gold) - set(got)); extra = sorted(set(got) - set(gold))
-        fail(f"编号对不上：缺 {miss[:4]} 多 {extra[:4]}")
+        fail(f"Clip IDs do not match: missing {miss[:4]}, extra {extra[:4]}")
 
     n = len(got)
     conc = disc = 0

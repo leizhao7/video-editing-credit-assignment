@@ -8,7 +8,7 @@ import argparse, base64, json, os, re, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件、发请求）")
+    raise ImportError(f"{__file__} is a command-line script and cannot be imported because it writes files and sends requests")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from s3_rubrics import RUBRICS, aggregate  # noqa: E402
@@ -25,7 +25,7 @@ P.add_argument("-m", "--model", default=DEPLOY)
 P.add_argument("--max-tokens", type=int, default=4000)
 P.add_argument("--timeout", type=int, default=180)
 P.add_argument("--no-images", action="store_true",
-               help="不传联络表，只看数字——用来对照『看得见画面』值多少")
+               help="Legacy diagnostic flag: omit contact sheets; rubrics requiring them remain unscored")
 P.add_argument("--quiet", action="store_true")
 A = P.parse_args()
 
@@ -34,7 +34,7 @@ KEY = os.environ.get("AZURE_AI_KEY")
 if PROVIDER == "azure" and not (KEY and ENDPOINT and A.model):
     sys.exit("Set AZURE_AI_KEY, AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT (or --model)")
 if PROVIDER == "gemini" and not os.environ.get("GOOGLE_AI_STUDIO_API_KEY"):
-    sys.exit("GOOGLE_AI_STUDIO_API_KEY 没设")
+    sys.exit("GOOGLE_AI_STUDIO_API_KEY is not set")
 
 
 def judge_identity():
@@ -71,7 +71,7 @@ def parse_band_response(value):
 def chat(messages, max_tokens):
     if os.environ.get("S12_JUDGE_PROVIDER", "gemini").lower() == "gemini":
         return chat_gemini(messages, max_tokens)
-    # ↓ 以下是 Azure/gpt-5.5 那条路
+    # Legacy Azure/gpt-5.5 path below
     # Keep the optional seed explicit when the configured Azure backend supports it.
     _body = {"model": A.model, "messages": messages,
              "max_completion_tokens": max_tokens}
@@ -106,14 +106,14 @@ def chat(messages, max_tokens):
 
 
 
-# ── Gemini（AI Studio）判分后端 ────────────────────────────────────────────
+# ── Gemini (AI Studio) grading backend ────────────────────────────────────────────
 # The Gemini backend uses its own sampling settings and payload format.
 #
-# 两边消息格式不同，这里做转换：
+# Convert between the provider message formats:
 #   system            -> systemInstruction
 #   {"type":"text"}   -> {"text": ...}
 #   image_url(data:)  -> {"inlineData": {"mimeType", "data"}}
-# Gemini 3 是思考模型，回复里可能混 thought 部件，只取非 thought 的 text。
+# Gemini 3 responses may include thought parts; retain only non-thought text.
 _GEMINI_MODEL = os.environ.get("S12_GEMINI_MODEL", "gemini-3.1-pro-preview")
 _GEMINI_HOST = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -128,10 +128,10 @@ def chat_gemini(messages, max_tokens):
     return gemini_chat(messages, max_tokens, model=A.model, timeout=A.timeout)
 
 def slice_evidence(ev, rid):
-    """只给这条 rubric 要的那部分。
+    """Include only evidence needed by this rubric.
 
-    判跳切的不需要读转录，判覆盖的不需要权衡运动能量。输入收窄，回答就不会在三件事
-    之间飘。"""
+    Jump-cut grading does not require transcripts, and coverage grading does not require motion energy.
+    Narrow the inputs to keep each judgment focused."""
     base = {"task": ev["task"], "how_measured": ev.get("how_measured")}
     if rid == "placement":
         base |= {
@@ -158,10 +158,10 @@ def slice_evidence(ev, rid):
 
 
 def sheet_part(task, ev, r):
-    """把这条 rubric 该看的那张联络表做成 image_url 部件。
+    """Convert this rubric's contact sheet to an image_url part.
 
-    只挂一张。三张全给会让它在不该看的图里找证据——jumpcut 那条要判的是接点两侧，
-    给它 kept 那张只会引它去谈内容。
+    Attach only the relevant sheet. Jump-cut grading concerns the two sides of a join;
+    a kept-content sheet could redirect the judgment toward shot content.
     """
     sid = r.get("sheet")
     meta = (ev.get("contact_sheets") or {}).get(sid)
@@ -217,7 +217,7 @@ Measured mechanically before you were called. `how_measured` says exactly how.
 Pick the band whose condition the evidence meets — not the one that feels about right.
 
 Cite what you used: clip ids, join numbers, and — when the frames decided it — the tile
-labels you read (`p03·2/5`, `j07前-1`, `p05出后`).
+labels you read (`p03·2/5`, `j07 pre-1`, `p05 post-out`).
 
 Reply with exactly one line in this shape and nothing else:
 
@@ -269,9 +269,9 @@ def call(task, ev, r):
             out, err = retry_out, retry_err
             band, rows, why = parse_band_response(out)
         elif retry_err:
-            err = f"格式重试失败 — {retry_err}"
+            err = f"Format retry failed — {retry_err}"
     if band is None and out:
-        err = f"回答不符合完整 BAND/ROWS/WHY 单行格式 — {out[-160:]}"
+        err = f"Response does not match the complete one-line BAND/ROWS/WHY format — {out[-160:]}"
     return {"rubric": r["id"], "title": r["title"], "band": band,
             "rows": rows[:140], "why": why,
             "retried_format": retried_format, "saw_video": True,
@@ -283,7 +283,7 @@ def judge(task):
     ep = f"{task}/evidence/s3_evidence.json"
     name = task.split("training_task/")[-1]
     if not os.path.exists(ep):
-        print(f"  {name:<30} ★ 没有 evidence，先跑 s3_evidence.py", flush=True)
+        print(f"  {name:<30} ★ Missing evidence; run s3_evidence.py first", flush=True)
         return None
     ev = json.load(open(ep))
     with ThreadPoolExecutor(max_workers=3) as ex:
@@ -302,7 +302,7 @@ def judge(task):
         s = agg["score"]
         print(f"  {name:<30} {('%.3f' % s) if s is not None else '  —  '}   " +
               "  ".join(f'{x["rubric"][:4]} {x["band"] if x["band"] is not None else "?"}'
-                        + ("" if x["saw_image"] else "(无图)") for x in res), flush=True)
+                        + ("" if x["saw_image"] else "(no image)") for x in res), flush=True)
         for x in res:
             if x["why"]:
                 print(f"      {x['title']}: {x['why'][:110]}", flush=True)
@@ -315,10 +315,10 @@ def judge(task):
 
 tasks = json.load(open(A.tasks)) if A.tasks else [A.task]
 _jid = judge_identity()
-print(f"评 {len(tasks)} 份 × 3 条 rubric   判官 {_jid['model']} ({_jid['provider']})"
-      f"{'  【不传图】' if A.no_images else '  【带联络表】'}\n", flush=True)
+print(f"Grading {len(tasks)} submissions × 3 rubrics; judge {_jid['model']} ({_jid['provider']})"
+      f"{'  [contact sheets disabled]' if A.no_images else '  [with contact sheets]'}\n", flush=True)
 with ThreadPoolExecutor(max_workers=A.workers) as ex:
     got = [x for x in ex.map(judge, tasks) if x is not None]
 if got:
     import statistics as st
-    print(f"\n中位 {st.median(got):.3f}   分布 {min(got):.2f}–{max(got):.2f}")
+    print(f"\nMedian {st.median(got):.3f}; range {min(got):.2f}–{max(got):.2f}")

@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/run_script_queue.py [options]\n\n  --film\n  --films  清单文件，每行一个 slug；只跑这些\n  --redo  已完成的也重跑\n  -j, --workers\n  --prep-only  只生成输入，不跑 agent\n  --all  Process all inputs explicitly\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/run_script_queue.py [options]\n\n  --film\n  --films  Text file with one film slug per line; process only those films\n  --redo  Rerun completed annotations\n  -j, --workers\n  --prep-only  Prepare inputs without invoking an agent\n  --all  Process all inputs explicitly\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 try:
@@ -38,7 +38,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = DATA_ROOT
-EFFORT = "max"   # 地基产物，后面每一步都以它为准
+EFFORT = "max"   # Downstream stages depend on this annotation.
 TOOLS = ("Read,Write,Edit,Glob,Grep,"
          "Bash(ffmpeg:*),Bash(ffprobe:*),Bash(python3:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*)")
 STALL_S = 20 * 60
@@ -122,7 +122,7 @@ def prep(slug):
                       "tags": tags})
 
     out = {"film": slug, "n_shots": len(shots),
-           "note": "这些是量出来的，不要重新推导；画面内容要你自己看",
+           "note": "These values are measured; do not re-derive them. Inspect the pictures to describe visual content.",
            "shots": shots, "speech": speech, "music": music}
     json.dump(out, open(f"{T}/stages/script_inputs.json", "w"),
               ensure_ascii=False, indent=1)
@@ -133,12 +133,12 @@ def check(slug, T):
     """a shot log that skips shots, or beats that leave gaps, is not a shot log"""
     p = f"{T}/stages/script.json"
     if not os.path.exists(p):
-        return ["script.json 未生成"]
+        return ["script.json was not generated"]
     try:
         with open(p, encoding="utf-8") as stream:
             d = json.load(stream)
     except Exception as e:
-        return [f"JSON 解析失败: {e}"]
+        return [f"JSON parsing failed: {e}"]
     with open(f"{T}/stages/script_inputs.json", encoding="utf-8") as stream:
         inp = json.load(stream)
     return check_document(slug, inp, d)
@@ -159,48 +159,48 @@ def check_document(slug, inp, d):
              else s.get("line") for s in inp["shots"]}
     bad = []
     if d.get("film") != slug or d.get("film") != inp.get("film"):
-        bad.append("film 必须与输入及请求的 slug 一致")
+        bad.append("film must match the input and requested slug")
 
     got = [s.get("id") for s in d.get("shots", [])]
     if got != want:
         miss = [i for i in want if i not in got]
         extra = [i for i in got if i not in want]
-        bad.append(f"镜头表对不上: {len(got)}/{len(want)} 条"
-                   + (f" 缺{miss[:4]}" if miss else "") + (f" 多{extra[:4]}" if extra else "")
-                   + ("" if miss or extra else " 顺序不一致"))
+        bad.append(f"Shot list mismatch: {len(got)}/{len(want)} entries"
+                   + (f" missing {miss[:4]}" if miss else "") + (f" extra {extra[:4]}" if extra else "")
+                   + ("" if miss or extra else " order differs"))
     for s in d.get("shots", []):
         if s.get("id") in lines and ("line" not in s or s["line"] != lines[s["id"]]):
-            bad.append(f"{s.get('id')} 的 line 必须原样保留输入对白 text 或 null"); break
+            bad.append(f"{s.get('id')} line must preserve the supplied dialogue text or null exactly"); break
         if not (s.get("desc") or "").strip():
-            bad.append(f"{s.get('id')} 缺画面描述"); break
+            bad.append(f"{s.get('id')} is missing a visual description"); break
         if kind.get(s.get("id")) == "card" and not (s.get("card_text") or "").strip() \
                 and not (s.get("card_misflag") or "").strip():
-            bad.append(f"{s.get('id')} 是字幕卡但没抄字（真不是卡就写 card_misflag）"); break
+            bad.append(f"{s.get('id')} is a card without transcribed text (use card_misflag only when visual evidence contradicts the classification)"); break
     if not d.get("logline"):
-        bad.append("缺 logline")
+        bad.append("Missing logline")
 
     beats = d.get("beats") or []
     if len(beats) < 2:
-        bad.append(f"只划了 {len(beats)} 段")
+        bad.append(f"Only {len(beats)} beats were provided; at least two are required")
     idx = {s: i for i, s in enumerate(want)}
     cover, prev_end = [], -1
     for b in beats:
         sh = b.get("shots") or []
         if len(sh) != 2 or sh[0] not in idx or sh[1] not in idx:
-            bad.append(f"{b.get('id')} 的 shots 不是两个合法镜头 id"); break
+            bad.append(f"{b.get('id')} shots must contain two valid shot IDs"); break
         a, z = idx[sh[0]], idx[sh[1]]
         if z < a:
-            bad.append(f"{b.get('id')} 起止颠倒"); break
+            bad.append(f"{b.get('id')} has reversed start/end IDs"); break
         if a != prev_end + 1:
-            bad.append(f"{b.get('id')} 起点 {sh[0]} 与上一段"
-                       + ("有空隙" if a > prev_end + 1 else "重叠")); break
+            bad.append(f"{b.get('id')} starts at {sh[0]} and "
+                       + ("leaves a gap after the previous interval" if a > prev_end + 1 else "overlaps the previous interval")); break
         prev_end = z
         cover.append((a, z))
         for k in ("name", "what", "function", "why_here"):
             if not (b.get(k) or "").strip():
-                bad.append(f"{b.get('id')} 缺 {k}"); break
+                bad.append(f"{b.get('id')} is missing {k}"); break
     if not bad and prev_end != len(want) - 1:
-        bad.append(f"段落没覆盖到最后一个镜头（停在第 {prev_end+1} 个）")
+        bad.append(f"Beats do not cover the final shot (coverage ends at shot {prev_end+1})")
     if bad:
         return bad
 
@@ -213,22 +213,22 @@ def check_document(slug, inp, d):
             beat_of[i] = b.get("id")
     chunks = d.get("chunks") or []
     if not chunks:
-        return ["缺 chunks（作业段）"]
+        return ["Missing chunks (editing assignments)"]
     prev_end = -1
     for ch in chunks:
         sh = ch.get("shots") or []
         if len(sh) != 2 or sh[0] not in idx or sh[1] not in idx:
-            bad.append(f"{ch.get('id')} 的 shots 不是两个合法镜头 id"); break
+            bad.append(f"{ch.get('id')} shots must contain two valid shot IDs"); break
         a, z = idx[sh[0]], idx[sh[1]]
         if z < a:
-            bad.append(f"{ch.get('id')} 起止颠倒"); break
+            bad.append(f"{ch.get('id')} has reversed start/end IDs"); break
         if a != prev_end + 1:
-            bad.append(f"{ch.get('id')} 起点 {sh[0]} 与上一段"
-                       + ("有空隙" if a > prev_end + 1 else "重叠")); break
+            bad.append(f"{ch.get('id')} starts at {sh[0]} and "
+                       + ("leaves a gap after the previous interval" if a > prev_end + 1 else "overlaps the previous interval")); break
         if beat_of[a] != beat_of[z]:
-            bad.append(f"{ch.get('id')} 跨越了段落边界（{beat_of[a]} → {beat_of[z]}）"); break
+            bad.append(f"{ch.get('id')} crosses a beat boundary ({beat_of[a]} -> {beat_of[z]})"); break
         if ch.get("beat") != beat_of[a]:
-            bad.append(f"{ch.get('id')} 标的 beat 是 {ch.get('beat')}，实际落在 {beat_of[a]}"); break
+            bad.append(f"{ch.get('id')} names beat {ch.get('beat')} but lies within {beat_of[a]}"); break
         # Size is a target, not a rule. Forcing a split to hit exactly five puts the
         # boundary somewhere the picture does not actually turn, which is worse than a
         # eight-shot chunk cut at a real seam. Only absurd sizes are rejected; the
@@ -236,12 +236,12 @@ def check_document(slug, inp, d):
         n = z - a + 1
         blen = sum(1 for i in beat_of if beat_of[i] == beat_of[a])
         if n > 15 and blen > 15:
-            bad.append(f"{ch.get('id')} 有 {n} 镜，这不算划分了"); break
+            bad.append(f"{ch.get('id')} contains {n} shots; subdivide this long beat into smaller chunks"); break
         if not (ch.get("what") or "").strip():
-            bad.append(f"{ch.get('id')} 缺 what"); break
+            bad.append(f"{ch.get('id')} is missing what"); break
         prev_end = z
     if not bad and prev_end != len(want) - 1:
-        bad.append(f"作业段没覆盖到最后一个镜头（停在第 {prev_end+1} 个）")
+        bad.append(f"Chunks do not cover the final shot (coverage ends at shot {prev_end+1})")
     return bad
 
 
@@ -528,17 +528,17 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
     pre_m = os.path.getmtime(out_p) if os.path.exists(out_p) else 0.0
 
     prompt = open(f"{CODE_ROOT}/prompts/PROMPT_SCRIPT.md").read()
-    prompt += f"\n\n## 本片\n\n《{name}》，共 **{n} 个镜头**。slug 是 `{slug}`。\n"
+    prompt += f"\n\n## Current film\n\n{name}: **{n} shots**. Film slug: `{slug}`.\n"
     if why:
-        prompt += ("\n## 上一次被打回了\n\n原因：\n- " + "\n- ".join(why[:5]) +
-                   "\n\n这次务必避开。\n")
+        prompt += ("\n## Previous attempt failed validation\n\nReasons:\n- " + "\n- ".join(why[:5]) +
+                   "\n\nAddress these failures in this attempt.\n")
     command = build_annotation_command(prompt, T, tools=TOOLS, effort=EFFORT)
     if command.backend == "claude":
         return _claude_once(slug, name, T, n, runs, st, resume=resume, why=why)
     open(f"{runs}/PROMPT.md", "w").write(prompt)
 
     t0 = time.time()
-    print(f"  [{name}] {n} 镜头 启动{'（重试）' if attempt else ''} → {runs}/progress.log",
+    print(f"  [{name}] Starting {n} shots{' (retry)' if attempt else ''} → {runs}/progress.log",
           flush=True)
     events = AnnotationEvents(command.backend)
     with annotation_process(command.argv, cwd=T, stderr_path=f"{runs}/stderr.log") as p:
@@ -571,7 +571,7 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
         returncode = p.wait()
     cost, rl = events.cost, [events.rate_limit]
     if killed:
-        print(f"  [{name}] ⚠ 静默超过 {STALL_S//60} 分钟，已终止", flush=True)
+        print(f"  [{name}] Stopped after more than {STALL_S//60} minutes without activity", flush=True)
     dt = time.time() - t0
 
     bad = events.failures() + check(slug, T)
@@ -580,7 +580,7 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
     if killed:
         bad.insert(0, "Annotation process exceeded its inactivity limit")
     if not bad and (not os.path.exists(out_p) or os.path.getmtime(out_p) <= pre_m):
-        bad = ["script.json 没被本次运行写过"]
+        bad = ["script.json was not written by this attempt"]
     if os.path.exists(out_p):
         shutil.copy(out_p, f"{runs}/script.json")
     st["script"] = {"ok": not bad, "at": time.strftime("%F %T"), "min": round(dt / 60, 1),
@@ -598,9 +598,9 @@ def _once(slug, name, T, n, attempt, why=None, resume=True):
     _sz = sorted(_ids.index(c["shots"][1]) - _ids.index(c["shots"][0]) + 1
                  for c in (_d.get("chunks") or [])
                  if c.get("shots") and c["shots"][0] in _ids and c["shots"][1] in _ids)
-    _rng = f" {_sz[0]}-{_sz[-1]}镜" if _sz else ""
-    print(f"  [{name}] {dt/60:.1f}分 {ntool}次" + (f" ${cost:.2f}" if cost else "") +
-          (f"  {nb} 段 / {nc} 作业段{_rng}  ✓" if not bad else f"  ✗ {bad[0][:70]}"),
+    _rng = f" {_sz[0]}-{_sz[-1]} shots per chunk" if _sz else ""
+    print(f"  [{name}] {dt/60:.1f} min, {ntool} tool calls" + (f" ${cost:.2f}" if cost else "") +
+          (f"  {nb} beats / {nc} chunks{_rng}  ✓" if not bad else f"  ✗ {bad[0][:70]}"),
           flush=True)
     return (not bad, rl[0], bad)
 
@@ -613,9 +613,9 @@ def run(slug, name, redo=False):
         st = json.load(open(f"{E}/state.json"))
         for need in ("cutlist", "acuts"):
             if not st.get(need, {}).get("ok"):
-                print(f"  跳过 {name}: 缺 {need}", flush=True); return False
+                print(f"  Skipping {name}: missing {need}", flush=True); return False
         if st.get("script", {}).get("ok") and not redo:
-            print(f"  跳过 {name}: 场记表已完成", flush=True); return True
+            print(f"  Skipping {name}: script annotation is complete", flush=True); return True
         T, n = prep(slug)
         attempt = waits = 0
         why = None
@@ -626,8 +626,8 @@ def run(slug, name, redo=False):
                 return True
             if rl.get("status") not in (None, "allowed") and waits < MAX_WAITS:
                 wake = (rl.get("resetsAt") or (time.time() + 900)) + 60
-                print(f"  [{name}] 触到限流，等到 "
-                      f"{time.strftime('%H:%M', time.localtime(wake))} 再试", flush=True)
+                print(f"  [{name}] Rate limited; retry at "
+                      f"{time.strftime('%H:%M', time.localtime(wake))}", flush=True)
                 while time.time() < wake:
                     time.sleep(60)
                 waits += 1
@@ -635,7 +635,7 @@ def run(slug, name, redo=False):
             attempt += 1
         return False
     except Exception as e:
-        print(f"  [{name}] ✗ 未捕获异常: {type(e).__name__}: {str(e)[:160]}", flush=True)
+        print(f"  [{name}] ✗ Unhandled exception: {type(e).__name__}: {str(e)[:160]}", flush=True)
         try:
             state_path = Path(ROOT) / "exports" / slug / "state.json"
             state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -650,10 +650,10 @@ def run(slug, name, redo=False):
 def main():
     P = argparse.ArgumentParser()
     P.add_argument("--film")
-    P.add_argument("--films", help="清单文件，每行一个 slug；只跑这些")
-    P.add_argument("--redo", action="store_true", help="已完成的也重跑")
+    P.add_argument("--films", help="Text file with one film slug per line; process only those films")
+    P.add_argument("--redo", action="store_true", help="Rerun completed annotations")
     P.add_argument("-j", "--workers", type=int, default=1)
-    P.add_argument("--prep-only", action="store_true", help="只生成输入，不跑 agent")
+    P.add_argument("--prep-only", action="store_true", help="Prepare inputs without invoking an agent")
     P.add_argument("--all", action="store_true", help="Process all inputs explicitly")
     A = P.parse_args()
     require_target(P, A)
@@ -673,20 +673,20 @@ def main():
         for k in skip:
             films.pop(k)
         if skip:
-            print(f"跳过已完成 {len(skip)} 部", flush=True)
+            print(f"Skipping {len(skip)} completed films", flush=True)
     if A.prep_only:
         for s in films:
             T, n = prep(s)
-            print(f"  {s:<24} {n} 镜头 -> {T}/stages/script_inputs.json")
+            print(f"  {s:<24} {n} shots -> {T}/stages/script_inputs.json")
         return
-    print(f"场记表队列: {len(films)} 部\n", flush=True)
+    print(f"Script annotation queue: {len(films)} films\n", flush=True)
     if A.workers > 1:
-        print(f"并行 {A.workers} 路\n", flush=True)
+        print(f"Using {A.workers} workers\n", flush=True)
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             ok = sum(bool(r) for r in ex.map(lambda kv: run(*kv, redo=A.redo), films.items()))
     else:
         ok = sum(bool(run(s, n, redo=A.redo)) for s, n in films.items())
-    print(f"\n完成 {ok}/{len(films)}")
+    print(f"\nCompleted {ok}/{len(films)} films")
     if ok != len(films):
         raise SystemExit(1)
 

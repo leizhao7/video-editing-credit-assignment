@@ -56,7 +56,7 @@ def main():
               open(f"{T}/stages/cut_list.json", "w"), ensure_ascii=False, indent=1)
     from collections import Counter
     k = Counter((c["after_kind"], c["before_kind"]) for c in cuts)
-    print(f"{A.film}: {len(units)} 单元 -> {len(cuts)} 个切点   总长 "
+    print(f"{A.film}: {len(units)} units -> {len(cuts)} cut boundaries; total duration "
           f"{sum(x['dur'] for x in units):.2f}s")
     for (a, b), n in k.most_common(6):
         print(f"  {a:<12}→ {b:<12} {n}")

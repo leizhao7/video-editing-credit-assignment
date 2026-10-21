@@ -29,6 +29,9 @@ Read {_quoted_path(inputs_path)} and the contact-sheet manifest at
 shot IDs, measured timing, kind, supplied dialogue and card-still names. Do not
 modify these input files or re-derive their measurements. Do not delegate.
 
+Write newly authored descriptions and explanations in English. Preserve visible
+card text and proper names in their original form.
+
 Your only output is the working draft at {_quoted_path(visuals['draft_path'])}.
 Write a JSON object with `film` copied exactly from the input and a `shots` array.
 For each input shot, in its original order, provide:
@@ -222,6 +225,9 @@ rewrite shots, repeat the full contact-sheet inspection, or regenerate dialogue.
 Use the full shot log and supplied speech to reason about sequence continuity.
 You may inspect an individual listed image or a nearby `reference/golden.mp4`
 frame if a specific boundary remains ambiguous. Do not delegate.
+
+Write all newly authored summaries, briefs, and explanations in English;
+preserve IDs and proper names exactly.
 
 Write one JSON object to {_quoted_path(structure_path)}, containing exactly these
 three top-level fields (no `film`, `shots` or other fields):

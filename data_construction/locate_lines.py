@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/locate_lines.py [options]\n\n  --film\n  --all\n  --gap  合并成一段语流的最大词间隔\n  --floor  判定找到的最低分\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/locate_lines.py [options]\n\n  --film\n  --all\n  --gap  Maximum gap between words in one speech run\n  --floor  Minimum score required for a match\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 def main():
@@ -26,8 +26,8 @@ def main():
     P = argparse.ArgumentParser()
     P.add_argument("--film")
     P.add_argument("--all", action="store_true")
-    P.add_argument("--gap", type=float, default=0.35, help="合并成一段语流的最大词间隔")
-    P.add_argument("--floor", type=float, default=0.55, help="判定找到的最低分")
+    P.add_argument("--gap", type=float, default=0.35, help="Maximum gap between words in one speech run")
+    P.add_argument("--floor", type=float, default=0.55, help="Minimum score required for a match")
     A = P.parse_args()
     require_target(P, A)
 
@@ -37,7 +37,7 @@ def main():
 
 
     def runs_from(path, gap):
-        """词表 → 语流。间隔 ≤gap 的词属于同一段话，这和答案里 J/L 的口径一致。"""
+        """Group words separated by at most gap seconds, matching the reference J/L definition."""
         tr = json.load(open(path))
         W = sorted([w for s in tr["segments"] for w in s["words"] if w.get("p", 1) > 0.4],
                    key=lambda w: w["s"])
@@ -55,7 +55,7 @@ def main():
 
 
     def score(q, w):
-        """有序重合：相同的词算分，顺序也对的加权。停用词不计，否则短句全靠 the/a 撞上。"""
+        """Score word overlap and order, excluding stopwords to avoid trivial short-line matches."""
         qs = [x for x in q if x not in STOP]
         ws = [x for x in w if x not in STOP]
         if not qs:
@@ -67,7 +67,7 @@ def main():
                 have.remove(x)
                 hit += 1
         cov = hit / len(qs)
-        # 顺序奖励：最长公共子序列 / 查询长度
+        # Order score: longest common subsequence divided by query length.
         m, n = len(qs), len(ws)
         if m and n:
             prev = [0] * (n + 1)
@@ -98,7 +98,7 @@ def main():
         for ln in lines:
             q = tok(ln["text"])
             if len(q) < 2:
-                rows.append({**ln, "found": False, "why": "太短，不判"})
+                rows.append({**ln, "found": False, "why": "Too short to assess"})
                 continue
             win = max(3, len(q))
             # Cap elapsed source time for a word window so long silent gaps cannot create implausible matches.
@@ -106,7 +106,7 @@ def main():
             
             span_cap = (ln["e"] - ln["s"]) * 3.0 + 3.0
             best, bi = 0.0, -1
-            # 窗口在 0.7×~1.6× 查询长度之间滑动，一句台词在正片里可能被停顿切开
+            # Search windows of 0.7-1.6 times the query length; source dialogue may contain pauses.
             for L in {max(3, int(win * 0.7)), win, int(win * 1.2) + 1, int(win * 1.6) + 1}:
                 for i in range(0, max(1, len(low) - L + 1)):
                     j = min(i + L - 1, len(SW) - 1)
@@ -139,14 +139,14 @@ def main():
                 if anc:
                     j, L, cov = anc
                     rows.append({**ln, "found": True, "score": round(cov, 3),
-                                 "via": "n-gram 锚点",
+                                 "via": "n-gram anchor",
                                  "anchor_words": L,
                                  "film_s": round(SW[j]["s"], 3),
                                  "film_e": round(SW[min(j + L - 1, len(SW) - 1)]["e"], 3),
                                  "film_text": " ".join(words[j:j + L])})
                     continue
                 rows.append({**ln, "found": False, "best": round(best, 3),
-                             "why": "正片里找不到这句"})
+                             "why": "Line not found in the source film"})
                 continue
             rows.append({**ln, "found": True, "score": round(best, 3),
                          "film_s": round(SW[bi]["s"], 3),
@@ -167,13 +167,13 @@ def main():
     for slug in films:
         r = locate(slug)
         if not r:
-            print(f"  {slug:<24} 缺转录，跳过")
+            print(f"  {slug:<24} Missing transcript; skipped")
             continue
         n, ok = r
         T += n
         O += ok
-        print(f"  {slug:<24} {ok:3d}/{n:3d} 句在正片里找到  {ok/max(n,1):.0%}", flush=True)
-    print(f"\n合计 {O}/{T}  {O/max(T,1):.0%}")
+        print(f"  {slug:<24} {ok:3d}/{n:3d} lines found in the source film  {ok/max(n,1):.0%}", flush=True)
+    print(f"\nTotal {O}/{T}  {O/max(T,1):.0%}")
 
 
 if __name__ == "__main__":

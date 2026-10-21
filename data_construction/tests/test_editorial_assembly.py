@@ -181,7 +181,7 @@ class EditorialAssemblyTests(unittest.TestCase):
         before = (directory / "task.json").stat().st_mtime_ns
         self.build()
         self.assertEqual((directory / "task.json").stat().st_mtime_ns, before)
-        self.assertIn("0 道创作题", self.last_stdout)
+        self.assertIn("0 creative editing tasks", self.last_stdout)
 
     def test_missing_takes_fails_with_preparation_instructions(self):
         (self.exports / "takes.json").unlink()

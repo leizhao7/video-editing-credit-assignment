@@ -40,6 +40,12 @@ The `video_editing.py` entry point adds project setup, local prerequisite checks
 
 Seven local CLI checks also passed using small FFmpeg-generated movie/trailer files and paths containing spaces: initialization, prerequisite checks, plan, media probe, resumed probe, status, and submission prerequisites. The probe ran once across two invocations, and the checks worked without a Gemini key. No cloud or model stages ran in this check. The unified entry point has not yet been rerun from raw media through all stages on a complete film; the component-level evidence above remains the full-film validation record. Construction and quality reviews resume saved work; each `score --execute` invocation starts a fresh evaluation.
 
+## English interface checks
+
+On 2026-10-21, the task-construction and main scoring interfaces were translated into English: CLI help, progress/errors, annotation instructions, report labels, tool descriptions, submission rules, and generated grading explanations. Supplied dialogue, visible card text, IDs, and proper names remain source content. Historical Chinese recognition patterns, internal compatibility labels, and Unicode test fixtures remain where required. New English card-description patterns include temporal-reference, overlay, and negation checks; they do not change the recorded dataset.
+
+All 406 regression tests passed (296 construction/workflow and 110 scoring/release tests). Seven real local CLI checks with synthetic media produced English output and resumed the probe without repeating it. A synthetic report rendered successfully, its ten filters ran, and both English and historical vocabulary headings parsed correctly. Tool schemas/quotas and scoring calculations were checked against the preceding revision; the rubric aggregators matched on 1,728 combinations of missing and 0–4 scores. No annotation, quality-audit, or scoring provider was called during this language pass, and no complete-film run was repeated. The workflow guide now includes an overview of each stage and distinguishes model-based preprocessing, agent annotation, programmatic assembly, quality filtering, and outcome scoring.
+
 ## Work still needed before claiming full reproducibility
 
 1. Restore the original reference-answer OPSD recipe with aggregate SHA-256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`. The final turn-suggestion recipe must not be silently substituted.

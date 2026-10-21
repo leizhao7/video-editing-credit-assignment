@@ -85,7 +85,7 @@ class ScriptProgressTests(unittest.TestCase):
 
     def test_draft_is_never_accepted_as_final_annotation(self):
         self.draft.write_text(json.dumps({"film": "sample", "shots": [{"id": "s1", "desc": "Shape"}]}))
-        self.assertEqual(queue.check("sample", str(self.task)), ["script.json 未生成"])
+        self.assertEqual(queue.check("sample", str(self.task)), ["script.json was not generated"])
 
     def test_visual_preparation_is_only_used_for_claude(self):
         endings = {"claude": {"type": "result", "is_error": False},
@@ -114,7 +114,7 @@ class ScriptProgressTests(unittest.TestCase):
                     prepare.assert_called_once_with(str(self.task))
                     self.assertTrue(any("shots-001/shots.json" in part for part in captured))
                 else:
-                    self.assertIn("script.json 未生成", errors)
+                    self.assertIn("script.json was not generated", errors)
                     prepare.assert_not_called()
                     self.assertFalse(any(str(self.draft) in part for part in captured))
 

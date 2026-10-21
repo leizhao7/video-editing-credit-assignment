@@ -8,7 +8,7 @@ from grading_media import render_audio, map_time, unexplained_black, verified_br
 _RENDER_AUDIO = {}
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件、起子进程）")
+    raise ImportError(f"{__file__} is a command-line script, not an importable module (it writes files and starts subprocesses)")
 
 P = argparse.ArgumentParser()
 P.add_argument("--task")
@@ -94,14 +94,12 @@ def _is_canned_hallucination(segment) -> bool:
 
 
 def asr(path, words=False):
-    """优先读预计算缓存 `<media>.asr.json`。
+    """Prefer a precomputed <media>.asr.json cache with full text and word timings.
 
-    ASR 只依赖媒体文件本身、和模型输出无关，离线算一次就够；放在 rollout 里
-    现算等于给每条轨迹白加一两分钟。缓存同时存整段文本和词级两种形态。
-
-    缓存缺失时必须真正运行 ASR。依赖、模型初始化或转录失败都抛错，绝不能
-    伪装成“成片没有对白”；空转录只有在一次成功解码后才是有效测量。
-    """
+    ASR depends on the media, not the policy output; caching avoids repeated work
+    during rollouts. A cache miss must run ASR. Dependency, initialization and
+    transcription failures propagate; they must not imply dialogue is absent.
+    An empty transcript is valid only after successful decoding/transcription."""
     cache = os.path.splitext(path)[0] + ".asr.json"
     if os.path.exists(cache):
         try:
@@ -274,7 +272,7 @@ def _parse_volumedetect(stderr, source="audio"):
 
 
 def level_db(path, ss=None, t=None):
-    """一段音频的平均电平和峰值。声明抬了 +14 dB 和实际听不听得见是两回事。"""
+    """Measure mean and peak audio levels; a declared +14 dB gain does not establish audibility."""
     path = _RENDER_AUDIO.get(str(path), path)
     c = ["ffmpeg", "-v", "info"]
     if ss is not None:
@@ -289,7 +287,7 @@ def level_db(path, ss=None, t=None):
 
 
 def luma_series(path, fps=24):
-    """逐帧亮度。黑场是不是真的黑、黑了多久，只能从这里读。"""
+    """Measure frame luminance to inspect whether black frames occur and how long they last."""
     import numpy as np
     r = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vf",
                         f"fps={fps},scale=32:18", "-pix_fmt", "gray",
@@ -303,11 +301,10 @@ def luma_series(path, fps=24):
 
 
 def music_accents(path, offset, dur, top=14):
-    """音乐里的重击，换算到本段时间线上。
+    """Map music accents to the task timeline.
 
-    offset 是 agent 声明的对齐位置：文件里的第 offset 秒 = 本段的 0 秒。卡点判得准不准，
-    全看这个换算——用文件时间跟切点比是没有意义的。
-    """
+    offset is the declared alignment: cue time offset corresponds to timeline
+    time zero. Subtract it before comparing cue events with picture cuts."""
     np, librosa = _audio_libs()
     try:
         y, sr = librosa.load(path, sr=22050, offset=max(0.0, offset), duration=dur + 0.5)
@@ -329,7 +326,7 @@ def music_accents(path, offset, dur, top=14):
     for i in idx:
         if len(picked) >= top:
             break
-        # 同一记重击会连出好几帧，60ms 内只取最强的那个
+        # An accent can span several frames; keep the strongest event within 60 ms.
         if any(abs(t[i] - u) < 0.06 for u in used):
             continue
         used.append(t[i])
@@ -343,7 +340,7 @@ def music_accents(path, offset, dur, top=14):
             "db": round(float(20 * np.log10(rms[i] + 1e-9)), 1)}
            for i in range(0, len(rms), max(1, len(rms) // 24))]
     return {"accents": picked, "envelope": env,
-            "note": "t_s 已换算到本段时间线（文件时间 − 声明的对齐位置）"}
+            "note": "t_s uses the task timeline (file time minus the declared alignment offset)."}
 
 
 def music_render_match(music_path, offset, render_path, dur):
@@ -399,8 +396,8 @@ def music_render_match(music_path, offset, render_path, dur):
         "estimated_codec_lag_s": round(float(local_lags[pos]) / sr, 4),
         "least_squares_gain": round(gain, 5),
         "note": (
-            "render 与声明 cue 段的波形相关性，允许 ±0.25s 编码延迟；越高越能确认音乐"
-            "确实进入成片，但混入对白/同期声会压低它，不能用单一阈值判零分"
+            "Waveform correlation between the render and declared cue, allowing +/-0.25s codec lag. "
+            "Higher correlation supports the cue being present; dialogue/production sound can lower it, so no single threshold justifies a zero score."
         ),
     }
 
@@ -412,7 +409,7 @@ STOP = set("a an the and or but of to in on at is are was were be been it its th
 
 
 def words(t):
-    """实词集合。比对 take 文本和镜头同期声用——判这条台词是不是这个镜头自己的话。"""
+    """Content-word set for comparing take text with source-shot production sound."""
     return {w for w in re.findall(r"[a-z']+", (t or "").lower())
             if len(w) > 2 and w not in STOP}
 
@@ -422,9 +419,10 @@ def sh(c):
 
 
 def wave(src, t0, dur, out_png, w=1200, h=110, spec=False):
-    """把一段声音画成图。判官这个部署只收 text 和 image_url——探过，input_audio 直接
-    400。所以声音要么以数字到它面前（电平、秒数、转录），要么画成画面跟帧一起看。
-    showwavespic 看连不连得上，showspectrumpic 看连过去的是人声还是乐器。"""
+    """Render waveform or spectrum images alongside picture frames.
+
+    This supplies navigational audio evidence for image-based inspection;
+    continuity and spectral content do not prove a particular bridge type."""
     f = (f"showspectrumpic=s={w}x{h}:legend=0:scale=log:color=intensity"
          if spec else f"showwavespic=s={w}x{h}:colors=0xdddddd:split_channels=0")
     src = _RENDER_AUDIO.get(str(src), src)
@@ -435,20 +433,16 @@ def wave(src, t0, dur, out_png, w=1200, h=110, spec=False):
 
 
 def cut_roughness(path, t, half=0.23):
-    """量这一刀在成片里听起来有多糙。不看声明，只看波形。
+    """Measure rendered-audio discontinuity from the waveform, not declarations.
 
-    三个数：
-      step_db    切点两侧 0.23 秒窗口的电平差
-      spec_dist  两侧 16 个对数频带能量向量的余弦距离——同一个声源继续响则小
-      gap_db     切点前后各 50ms 里最安静的 20ms，相对两侧平均电平掉多少
+    step_db: level difference between 0.23-second windows beside the join.
+    spec_dist: cosine distance between 16 log-frequency energy bands.
+    gap_db: quietest 20 ms within 50 ms of the join, relative to neighboring levels.
 
-    **这把尺子量不出桥的类型。** 拿 90 段真预告片按 golden 的声明分组量过：hard 刀的
-    频谱距离(0.119)反而比 J(0.208)、L(0.221)更小，因为成片里音乐床连续铺着、占了频谱
-    主导，干接时音乐没变所以"连续"，而 J/L 是台词在进出、频谱变化更大。
-
-    它量的是另一件事：这一刀有多糙。真预告片的干接中位 0.119，agent 提交的中位 0.166——
-    比预告片的干接还糙 39%。这是"声音是断的"这个印象的机械对应物。
-    """
+    These measurements cannot identify bridge type. A continuous music bed can
+    dominate the spectrum of a hard cut, while entering/leaving dialogue can
+    increase spectral distance during a J/L cut. They describe audio roughness,
+    not whether a declared transition was implemented."""
     np, librosa = _audio_libs()
     try:
         y, sr = librosa.load(_RENDER_AUDIO.get(str(path), path), sr=22050, mono=True,
@@ -487,7 +481,7 @@ def cut_roughness(path, t, half=0.23):
 
 
 def seg_db(path, a, b):
-    """一段音频的平均电平。取不到就 None——不猜。"""
+    """Return mean audio level for a segment, or None if it cannot be measured."""
     if not path or not os.path.exists(path) or b - a < 0.02:
         return None
     np, librosa = _audio_libs()
@@ -505,14 +499,11 @@ def seg_db(path, a, b):
 
 
 def carry_content(is_dir, shot, past_s, is_prelap):
-    """手柄铺过切点了——铺出去的那一段里到底有没有声音。
+    """Measure whether the source handle extension contains sound.
 
-    L cut 的意思是离开镜自己的声音继续响。把手柄拉长 0.9 秒、拉到的是一段室内静音，
-    那不是 L cut，是把静音接到了下一个镜头上。声明和手柄记账都看不出这个区别，
-    只有量那一段的电平能看出来。
-
-    返回铺出去那段相对镜内的电平差。低太多就是铺了个寂静。
-    """
+    Extending a handle by 0.9 seconds can extend silence rather than production
+    sound. Compare the extension level with the in-shot level; a much quieter
+    extension suggests silence. This source measurement does not verify the render."""
     h = (shot.get("handle") or {})
     pin = h.get("picture_in_s")
     if pin is None or past_s <= 0.04:
@@ -528,23 +519,19 @@ def carry_content(is_dir, shot, past_s, is_prelap):
         return None
     return {"extended_s": round(past_s, 3), "ext_db": ext, "in_shot_db": inner,
             "rel_db": round(ext - inner, 1),
-            "reading": ("铺出去的是静音——手柄拉长了，拉到的那段没有声音，"
-                        "这不是 L/J cut" if ext - inner < -12 else
-                        "铺出去的那段有内容，是真的把声音带过了切点")}
+            "reading": ("The extended source handle is much quieter than the in-shot segment; "
+                        "extending silence does not establish an L/J cut." if ext - inner < -12 else
+                        "The extended source handle contains sound beyond the picture boundary; verify its use in the render.")}
 
 
 def carry_opportunity(is_dir, leaving, arriving, win=0.6):
-    """这一刀撑不撑得住一个过渡——不用成片也答得出。
+    """Measure source-handle opportunities independently of the delivered edit.
 
-    L cut 要的是离开镜的声音在画面切掉之后还在响。手柄文件比画面前后各多 4 秒，
-    所以"画面出点之后那 0.6 秒里有没有声音"是直接量得到的。有内容就是这一刀本来
-    可以做 L；作业干接了，那是放掉了一个现成的过渡。J cut 同理，看到达镜画面入点
-    之前那 0.6 秒。
-
-    盲判占最终分的 0.6，但它没有成片可比。参照判官那边靠 join_alignment 数"成片铺了
-    作业没铺"（成片 2%、agent 23%、拆平对照 38%），盲判这边靠这个——素材自己就能
-    证明那里有声音可以延过去。
-    """
+    An L-cut opportunity uses sound after the leaving picture; a J-cut opportunity
+    uses sound before the arriving picture. Handles provide up to four seconds of
+    context on each side; inspect 0.6-second windows by default. This tells the
+    blind judge whether source sound is available to extend, not whether the
+    submitted render includes it or whether extending it is artistically required."""
     out = {}
     for role, sh_ in (("carry_out", leaving), ("prelap_in", arriving)):
         h = (sh_ or {}).get("handle") or {}
@@ -564,17 +551,17 @@ def carry_opportunity(is_dir, leaving, arriving, win=0.6):
         out[role] = {"shot": sh_["id"], "handle_db": ext, "in_shot_db": inner,
                      "rel_db": rel,
                      "supports": rel > -12,
-                     "reading": ("这一刀撑得住：手柄里画面之外那段有声音，延过去是现成的"
+                     "reading": ("Source sound is available beyond the picture boundary and could be extended across the join."
                                  if rel > -12 else
-                                 "撑不住：手柄里画面之外那段基本是静音，没东西可延")}
+                                 "The source handle beyond the picture boundary is mostly quiet, with little sound to extend.")}
     if out:
-        out["note"] = ("量的是素材本身，跟作业怎么做无关。supports=true 而作业在这一刀"
-                       "干接，就是放掉了一个现成的过渡")
+        out["note"] = ("This measures source material independently of the submission. supports=true indicates "
+                       "a source-sound extension opportunity that a hard cut would leave unused; it does not prove a rendered bridge.")
     return out or None
 
 
 def black_runs(path):
-    """用 ffmpeg 的 blackdetect 找黑场，避免把正常的暗镜误判为黑场。"""
+    """Use FFmpeg blackdetect to distinguish black intervals from ordinarily dark shots."""
     if not path or not os.path.exists(path):
         return []
     r = subprocess.run(["ffmpeg", "-v", "info", "-i", path, "-an",
@@ -591,12 +578,12 @@ def black_runs(path):
 
 
 def render_offsets(runs_in, joins, drift, expected_black_spans=None):
-    """粗剪的接点时间 → 成片里的时间。
+    """Map rough-cut joins to rendered time using extra black intervals.
 
-    只有成片相对 rough cut **多出来**的黑场才能移动时钟。题目里本来就占时长的标题卡
-    即使整段为黑，也绝不能再次累加；所有偏移总和还必须受正 duration drift 的硬上限
-    约束。否则一张 3 秒黑底标题卡会把后续所有声画证据错移 3 秒。
-    """
+    Only black time added beyond the rough cut can shift the clock. A title card
+    already included in the task duration must not be counted again. Bound all
+    offsets by positive duration drift; otherwise an existing three-second black
+    title card could incorrectly shift all later evidence by three seconds."""
     zero = {j["join"]: 0.0 for j in joins}
     try:
         numeric_drift = float(drift)
@@ -604,9 +591,9 @@ def render_offsets(runs_in, joins, drift, expected_black_spans=None):
         numeric_drift = 0.0
     positive_drift = max(0.0, numeric_drift)
     if not runs_in or positive_drift < 0.02:
-        reason = ("成片没有比粗剪更长，黑帧不能作为插入时长累加"
+        reason = ("The render is not longer than the rough cut; black frames cannot add inserted duration."
                   if numeric_drift < -0.02 else
-                  "成片与粗剪等长，波形按粗剪时间截取")
+                  "The render and rough cut have equal duration; waveform windows use rough-cut times.")
         return zero, reason
 
     expected = []
@@ -670,8 +657,8 @@ def render_offsets(runs_in, joins, drift, expected_black_spans=None):
 
     if not extra_runs:
         return zero, (
-            f"检测到的黑场均已由 rough-cut 标题卡解释；未增加接点偏移"
-            f"（忽略已编入时长的黑场 {ignored_expected:.3f}s）"
+            f"All detected black intervals are accounted for by rough-cut title cards; no join offset added "
+            f"({ignored_expected:.3f}s of already-budgeted black time excluded)."
         )
 
     off, used = {}, 0.0
@@ -689,9 +676,9 @@ def render_offsets(runs_in, joins, drift, expected_black_spans=None):
         off[join["join"]] = round(acc, 3)
         used = max(used, acc)
     tail = round(numeric_drift - used, 3)
-    return off, (f"成片比粗剪长 {numeric_drift:+.3f}s；最多只允许使用这段正 drift。"
-                 f"排除 rough-cut 标题卡黑场 {ignored_expected:.3f}s 后，"
-                 f"接点前确认额外黑场 {used:.3f}s；剩余 {tail:+.3f}s 不移动接点")
+    return off, (f"The render is {numeric_drift:+.3f}s longer than the rough cut; offsets are bounded by this positive drift. "
+                 f"After excluding {ignored_expected:.3f}s of rough-cut title-card black time, "
+                 f"{used:.3f}s of extra black time precedes joins; the remaining {tail:+.3f}s does not shift joins.")
 
 
 def bridge_decision_count(bridges, placed):
@@ -713,13 +700,11 @@ def bridge_decision_count(bridges, placed):
 
 
 def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=1500):
-    """整段一条时间轴：画面 / 成片波形 / 成片频谱 / 音乐床包络与重击 / 台词占位。
+    """Draw aligned picture, render waveform/spectrum, cue envelope/accents and dialogue.
 
-    music 这条 rubric 原来完全靠作业自己写的 note 打分——同一个入点数字，换一段有论证
-    的文字，十份的 band 从均 1.20 涨到 2.90。判官手里除了数字没有别的，不给 note 就
-    什么都不剩。这张图是给它的东西：床从哪儿进、在哪儿起、重击落在哪一刀上、台词占着
-    哪几段，全在同一条轴上，自己看。
-    """
+    A shared timeline gives the judge observable evidence beyond authored notes:
+    cue placement, accent timing and dialogue occupancy. The cue envelope comes
+    from the declared source cue; it is not isolated music from the rendered mix."""
     from PIL import Image, ImageDraw
     tot = mus.get("render_duration_s") or max(s["end_s"] for s in shots) or 1.0
     FH, WH, SH, MH, DH, LH = 92, 96, 96, 116, 30, 22
@@ -729,7 +714,7 @@ def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=15
     d = ImageDraw.Draw(im)
     render_audio = bool(render_path and has_audio_stream(render_path))
 
-    # ① 画面条：每个镜头占的宽度就是它占的时间
+    # 1. Picture strip: each shot's width represents its duration.
     y = 0
     for sh_ in shots:
         x0, x1 = X(sh_["start_s"]), X(sh_["end_s"])
@@ -776,7 +761,7 @@ def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=15
             d.text((8, y + 8), "NO AUDIO STREAM IN RENDER", fill=(255, 120, 120))
         y += hh
 
-    # ④ 音乐床：包络折线 + 重击竖线，高度按强度百分位
+    # 4. Music bed: envelope line and accent markers scaled by strength percentile.
     my, env = y, (mus.get("envelope") or [])
     d.rectangle([0, my, w, my + MH], fill=(20, 20, 26))
     if env:
@@ -791,7 +776,7 @@ def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=15
         d.line([(x, my + MH), (x, my + MH - h)], fill=(255, 190, 60), width=2)
     y = my + MH
 
-    # ⑤ 台词占位
+    # 5. Dialogue occupancy.
     d.rectangle([0, y, w, y + DH], fill=(18, 24, 18))
     for pl in placed:
         sp = pl.get("timeline_span_s") or []
@@ -814,7 +799,7 @@ def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=15
         d.text((6, y + 8), "no dialogue placed", fill=(150, 170, 150))
     y += DH
 
-    # 接点：贯穿所有层的竖线
+    # Join markers span every layer.
     for j in joins:
         x = X(j["t_s"])
         d.line([(x, 0), (x, y)], fill=(235, 60, 60), width=2)
@@ -833,15 +818,11 @@ def music_timeline(shots, joins, placed, mus, render_path, is_dir, out_png, w=15
 
 def render_panels(render_path, joins, runs, drift, out_png, w=1188,
                   expected_black_spans=None):
-    """跟 join_panels 同样的三层结构，但画面取自**成片**。
+    """Build aligned picture/audio panels from the actual delivered render.
 
-    join_panels 的画面来自素材，答的是"这两个镜头在干什么，这一刀配不配得上"。
-    这一张答的是另一件事：成片这一刀实际发生了什么。插进去的黑、真做出来的淡、
-    时间轴的位移，只有在成片里看得见——素材里永远没有黑场。
-
-    bridges 那条 rubric 原来只有 declared_* 和 reconcile 可读，问的全是"作业说的对不对"。
-    散文摘掉之后剩下的 cut / under / prelap 仍然是自述。给它成片本身。
-    """
+    Unlike source-based join_panels, these show implemented black frames, fades
+    and timing shifts. Declared cut/under/prelap fields do not substitute for
+    rendered evidence. Mapping remains heuristic and requires visual checking."""
     from PIL import Image, ImageDraw
     if not render_path or not joins:
         return False
@@ -855,7 +836,7 @@ def render_panels(render_path, joins, runs, drift, out_png, w=1188,
         rt = j["t_s"] + offs.get(j["join"], 0.0)
         row = Image.new("RGB", (w, th), (12, 12, 12))
         frame_failures = []
-        # 六格跨过成片里的切点，和下面的波形共用同一条时间轴
+        # Six frames span each rendered join, sharing the waveform's timeline.
         for k, dt in enumerate((-0.30, -0.16, -0.04, 0.02, 0.14, 0.28)):
             q = f'{tmp}/{j["join"]}_{k}.png'
             tag = f'j{j["join"]}{"+" if dt > 0 else ""}{dt:+.2f}'.replace("++", "+")
@@ -924,15 +905,14 @@ def render_panels(render_path, joins, runs, drift, out_png, w=1188,
 
 def join_panels(items, render_path, joins, out_png, w=1188, runs=None, drift=0.0,
                 expected_black_spans=None):
-    """每刀一块：六帧一排，底下压同一时间窗的波形和频谱，红线标切点。
+    """Place six picture samples over a waveform/spectrum window for each join.
 
-    分两张图（帧一张、声音一张）判官对不上号——它得自己记住 j05 的第几格对应哪一段声音。
-    压在一起就不用记：同一条时间轴，上面是看见的，下面是听见的。
-    """
+    A shared timeline with a red cut marker links picture positions to audio
+    measurements without requiring the judge to align separate images mentally."""
     from PIL import Image, ImageDraw
     if not items or not joins:
         return False
-    HALF, TH, SH = 0.55, 84, 84          # 窗口半宽 / 波形高 / 频谱高
+    HALF, TH, SH = 0.55, 84, 84          # Window half-width / waveform height / spectrum height.
     tw = w // 6
     th = int(tw * 9 / 16)
     offs, off_note = render_offsets(runs, joins, drift, expected_black_spans)
@@ -941,8 +921,8 @@ def join_panels(items, render_path, joins, out_png, w=1188, runs=None, drift=0.0
     got = {}
     for i, (path, t, tag) in enumerate(items):
         q = f"{tmp}/{i:03d}.png"
-        # 贴着片尾抽帧常常落到最后一帧之后，什么都不出。往回退着试——-1 那格
-        # （切点前 0.04 秒）在旧的联络表里从来没出现过，就是这个原因。
+        # Near the clip end, extraction can seek beyond the final frame. Try earlier times;
+        # otherwise the -1 tile (0.04 seconds before the join) can be missing.
         for back in (0.0, 0.03, 0.07, 0.12):
             run = sh(["ffmpeg", "-v", "error", "-ss", f"{max(0.0, t - back):.4f}",
                       "-i", path, "-frames:v", "1", "-vf",
@@ -975,7 +955,7 @@ def join_panels(items, render_path, joins, out_png, w=1188, runs=None, drift=0.0
                 tag.startswith("+") for tag, _ in tiles):
             raise RuntimeError(f"S4E join {j['join']} lacks source frames on one side")
         row = Image.new("RGB", (w, th), (12, 12, 12))
-        # 左三格贴左半，右三格贴右半——中缝永远是切点，缺格也不会把红线错位
+        # Keep three tiles on each side; missing tiles must not move the central cut marker.
         for tag, q in tiles:
             k = int(tag[1]) - 1
             x = (2 - k) * tw if tag[0] == "-" else w // 2 + k * tw
@@ -1028,11 +1008,10 @@ def join_panels(items, render_path, joins, out_png, w=1188, runs=None, drift=0.0
 
 
 def sheet(items, out_png, cols=6, w=280):
-    """联络表。每格左上角压标签，判官才能把画面跟证据里的行对上。
+    """Create labeled contact sheets linked to evidence records.
 
-    每帧单独抽、统一 pad 到同一尺寸再用 tile 拼。xstack 的 `w0*n_h0*n` 布局要求瓦片
-    等尺寸，各镜头宽高比不同会让整张静默失败——S3 那边踩过这个坑。
-    """
+    Extract each frame, scale/pad to a common size, and tile. Different source
+    aspect ratios must not produce unequal tiles or silently break the sheet."""
     if not items:
         return None
     h = int(w * 9 / 16)
@@ -1083,7 +1062,7 @@ def build(task):
     man = json.load(open(f"{task}/initial_state/manifest.json"))
     sub_p = f"{task}/output/edit.json"
     if not os.path.exists(sub_p):
-        return {"error": "没有 output/edit.json"}
+        return {"error": "Missing output/edit.json"}
     sub = json.load(open(sub_p))
     ev_dir = f"{task}/evidence"
     os.makedirs(ev_dir, exist_ok=True)
@@ -1102,9 +1081,9 @@ def build(task):
         m = re.search(r"covers:\s*\n+>\s*(.+?)\n", open(tp).read())
         beat = m.group(1).strip() if m else None
 
-    # ---------------------------------------------------------- 时间线与画面内容
-    # 同期声是画面内容的文字侧写。判官现在也看得见帧了，但这两样答的不是一回事：
-    # 静默镜头转录是空的，画面里却有主体；一句同期声也不说明说话的人在不在画内。
+    # ---------------------------------------------------------- Timeline and picture content
+    # Production-sound transcripts supplement pictures: a silent shot can still contain a subject,
+    # and a spoken line does not establish that its speaker is visible.
     t, shots = 0.0, []
     for s in man["shots"]:
         rec = {"id": s["id"], "start_s": round(t, 3), "end_s": round(t + s["dur_s"], 3),
@@ -1119,12 +1098,12 @@ def build(task):
             rec["production_sound_level"] = level_db(p)
             transcript = (asr(p) or "")[:160]
             rec["on_screen_says"] = (
-                transcript or "(ASR 成功，但没有识别出对白；不等同于无人声)"
+                transcript or "(ASR succeeded but recognized no dialogue; this does not establish absence of speech.)"
             )
         elif s.get("origin") == "to_build":
-            rec["on_screen_says"] = "(要 agent 生成的字幕卡，没有素材)"
+            rec["on_screen_says"] = "(Title card to be generated by the agent; no source asset.)"
         else:
-            rec["on_screen_says"] = "(预告片专有素材，已静音)"
+            rec["on_screen_says"] = "(Trailer-only footage; muted.)"
         shots.append(rec)
         t += s["dur_s"]
     total = round(t, 3)
@@ -1132,7 +1111,7 @@ def build(task):
               "leaving": j["leaving"], "arriving": j["arriving"]}
              for j in man["joins"]]
 
-    # ---------------------------------------------------------- 渲染里实际听到什么
+    # ---------------------------------------------------------- Audio observed in the render
     render = {"exists": has_prev, "audio_stream": False}
     if has_prev:
         render["audio_stream"] = has_audio_stream(prev)
@@ -1184,7 +1163,7 @@ def build(task):
         offset = jn_render_off.get(prior[-1]["join"], 0.0) if prior else 0.0
         return float(rough_t) + offset
 
-    # ---------------------------------------------------------- ① 台词落点
+    # ---------------------------------------------------------- 1. Dialogue placement
     pool = {l["id"]: l for l in (man.get("dialogue") or [])}
     placed = []
     for x in (sub.get("dialogue") or []):
@@ -1219,7 +1198,7 @@ def build(task):
                     {"join": j["join"], "t_s": j["t_s"],
                      "before_s": round(j["t_s"] - span[0], 3),
                      "after_s": round(span[1] - j["t_s"], 3)} for j in crossed]
-                # 声明抬了多少是一回事，渲染里量出来是另一回事
+                # Declared gain and measured rendered level are different evidence.
                 if has_prev:
                     render_span = (to_render_time(span[0]), to_render_time(span[1]))
                     rec["render_timeline_span_s"] = [
@@ -1240,8 +1219,8 @@ def build(task):
                     overlap = sorted(expected_words & heard_words)
                     rec["heard_here"] = (
                         heard_text or
-                        ("(成片没有音轨)" if not render["audio_stream"] else
-                         "(ASR 成功，但这一段没有识别出词；不能单独证明对白缺失)")
+                        ("(The render has no audio stream.)" if not render["audio_stream"] else
+                         "(ASR succeeded but recognized no words in this interval; this alone cannot prove dialogue is absent.)")
                     )
                     rec["asr_match"] = {
                         "expected_content_words": sorted(expected_words),
@@ -1255,14 +1234,14 @@ def build(task):
                             "no_audio_stream" if not render["audio_stream"] else
                             "not_confirmed_by_asr"
                         ),
-                        "note": "ASR 未匹配只是不确认；需结合区间电平和频谱，不能单独判缺失",
+                        "note": "An ASR non-match is unconfirmed, not proof of absence; inspect interval levels and spectrum too.",
                     }
         placed.append(rec)
     used = {x.get("take") for x in (sub.get("dialogue") or [])}
     omitted = [{"id": k, "text": (v.get("text") or "")[:100]}
                for k, v in pool.items() if k not in used]
 
-    # ---------------------------------------------------------- ② 音乐卡点
+    # ---------------------------------------------------------- 2. Music accent timing
     mu = sub.get("music") or {}
     off = mu.get("starts_at_s")
     music = {"declared_start_s": off, "declared_note": str(mu.get("note", ""))[:200]}
@@ -1299,7 +1278,7 @@ def build(task):
     else:
         music["analysis_status"] = "not_declared"
 
-    # ------------------------------------------- ②·5 同期声铺过接点（真正的 J/L cut）
+    # ------------------------------------------- 2.5 Production sound extending across picture joins
     # Track production_sound source handles and in_s/out_s/at_s placement
     # separately from declarations; a declared bridge is not measured evidence.
     SPOS = {s_["id"]: s_ for s_ in shots}
@@ -1312,10 +1291,10 @@ def build(task):
         i_s, o_s, at = x.get("in_s"), x.get("out_s"), x.get("at_s")
         if None not in (i_s, o_s, at):
             span = (float(at), float(at) + (float(o_s) - float(i_s)))
-            how = "handle"          # 用手柄铺出来的，可以越过画面
+            how = "handle"          # Source handles can extend beyond picture boundaries.
         else:
             span = (sh_["start_s"], sh_["end_s"])
-            how = "sync"            # 只是保留本镜同步声，跟画面等长，不构成 bridge
+            how = "sync"            # In-shot production sound alone does not form a bridge.
         rec = {"shot": sid, "how": how, "gain_db": x.get("gain_db"),
                "timeline_span_s": [round(span[0], 3), round(span[1], 3)],
                "picture_span_s": [sh_["start_s"], sh_["end_s"]],
@@ -1324,7 +1303,7 @@ def build(task):
             rec["invalid_timeline_span"] = (
                 f"out_s ({o_s}) must be greater than in_s ({i_s})"
             )
-        # 声音比画面多出来的部分——正是 J/L cut 的量
+        # Measure how far audio extends beyond its source picture.
         rec["tail_past_picture_s"] = round(span[1] - sh_["end_s"], 3)
         rec["head_before_picture_s"] = round(sh_["start_s"] - span[0], 3)
         rec["crosses_joins"] = [
@@ -1352,8 +1331,8 @@ def build(task):
             **(result or {})}
 
 
-    # 决定数 ≠ 接点数。一条台词跨 8 刀是一个决定，不是八个——两轮判分在这上面差了
-    # 三档（4 分 vs 1 分），读的是同一份证据。口径必须在证据里就算清楚。
+    # Count decisions, not joins: one line crossing 8 cuts is one decision, not eight.
+    # Define this in the evidence so reviewers use the same unit of counting.
     n_join_touched = sum(1 for b in bridges if b["bridge_kinds"])
     n_decisions, spanning_takes, title_card_shots = bridge_decision_count(
         bridges, placed
@@ -1363,17 +1342,17 @@ def build(task):
         "distinct_decisions": n_decisions,
         "spanning_takes": sorted(spanning_takes),
         "title_card_shots": sorted(title_card_shots),
-        "note": "一条台词跨 N 刀算一个决定。数决定，不数接点——"
-                "两条台词铺满一段蒙太奇是 2 个决定，不是 8 个"}
+        "note": "One dialogue line crossing N cuts counts as one decision. Count decisions, not joins: "
+                "two lines spanning a montage are 2 decisions, not 8."}
 
-    # ---------------------------------------------------------- 联络表
+    # ---------------------------------------------------------- Contact sheets
     # Contact sheets provide navigation for visual inspection.
-    # 这套 S4 证据原先建在"看不了"的假设上，用同期声转录当画面代理；那个假设不成立，
-    # 而同期声在静音镜头和纯动作镜头上是全盲的。
+    # Include pictures directly; production-sound transcripts cannot represent
+    # silent or action-only shots.
     sheets = {}
     SP = lambda sid: f"{task}/initial_state/shots/{sid}.mp4"
-    # ① 接点附近密采样：每刀六格，跨过切点。判 bridge 配不配得上这两个镜头。
-    #    取自素材而非渲染——渲染里如果加了黑场，时间线会偏移，而接点位置是题目定死的。
+    # 1. Six samples span each join to inspect how a bridge fits the adjacent shots.
+    # Use source picture: inserted black time can shift the render relative to fixed task joins.
     jt = []
     by_id = {s_["id"]: s_ for s_ in shots}
     for j in joins:
@@ -1407,11 +1386,11 @@ def build(task):
                     "Source frames do not prove delivered picture. Continuous audio/waveform does not "
                     "identify a particular source bridge; inspect the continuous delivered video."}
     elif sheet(jt, f"{ev_dir}/frames_joins.png", cols=6):
-        sheets["join_frames"] = {         # 没成片可读时退回纯画面
+        sheets["join_frames"] = {         # Fall back to picture-only samples when the render cannot be read.
             "file": "evidence/frames_joins.png",
-            "note": "每个接点六格：-3 -2 -1 | +1 +2 +3，跨过切点，间隔约 0.13 秒。"
-                    "左三格是离开的镜头（-1 最接近切点），右三格是到达的镜头。"
-                    "（这份没有渲染成品可读，所以只有画面，没有配套的波形和频谱）"}
+            "note": "Six tiles per join: -3 -2 -1 | +1 +2 +3, about 0.13 seconds apart. "
+                    "The left three show the leaving shot (-1 nearest the cut); the right three show the arriving shot. "
+                    "No readable render was available, so these are picture samples without waveform/spectrum."}
     render_shots = [{**x, "start_s": x["render_start_s"], "end_s": x["render_end_s"]} for x in shots]
     render_joins = [{**x, "t_s": to_render_time(x["t_s"])} for x in joins]
     render_placed = [{**x, "timeline_span_s": x.get("render_timeline_span_s", x.get("timeline_span_s"))} for x in placed]
@@ -1423,14 +1402,14 @@ def build(task):
                       f"{task}/initial_state", f"{ev_dir}/music_timeline.png"):
         sheets["music_timeline"] = {
             "file": "evidence/music_timeline.png",
-            "note": "整段一条时间轴，五层从上到下：画面（每个镜头占的宽度＝它占的时间，"
-                    "标了 id）／成片波形／成片频谱／音乐床的包络（蓝线，越高越响）和重击"
-                    "（黄竖线，高度＝强度百分位）／台词占位（绿块，标 take）。"
-                    "红竖线是画面切点，贯穿所有层。\n"
-                    "蓝线/黄线来自声明 offset 对应的原始 cue，不是从成片分离出的音乐；"
-                    "是否真的混进成片必须同时看 music.render_match 和成片频谱。"
-                    "床从哪儿进、重击落在哪一刀上、有没有给台词让位，可以在同轴上核对"}
-    # ② 每镜一帧：判台词落在什么画面上。同期声只在有人说话的镜头上有效。
+            "note": "One timeline with five layers: picture (ID labels and widths proportional to duration), "
+                    "render waveform, render spectrum, cue envelope (blue; higher means louder) and accents "
+                    "(yellow markers; height is strength percentile), then dialogue occupancy (green blocks labeled by take). "
+                    "Red picture-cut markers span all layers.\n"
+                    "Blue/yellow traces come from the source cue at its declared offset, not music separated from the render. "
+                    "Check music.render_match and the render spectrum to assess whether the cue entered the final mix. "
+                    "The shared axis supports inspection of bed entry, accent timing and space left for dialogue."}
+    # 2. Midpoint pictures show what appears under dialogue; production-sound text alone cannot do this.
     st = [(SP(s_["id"]) if os.path.exists(SP(s_["id"])) else prev,
            ((s_["end_s"] - s_["start_s"]) * 0.5
             if os.path.exists(SP(s_["id"])) else
@@ -1446,8 +1425,8 @@ def build(task):
     if sheet(st, f"{ev_dir}/frames_shots.png", cols=4, w=320):
         sheets["shot_frames"] = {
             "file": "evidence/frames_shots.png",
-            "note": "每对 SOURCE/RENDER 分别是提供的素材与成品对应时刻；判断实际交付用 RENDER，不能拿 SOURCE 冒充成品。"}
-    # ③ 渲染里接点附近：核对声明的黑场/叠化到底有没有发生
+            "note": "Each SOURCE/RENDER pair shows supplied footage and the corresponding delivered moment. Judge the delivered result from RENDER; SOURCE is not a substitute."}
+    # 3. Rendered join neighborhoods show whether declared black intervals or dissolves occurred.
     if has_prev:
         rt = []
         for j in joins:
@@ -1509,20 +1488,20 @@ def build(task):
               },
           },
           "how_measured": {
-              "on_screen_says": f"faster-whisper {A.asr} 转每个镜头自带的正片同期声。"
-                                f"VAD 已开启；ASR 只作正向语义证据，不以缺词证明不属于。"
-                                f"它补充画面联络表，不是画面内容的替代品。",
-              "measured_in_render": "对 preview.mp4 的那一段跑 volumedetect；"
-                                    "声明的 gain_db 是意图，这个是结果",
-              "heard_here": "对 preview.mp4 整条做词级转录后按时间取词——"
-                            "有匹配词可确认台词存在；无匹配词不能单独证明台词缺失，"
-                            "必须结合该区间电平和频谱",
-              "music accents": "librosa onset_strength 的局部峰，60ms 内去重；"
-                               "t_s 已减去声明的对齐位置，换算到本段时间线",
-              "music render match": "声明源 cue 的包络不是成品音乐的确认；全局相关不适用于"
-                                    "有插入/错位的时间线，标 unknown，由实际成品听音评判。",
-              "clock": "ASR、波形、频谱均使用按视频起点对齐并保留时间戳空洞的 PCM。"
-                       "rough→render 的局部映射仍是黑段启发式，不是视频内容对齐证明。",
+              "on_screen_says": f"faster-whisper {A.asr} transcribes each shot's source production sound with VAD enabled. "
+                                f"ASR provides positive semantic evidence; missing words do not establish non-membership. "
+                                f"It supplements contact sheets, not the visual content itself.",
+              "measured_in_render": "volumedetect measures the relevant preview.mp4 interval. "
+                                    "Declared gain_db is intent; this is the rendered result.",
+              "heard_here": "Word-timed transcription of the full preview.mp4, selected by interval. "
+                            "Matching words support dialogue presence; no match alone cannot establish absence. "
+                            "Inspect that interval's level and spectrum too.",
+              "music accents": "Local peaks of librosa onset_strength, deduplicated within 60 ms. "
+                               "t_s subtracts the declared alignment offset to use the task timeline.",
+              "music render match": "The declared source-cue envelope does not confirm delivered music. Global correlation is unsuitable "
+                                    "for inserted or misaligned timelines: mark unknown and judge the actual rendered audio.",
+              "clock": "ASR, waveform and spectrum use PCM aligned to the video start, preserving timestamp gaps. "
+                       "Local rough-to-render mapping remains a black-interval heuristic, not proof of video-content alignment.",
               "cut_roughness": "mapped render-clock PCM windows: step_db/spec_dist/gap_db; "
                                "status distinguishes measured, unknown and no_audio_stream; not proof of an editorial defect"}}
     json.dump(ev, open(f"{ev_dir}/s4e_evidence.json", "w"), ensure_ascii=False, indent=1)
@@ -1533,13 +1512,13 @@ tasks = json.load(open(A.tasks)) if A.tasks else [A.task]
 for t in tasks:
     if (not A.force and os.path.exists(f"{t}/evidence/s4e_evidence.json")
             and json.load(open(f"{t}/evidence/s4e_evidence.json")).get("continuous_video", {}).get("contract") == VIDEO_CONTRACT):
-        print(f"  {t.split('training_task/')[-1]:<30} 已有，跳过", flush=True)
+        print(f"  {t.split('training_task/')[-1]:<30} Already available; skipped", flush=True)
         continue
     e = build(t)
     if e.get("error"):
         print(f"  {t.split('training_task/')[-1]:<30} ★ {e['error']}", flush=True)
         continue
     nb = sum(1 for b in e["bridges"] if b["bridge_kinds"])
-    print(f"  {e['task']:<30} 台词 {len(e['dialogue_placed'])} 处  "
-          f"bridge {nb}/{len(e['bridges'])} 接点  "
-          f"音乐重击 {(e['music'].get('summary') or {}).get('n_accents', '—')}", flush=True)
+    print(f"  {e['task']:<30} dialogue placements {len(e['dialogue_placed'])}  "
+          f"bridge {nb}/{len(e['bridges'])} joins  "
+          f"music accents {(e['music'].get('summary') or {}).get('n_accents', '—')}", flush=True)

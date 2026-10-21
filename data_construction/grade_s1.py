@@ -7,14 +7,14 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/grade_s1.py [options]\n\n  --task  任务目录，默认取本脚本的上上级\n  --quiet\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/grade_s1.py [options]\n\n  --task  Task directory; defaults to the grandparent of this script directory\n  --quiet\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 def main():
     import argparse, json, os, sys
 
     P = argparse.ArgumentParser()
-    P.add_argument("--task", default=None, help="任务目录，默认取本脚本的上上级")
+    P.add_argument("--task", default=None, help="Task directory; defaults to the grandparent of this script directory")
     P.add_argument("--quiet", action="store_true")
     A = P.parse_args()
 
@@ -25,17 +25,17 @@ def main():
 
     p = f"{T}/output/selection.json"
     if not os.path.exists(p):
-        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": "output/selection.json 不存在"},
+        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": "output/selection.json is missing"},
                          ensure_ascii=False))
         sys.exit(0)
     try:
         raw = json.load(open(p)).get("selected")
     except Exception as e:
-        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": f"JSON 解析失败: {e}"},
+        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": f"JSON parsing failed: {e}"},
                          ensure_ascii=False))
         sys.exit(0)
     if not isinstance(raw, list):
-        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": "selected 不是数组"},
+        print(json.dumps({"task": key["task"], "score": 0.0, "f1": 0.0, "error": "selected must be an array"},
                          ensure_ascii=False))
         sys.exit(0)
 

@@ -50,9 +50,9 @@ def main():
             if cur: runs.append(cur)
             cur = (w["s"], w["e"], w["w"])
     if cur: runs.append(cur)
-    print(f"{len(W)} 词 -> {len(runs)} 个连续发声段  "
-          f"（中位 {np.median([r[1]-r[0] for r in runs]):.2f}s，覆盖 "
-          f"{100*sum(r[1]-r[0] for r in runs)/cuts.max():.0f}% 片长）")
+    print(f"{len(W)} words -> {len(runs)} continuous speech runs  "
+          f"(median {np.median([r[1]-r[0] for r in runs]):.2f}s; covering "
+          f"{100*sum(r[1]-r[0] for r in runs)/cuts.max():.0f}% of the timeline)")
 
     # ---------------------------------------------------------------- music stem
     y, _ = librosa.load(f"{E}/stems/music.wav", sr=SR)
@@ -98,11 +98,11 @@ def main():
                      "music": tags, "music_sim": round(sim, 3) if len(m_pre) > 3 else None})
 
     from collections import Counter
-    print(f"\n语音关系 {dict(Counter(r['speech']['type'] for r in rows))}")
+    print(f"\nSpeech relationships {dict(Counter(r['speech']['type'] for r in rows))}")
     mt = Counter(x for r in rows for x in r["music"])
-    print(f"音乐手法 {dict(mt)}   （无标记 {sum(1 for r in rows if not r['music'])} 条）")
+    print(f"Music events {dict(mt)}   (no tags on {sum(1 for r in rows if not r['music'])} boundaries)")
     both = [r for r in rows if r["speech"]["type"] != "hard" and r["music"]]
-    print(f"语音+音乐同时起作用的切点: {len(both)}")
+    print(f"Boundaries with both speech and music events: {len(both)}")
 
     out = f"{E}/audio_cuts.json"
     json.dump({"film": A.film, "n": len(rows), "cuts": rows}, open(out, "w"),
@@ -111,7 +111,7 @@ def main():
     for r in rows:
         if r["speech"]["type"] != "hard":
             print(f"  #{r['idx']:<3} {r['speech']['type']}  ±{r['speech']['offset']:.2f}s  "
-                  f"{'/'.join(r['music']) or '—':<14} 「{r['speech']['line']}」")
+                  f"{'/'.join(r['music']) or '—':<14} [{r['speech']['line']}]")
 
 
 if __name__ == "__main__":

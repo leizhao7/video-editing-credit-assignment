@@ -7,7 +7,7 @@ entry points, and reconstruction limits.
 if __name__ == "__main__":
     import sys as _cli_sys
     if "--help" in _cli_sys.argv[1:] or "-h" in _cli_sys.argv[1:]:
-        print('Usage: python data_construction/pipeline.py [options]\n\n  --film\n  --all\n  --films  文本文件，每行一个片名/slug/片段；只跑这些\n  --from\n  --only\n  --modal-dir  Optional override for bundled modal/ adapters\n  -j, --workers\n  --repair  按盘上的产物反推 state.json，不跑任何阶段\n  -h, --help  Show this static help without loading optional dependencies.\n')
+        print('Usage: python data_construction/pipeline.py [options]\n\n  --film\n  --all\n  --films  Text file with one film name/slug/fragment per line\n  --from\n  --only\n  --modal-dir  Optional override for bundled modal/ adapters\n  -j, --workers\n  --repair  Reconstruct state.json from existing artifacts without running stages\n  -h, --help  Show this static help without loading optional dependencies.\n')
         raise SystemExit(0)
 
 try:
@@ -182,8 +182,8 @@ class Film:
         if r.returncode: raise RuntimeError(r.stderr[-400:])
         p = json.load(open(f"{self.E}/probe.json"))
         self.mark("probe", crop=p["crop"], wm=p["wm"], fps_match=p["fps_match"])
-        return f"crop={p['crop'] or '无'} wm={'有' if p['wm'] else '无'} " \
-               f"{'同帧率' if p['fps_match'] else '帧率不同'}"
+        return f"crop={p['crop'] or 'none'} wm={'yes' if p['wm'] else 'no'} " \
+               f"{'matching frame rates' if p['fps_match'] else 'different frame rates'}"
 
     def proxy(self):
         with SEM_PROXY:
@@ -210,11 +210,11 @@ class Film:
             want = p["src"].get("vdur") or p["src"]["dur"]
             if abs(_dur(tmp) - want) > max(2.0, want * 0.002):
                 d = _dur(tmp); os.remove(tmp)
-                raise RuntimeError(f"proxy 只有 {d:.0f}s，应为 {want:.0f}s")
+                raise RuntimeError(f"Proxy duration is {d:.0f}s; expected {want:.0f}s")
             os.replace(tmp, out)
         self.mark("proxy", gb=round(os.path.getsize(out) / 2**30, 2),
                   cropped=bool(p.get("src_crop_expr")))
-        return f"{os.path.getsize(out)/2**30:.2f} GB" + (" (已裁黑边)" if p.get("src_crop_expr") else "")
+        return f"{os.path.getsize(out)/2**30:.2f} GB" + (" (letterbox bars cropped)" if p.get("src_crop_expr") else "")
 
     def upload(self):
         p = json.load(open(f"{self.E}/probe.json"))
@@ -249,10 +249,10 @@ class Film:
             return
         r = sh(["modal", "volume", "ls", cloud_volume(), f"/{self.slug}"])
         if r.returncode or "source.mp4" not in (r.stdout or ""):
-            return                       # 卷上没有就留着，不冒险
+            return                       # Keep the local copy unless the remote source is confirmed.
         n = os.path.getsize(p)
         os.remove(p)
-        return f"清代理 {n/1e9:.1f}GB"
+        return f"Removed local proxy: {n/1e9:.1f} GB"
 
     def fetch(self):
         """golden clips + the source shot manifest; source clips stay on the volume"""
@@ -267,7 +267,7 @@ class Film:
             f"{self.E}/source_manifest.csv", "--force"])
         n = len([f for f in os.listdir(f"{self.E}/golden_clips") if f.endswith(".mp4")])
         self.mark("fetch", golden_shots=n)
-        return f"{n} 个预告镜头"
+        return f"{n} trailer shots"
 
     def _afps(self):
         """sampling rate from this film's own shot lengths: enough frames inside the
@@ -312,10 +312,10 @@ class Film:
                   inliers_med=med, low_inlier_frac=round(lo, 3))
         warn = ""
         if inl and (med < 30 or lo > 0.6):
-            warn = (f"   ⚠ 匹配质量存疑：inliers 中位 {med}，{lo:.0%} 的命中低于 30。"
-                    f"先把几对匹配的画面拿出来"
-                    f"看一眼，确认正片和预告是同一部电影、同一个版本。")
-        return f"匹配 {m}/{len(rows)}  (采样 {af:.0f}fps  inliers中位 {med}){warn}"
+            warn = (f"   Warning: match quality needs review; median inliers {med}, {lo:.0%} of matches below 30. "
+                    f"Inspect several matched frame pairs "
+                    f"to confirm that the source and trailer use the same film and edition.")
+        return f"Matched {m}/{len(rows)}  (sampling {af:.0f} fps; median inliers {med}){warn}"
 
     def cards(self):
         r = sh([sys.executable, "-W", "ignore", f"{CODE_ROOT}/classify_cards.py",
@@ -324,7 +324,7 @@ class Film:
         d = json.load(open(f"{self.E}/card_class.json"))
         nc = sum(1 for v in d.values() if v["kind"] == "card")
         self.mark("cards", cards=nc, live=len(d) - nc)
-        return f"卡 {nc} / 实拍 {len(d)-nc}"
+        return f"Cards {nc} / live-action shots {len(d)-nc}"
 
     def audio(self):
         for fn in ["modal_transcribe.py::run", "modal_stems.py::split"]:
@@ -341,7 +341,7 @@ class Film:
                 shutil.move(f"{self.E}/golden_stems/{f}", f"{self.E}/stems/{f}")
             os.rmdir(f"{self.E}/golden_stems")
         self.mark("audio")
-        return "转录+分轨 ok"
+        return "Transcription and stem separation complete"
 
     def cutlist(self):
         r = sh([sys.executable, "-W", "ignore", f"{CODE_ROOT}/build_cutlist.py",
@@ -349,7 +349,7 @@ class Film:
         if r.returncode: raise RuntimeError(r.stdout[-400:] + r.stderr[-400:])
         n = json.load(open(f"{ROOT}/edit/task_{self.slug}/stages/cut_list.json"))["n_cuts"]
         self.mark("cutlist", n=n)
-        return f"{n} 个切点"
+        return f"{n} cut boundaries"
 
     def acuts(self):
         """Measure speech J/L boundaries and music events after units and the cut list exist."""
@@ -359,7 +359,7 @@ class Film:
         from collections import Counter
         sp = Counter(c["speech"]["type"] for c in d["cuts"])
         self.mark("acuts", **{k: v for k, v in sp.items()})
-        return f"语音 J{sp['J']}/L{sp['L']}/hard{sp['hard']}"
+        return f"Speech J{sp['J']}/L{sp['L']}/hard{sp['hard']}"
 
     def s3(self):
         with LOCK_RESOLVE, _resolve_lock():   # one Resolve, one writer — across processes too
@@ -429,8 +429,8 @@ def repair(f):
         try:
             if fn(f): f.mark(k, at="repair"); got.append(k)
         except (OSError, ValueError, KeyError, RuntimeError) as exc:
-            print(f"[{f.slug}] 无法检查 {k}: {exc}", file=sys.stderr, flush=True)
-    if got: print(f"[{f.slug}] 恢复 {len(got)}: {' '.join(got)}", flush=True)
+            print(f"[{f.slug}] Cannot inspect {k}: {exc}", file=sys.stderr, flush=True)
+    if got: print(f"[{f.slug}] Restored {len(got)} stage flags: {' '.join(got)}", flush=True)
     return len(got)
 
 
@@ -446,8 +446,8 @@ def _resolve(q, dirs):
         hit = [d for d in dirs if pick(d)]
         if len(hit) == 1: return hit
         if len(hit) > 1:
-            sys.exit(f"--film {q!r} 匹配到多部: {hit}")
-    sys.exit(f"--film {q!r} 匹配不到任何片。可选:\n  " + "\n  ".join(
+            sys.exit(f"--film {q!r} matches multiple films: {hit}")
+    sys.exit(f"--film {q!r} does not match a film. Available films:\n  " + "\n  ".join(
         f"{d}   (slug: {slugify(d)})" for d in dirs))
 
 
@@ -468,7 +468,7 @@ def _resolve_lock(timeout=1800):
                 except OSError: pass
                 continue
             if time.time() - t0 > timeout:
-                raise RuntimeError("等 Resolve 锁超时")
+                raise RuntimeError("Timed out waiting for the Resolve lock")
             time.sleep(3)
     os.write(fd, str(os.getpid()).encode()); os.close(fd)
     try:
@@ -495,7 +495,7 @@ def _claim(f):
         except Exception: pid = 0
         if pid and _alive(pid):
             return None
-        os.unlink(p)                                  # 锁主已死，接管
+        os.unlink(p)                                  # The previous owner exited; reclaim the lock.
         try: fd = os.open(p, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError: return None
     os.write(fd, str(os.getpid()).encode()); os.close(fd)
@@ -505,7 +505,7 @@ def _claim(f):
 def run(f, stages):
     lock = _claim(f)
     if lock is None:
-        print(f"[{f.slug}] 跳过: 另一个进程正在处理", flush=True)
+        print(f"[{f.slug}] Skipped: another process is working on this film", flush=True)
         return False
     try:
         return _run(f, stages)
@@ -515,7 +515,7 @@ def run(f, stages):
 
 
 def _run(f, stages):
-    print(f"[{f.slug}] 开始", flush=True)
+    print(f"[{f.slug}] Starting", flush=True)
     for s in stages:
         if f.done(s):
             continue
@@ -523,12 +523,12 @@ def _run(f, stages):
         log_path = Path(f.E) / "logs" / f"{s}.log"
         try:
             with _stage_logging(log_path):
-                print(f"[{f.slug}] {s:<8} 开始  log: {log_path}", flush=True)
+                print(f"[{f.slug}] {s:<8} Starting  log: {log_path}", flush=True)
                 msg = getattr(f, s)()
             print(f"[{f.slug}] {s:<8} {time.time()-t0:6.0f}s  {msg}", flush=True)
         except Exception as e:
             message = str(e).strip()
-            print(f"[{f.slug}] {s:<8} 失败: {message[-1500:]}\n完整日志: {log_path}", flush=True)
+            print(f"[{f.slug}] {s:<8} Failed: {message[-1500:]}\nFull log: {log_path}", flush=True)
             f.state[s] = {"ok": False, "err": message[-2000:], "log": str(log_path),
                           "at": time.strftime("%F %T")}
             json.dump(f.state, open(f.sf, "w"), ensure_ascii=False, indent=1)
@@ -540,13 +540,13 @@ def main():
     global MODAL
     P = argparse.ArgumentParser()
     P.add_argument("--film"); P.add_argument("--all", action="store_true")
-    P.add_argument("--films", help="文本文件，每行一个片名/slug/片段；只跑这些")
+    P.add_argument("--films", help="Text file with one film name/slug/fragment per line; process only these films")
     P.add_argument("--from", dest="start", choices=STAGES, default="probe")
     P.add_argument("--only", default=None)
     P.add_argument("--modal-dir", default="")
     P.add_argument("-j", "--workers", type=int, default=1)
     P.add_argument("--repair", action="store_true",
-                   help="按盘上的产物反推 state.json，不跑任何阶段")
+                   help="Reconstruct state.json from existing artifacts without running stages")
     A = P.parse_args()
     require_target(P, A)
 
@@ -564,7 +564,7 @@ def main():
         cloud_volume()
     missing = [m for m in ("modal_tn_generic.py", "modal_transcribe.py", "modal_stems.py")
                if needs_cloud and not os.path.exists(f"{MODAL}/{m}")]
-    if missing: sys.exit(f"{MODAL} 缺少: {missing}")
+    if missing: sys.exit(f"{MODAL} is missing: {missing}")
 
     all_films = sorted(d for d in os.listdir(SRC)
                        if os.path.isdir(f"{SRC}/{d}"))
@@ -585,17 +585,17 @@ def main():
         films = all_films
     if A.repair:
         n = sum(repair(Film(d)) for d in films)
-        print(f"共恢复 {n} 个阶段标记")
+        print(f"Restored {n} stage flags")
         return
-    print(f"{len(films)} 部片 × {len(stages)} 阶段   modal={MODAL}")
+    print(f"{len(films)} films x {len(stages)} stages   modal={MODAL}")
     t0 = time.time()
     if A.workers > 1:
-        print(f"并行 {A.workers} 路   proxy≤2 · 本地≤3 · Resolve 串行", flush=True)
+        print(f"{A.workers} parallel workers; proxy limit 2; local limit 3; Resolve serialized", flush=True)
         with ThreadPoolExecutor(max_workers=A.workers) as ex:
             ok = sum(ex.map(lambda d: run(Film(d), stages), films))
     else:
         ok = sum(run(Film(d), stages) for d in films)
-    print(f"\n完成 {ok}/{len(films)}   墙钟 {(time.time()-t0)/60:.0f} 分")
+    print(f"\nCompleted {ok}/{len(films)}   elapsed {(time.time()-t0)/60:.0f} min")
     if ok != len(films):
         raise SystemExit(1)
 

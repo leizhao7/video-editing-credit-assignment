@@ -66,8 +66,8 @@ def main():
                             "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True)
         n = len(r.stdout) // (w * h)
         if r.returncode or n == 0:
-            raise RuntimeError(f"解码失败 {os.path.basename(path)}  rc={r.returncode}  "
-                               f"{n} 帧\n{r.stderr.decode('utf8','replace')[-600:]}")
+            raise RuntimeError(f"Decoding failed: {os.path.basename(path)}  rc={r.returncode}  "
+                               f"{n} frames\n{r.stderr.decode('utf8','replace')[-600:]}")
         return np.frombuffer(r.stdout[:n * w * h], np.uint8).reshape(n, h, w).astype(np.float32)
 
 
@@ -76,8 +76,8 @@ def main():
         x0, x1, y0, y1 = [float(v) for v in A.wm.split(",")]
         MX = np.ones((H, W - 1), bool); MX[int(y0*H):int(y1*H), int(x0*W):int(x1*W)-1] = False
         MY = np.ones((H - 1, W), bool); MY[int(y0*H):int(y1*H)-1, int(x0*W):int(x1*W)] = False
-        print(f"水印剔除 x{x0}-{x1} y{y0}-{y1} —— 描述子少 "
-              f"{100*(1-(MX.sum()+MY.sum())/(MX.size+MY.size)):.1f}% 维度")
+        print(f"Watermark excluded at x{x0}-{x1} y{y0}-{y1}; descriptor dimensions reduced by "
+              f"{100*(1-(MX.sum()+MY.sum())/(MX.size+MY.size)):.1f}%")
     else:
         MX = np.ones((H, W - 1), bool); MY = np.ones((H - 1, W), bool)
 
@@ -99,14 +99,14 @@ def main():
         if len(src) == 0:
             os.remove(cache); src = None          # never trust an empty cache
         else:
-            print(f"复用缓存 {src.shape}")
+            print(f"Reusing cache {src.shape}")
     if src is None:
         src = dec(A.source, f"fps={FPS},scale={W}:{H},format=gray")
-        np.save(cache, src.astype(np.uint8)); print(f"source {len(src)} 帧  {time.time()-t0:.0f}s")
+        np.save(cache, src.astype(np.uint8)); print(f"source {len(src)} frames  {time.time()-t0:.0f}s")
     gold = dec(A.golden, f"{CROP}fps={FPS},scale={W}:{H},format=gray")
     SD, GD = desc(src), desc(gold)
     glum = gold.mean((1, 2)); BLACK = glum.max() * 0.08
-    print(f"golden {len(gold)} 帧   描述子维度 {SD.shape[1]}   {time.time()-t0:.0f}s")
+    print(f"golden {len(gold)} frames   descriptor dimensions {SD.shape[1]}   {time.time()-t0:.0f}s")
 
     gm = list(csv.DictReader(open(f"{E}/golden_clips/manifest.csv")))
     cm = list(csv.DictReader(open(f"{E}/source_manifest.csv")))
@@ -175,12 +175,12 @@ def main():
         lo, hi = t0g + (t1g-t0g)*.15, t1g - (t1g-t0g)*.15
         idx = [i for i in range(int(lo*FPS), int(hi*FPS)+1)
                if 0 <= i < len(gold) and glum[i] > BLACK]
-        if len(idx) < 2:                     # 短镜头：放宽到整段，别只取中间 70%
+        if len(idx) < 2:                     # For short shots, use the full span instead of only the middle 70%.
             idx = [i for i in range(int(t0g*FPS), int(t1g*FPS)+1)
                    if 0 <= i < len(gold) and glum[i] > BLACK]
         span = f"{t0g:6.2f}-{t1g:6.2f}"
         if len(idx) < 2:
-            # 采样不足 != 黑场。用该镜头自己的密集采样判断它到底黑不黑。
+            # Insufficient samples do not imply a black shot. Check denser samples from this shot.
             rr = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0g:.3f}",
                                  "-t", f"{t1g-t0g:.3f}", "-i", A.golden, "-vf",
                                  CROP + "fps=12,scale=64:26,format=gray", "-f", "rawvideo",
@@ -188,7 +188,7 @@ def main():
             k = len(rr.stdout)//(64*26)
             pk = (np.frombuffer(rr.stdout[:k*64*26], np.uint8).reshape(k, 26, 64)
                   .astype(np.float32).mean((1, 2)).max()) if k else 0.0
-            if pk >= 14:                     # 有画面，只是暗或太短 -> 用整段全部帧
+            if pk >= 14:                     # Image content is dark or brief; use every frame in the span.
                 idx = [i for i in range(int(t0g*FPS), int(t1g*FPS)+1) if 0 <= i < len(gold)]
         if len(idx) < 2:
             print(f"{gid:>6} {span:>14} {t1g-t0g:5.2f}s {'—':>7} {'—':>10} {'—':>5} {'—':>6}  BLACK")
@@ -248,8 +248,8 @@ def main():
     from collections import Counter
     mt = [r for r in rows if r[8].startswith("MATCH")]
     cl = [r[3] for r in mt]
-    print(f"\n{dict(Counter(r[8] for r in rows))}   共 {len(rows)}")
-    print(f"匹配 {len(mt)} -> {len(set(cl))} 个 clip；复用 {len(mt)-len(set(cl))} 次")
+    print(f"\n{dict(Counter(r[8] for r in rows))}   total {len(rows)}")
+    print(f"Matched {len(mt)} shots to {len(set(cl))} clips; {len(mt)-len(set(cl))} clip reuses")
     print(f"-> {A.out}   {time.time()-t0:.0f}s")
 
 

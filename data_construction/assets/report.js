@@ -15,8 +15,8 @@ function ok(r){
 function stills(id){
  return '<div class="st"><img src="cutframes/c'+id+'a.jpg" loading="lazy">'+
         '<img src="cutframes/c'+id+'b.jpg" loading="lazy"></div>'+
-        '<span class="lb l">切点前</span><span class="lb r">切点后</span>'+
-        '<span class="play">▶ 播放 · 前后 1.8s · 带声</span>';
+        '<span class="lb l">Before cut</span><span class="lb r">After cut</span>'+
+        '<span class="play">▶ Play preview with audio</span>';
 }
 function toggle(pair,id){
  if(pair.querySelector('video')){ pair.innerHTML=stills(id); playing=null; return; }
@@ -36,11 +36,11 @@ function render(){
    '<div class="tags">'+
     '<span class="t tr">'+r.tr+(p?' '+p:'')+'</span>'+
     '<span class="t tc'+(NV.has(r.tc)?' nv':'')+'">'+r.tc+(NV.has(r.tc)?' ★':'')+'</span>'+
-    '<span class="t sp'+(r.sp==='hard'?' h':'')+'">语音 '+r.sp+(r.off?' ±'+r.off+'s':'')+'</span>'+
-    r.mu.map(m=>'<span class="t mu">音乐 '+m+'</span>').join('')+
-    (r.pc===true?'<span class="t pc">画面连续'+(r.pcf?'?':'')+'</span>':'')+
+    '<span class="t sp'+(r.sp==='hard'?' h':'')+'">Speech '+r.sp+(r.off?' ±'+r.off+'s':'')+'</span>'+
+    r.mu.map(m=>'<span class="t mu">Music '+m+'</span>').join('')+
+    (r.pc===true?'<span class="t pc">Continuous picture'+(r.pcf?'?':'')+'</span>':'')+
    '</div>'+
-   (r.line?'<div class="line">「'+r.line+'」</div>':'')+
+   (r.line?'<div class="line">“'+r.line+'”</div>':'')+
    (r.note?'<div class="note">'+r.note+'</div>':'');
   const pair=el.querySelector('.pair');
   pair.onclick=e=>{ if(e.target.tagName!=='VIDEO') toggle(pair,id); };

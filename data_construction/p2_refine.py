@@ -88,8 +88,8 @@ def main():
         input_fields = reader.fieldnames or []
     t0 = time.time()
     out = []
-    print(f"{'id':>6} {'dur':>6} {'旧入点':>10} {'精修后':>10} {'移动':>8} {'峰值':>6} "
-          f"{'峰区宽':>6}  诊断（非置信度）")
+    print(f"{'id':>6} {'dur':>6} {'old in':>10} {'refined':>10} {'shift':>8} {'peak':>6} "
+          f"{'width':>6}  diagnostic (not confidence)")
     moved, plats = [], []
     empty = {"refined_src_s": "", "plateau_frames": "", "peak": "",
              "alignment_score_kind": SCORE_KIND, "alignment_fps": A.fps,
@@ -119,10 +119,10 @@ def main():
         plateau = interval["plateau_frames"]
         ref = aligned_source_start(source_start, b, A.fps, lo, g0)
         dm = (ref - st)*A.fps
-        v = "存在分离近峰" if interval["disjoint_near_peaks"] else "连续峰区"
+        v = "disjoint near peaks" if interval["disjoint_near_peaks"] else "contiguous peak interval"
         moved.append(abs(dm)); plats.append(plateau)
-        print(f"{r['golden_id']:>6} {dur:5.2f}s {st:9.3f} {ref:10.3f} {dm:+7.1f}帧 "
-              f"{pk:6.3f} {plateau:5d}帧  {v}")
+        print(f"{r['golden_id']:>6} {dur:5.2f}s {st:9.3f} {ref:10.3f} {dm:+7.1f}fr "
+              f"{pk:6.3f} {plateau:5d}fr  {v}")
         out.append({**r, **empty, **interval, "refined_src_s": round(ref, 4),
                     "peak": round(pk, 6),
                     "alignment_review_reason": "disjoint_near_peaks" if interval["disjoint_near_peaks"] else ""})
@@ -132,14 +132,14 @@ def main():
         # Zero refinable shots is not a crash, it is a finding: p2 matched nothing.
         # Write the pass-through file so the stage's output still exists and the failure
         # is visible in the match rate rather than in a traceback here.
-        print("\n没有可精修的镜头 —— p2 一个都没匹配上，检查画框/裁切是否对齐")
+        print("\nNo shots to refine: p2 produced no usable matches. Check framing and crop alignment.")
         import sys as _s
         with open(f"{E}/p2_refined.csv", "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(out[0]) if out else list(dict.fromkeys(input_fields + list(empty)))); w.writeheader(); w.writerows(out)
         print(f"-> {E}/p2_refined.csv"); _s.exit(0)
-    print(f"\n精修 {len(moved)} 条   移动 中位 {np.median(moved):.1f} 帧  最大 {moved.max():.0f} 帧")
-    print(f"连续近峰宽度中位 {np.median(plats):.0f} 个采样帧（{A.fps:g} fps）；"
-          f"分数带 {A.peak_band:g}，仅为启发式诊断，不代表对齐置信度")
+    print(f"\nRefined {len(moved)} shots; median shift {np.median(moved):.1f} frames; maximum {moved.max():.0f} frames")
+    print(f"Median contiguous near-peak width: {np.median(plats):.0f} sampled frames ({A.fps:g} fps); "
+          f"score band {A.peak_band:g}. This is a heuristic diagnostic, not alignment confidence.")
     o = f"{E}/p2_refined.csv"
     with open(o, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(out[0].keys())); w.writeheader(); w.writerows(out)

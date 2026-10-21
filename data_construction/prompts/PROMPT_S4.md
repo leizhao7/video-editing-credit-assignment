@@ -4,6 +4,8 @@ This is a generic prompt rewritten for the public code release. It preserves the
 
 Read the locked `stages/s3_units.json`, `stages/cut_list.json`, `stages/audio_measured.json`, and `stages/picture_measured.json`. Inspect `reference/golden.mp4` around each boundary. Do not change unit identities or timings. Audio labels are measured inputs: use their speech `type` (`hard`, `J`, or `L`) and music events (`hit`, `change`, `swell`, or `bridge`) rather than inventing an auditory observation. Only use `no_change` when the supplied picture measurement supports continuity. Do not delegate to other agents.
 
+Write all newly authored notes and explanations in English. Preserve supplied dialogue, visible card text, IDs, and proper names in their original form.
+
 Write `stages/s4_cuts.json` with top-level `stage: "S4"` and `cuts`, an array with exactly one object per input cut in the same order.
 
 | Field in each cut | Contract |
@@ -14,7 +16,7 @@ Write `stages/s4_cuts.json` with top-level `stage: "S4"` and `cuts`, an array wi
 | `technique` | Nonempty editing-technique label supported by the pictures. |
 | `note` | Concrete visual evidence and the relevant supplied audio evidence for this particular cut. |
 
-### 一、 Transition vocabulary
+### Transition vocabulary
 
 The headings below also support the inherited HTML report parser. These labels are not a closed ontology; use an explained new label only when the listed ones do not describe the evidence.
 
@@ -29,7 +31,7 @@ The headings below also support the inherited HTML report parser. These labels a
 | `blur_whip` | Blur or whip transition. |
 | `no_change` | Continuous picture, only with measured continuity support. |
 
-### 二、 Technique vocabulary
+### Technique vocabulary
 
 | Technique | Meaning |
 | --- | --- |

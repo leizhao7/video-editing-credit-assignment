@@ -71,7 +71,7 @@ def main():
         toks = [t for ln in lines for t in re.findall(r"[A-Za-z0-9]+", ln)]
         real = [t for t in toks if len(t) >= 4]
         if not lines or not real or len(real) < max(1, len(toks) // 3):
-            return {"text": None, "note": "读不出文字",
+            return {"text": None, "note": "Text could not be read",
                     "raw": " / ".join(lines) if lines else None}
         return {"lines": lines, "inverted": inv, "text": " / ".join(lines)}
 
@@ -109,7 +109,7 @@ def main():
                   open(f"{ROOT}/exports/{slug}/card_text.json", "w"),
                   ensure_ascii=False, indent=1)
         tot = sum(len(v["states"]) for v in out.values())
-        print(f"  {slug:<24} {len(out):3d} 卡  {tot:3d} 状态  读出文字 {nread}", flush=True)
+        print(f"  {slug:<24} {len(out):3d} cards; {tot:3d} states; text read from {nread}", flush=True)
 
 
 if __name__ == "__main__":

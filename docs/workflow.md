@@ -4,6 +4,34 @@ Use `video_editing.py` to create one private project, generate CS/NS/RC/FC tasks
 
 Generation produces tasks, not an agent's answers or performance scores. After an agent completes a task, the same entry point can check and score its submitted edit.
 
+## How task generation works
+
+```mermaid
+flowchart TD
+    A[Movie and matching trailer] --> B[Prepare media and align trailer shots to the movie]
+    B --> C[Annotate shots, narrative chunks, and edit boundaries]
+    C --> D[Build independent CS, NS, RC, and FC tasks]
+    D --> E[Attach scoring rules and audit task quality]
+    E --> F[Accepted tasks with private grading references]
+    F --> G[An editing agent submits its work]
+    G --> H[Validate and score the submission]
+```
+
+| Stage | What happens | Implementation |
+| --- | --- | --- |
+| Prepare media | Inspect files, make a proxy, detect shot boundaries, transcribe speech, and separate dialogue/music | FFmpeg and local Python; TransNetV2, Whisper, and Demucs on Modal |
+| Align footage | Locate trailer shots in the movie and refine source timings; keep unmatched footage identified separately | Programmatic visual matching and timing checks |
+| Annotate structure | Inspect pictures, describe shots, group them into narrative beats and smaller editing chunks, and label edit boundaries | Your chosen Claude Code, Codex CLI, or OpenCode agent, followed by Python validation |
+| Build tasks | Cut source clips and dialogue candidates, assemble assets and distractors, and write briefs, manifests, and private references | Python builders using measured media and annotations |
+| Review quality | Check whether the public brief and supplied assets support the task and whether grading is fair | Gemini API audit; accept only completed `keep_candidate` decisions |
+| Score submitted work | Validate deliverables, then run deterministic graders and RC/FC judges | Local scoring code and Gemini for the judged components |
+
+Each chunk can yield four **independent** task types: CS selects shots; NS orders a supplied selection; RC chooses in/out points within a fixed order; FC edits dialogue, music, and transitions around fixed picture timing and renders the result. Eligibility filters can produce different counts across types. One task's output does not initialize another task.
+
+The video and audio assets come from the supplied media. Models supply annotations, editing briefs, and quality judgments; they do not synthesize replacement movie footage. All newly authored instructions and explanations are requested in English. Original dialogue, visible card text, IDs, and proper names retain their source form. Compatibility rules still recognize historical Chinese annotations.
+
+The default workflow performs quality filtering. Optional cross-film balancing and train/validation sampling use the separate [selection command](data_construction.md#quality-review-and-sampling); they are not run automatically for a one-film project.
+
 ## 1. Set up once
 
 Use macOS or Linux with Python 3.12. You need FFmpeg/FFprobe, Tesseract with English data, a Modal account, one annotation CLI, and a Gemini API key for quality review and RC/FC scoring. A local GPU and DaVinci Resolve are not required.

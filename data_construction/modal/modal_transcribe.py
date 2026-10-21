@@ -98,7 +98,7 @@ def run(film: str, name: str = "golden", model: str = "large-v3"):
                                    "e": round(w.end, 3), "p": round(w.probability, 2)}
                                   for w in (s.words or [])]})
         nw = sum(len(s["words"]) for s in out)
-        print(f"{len(out)} 段 / {nw} 词   语言 {info.language} ({info.language_probability:.2f})"
+        print(f"{len(out)} segments / {nw} words; language {info.language} ({info.language_probability:.2f})"
               f"   {time.time()-t0:.0f}s", flush=True)
         for s in out[:6]:
             print(f"  {s['start']:7.2f}-{s['end']:7.2f}  {s['text'][:78]}", flush=True)

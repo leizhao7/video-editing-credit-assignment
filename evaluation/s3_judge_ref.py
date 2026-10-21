@@ -7,7 +7,7 @@ import argparse, base64, json, os, random, re, sys, time, urllib.error, urllib.r
 from concurrent.futures import ThreadPoolExecutor
 
 if __name__ != "__main__":
-    raise ImportError(f"{__file__} 是命令行脚本，不能被 import（会写文件、发请求）")
+    raise ImportError(f"{__file__} is a command-line script and cannot be imported because it writes files and sends requests")
 
 ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
 DEPLOY = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "")
@@ -28,7 +28,7 @@ KEY = os.environ.get("AZURE_AI_KEY")
 if PROVIDER == "azure" and not (KEY and ENDPOINT and A.model):
     sys.exit("Set AZURE_AI_KEY, AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT (or --model)")
 if PROVIDER == "gemini" and not os.environ.get("GOOGLE_AI_STUDIO_API_KEY"):
-    sys.exit("GOOGLE_AI_STUDIO_API_KEY 没设")
+    sys.exit("GOOGLE_AI_STUDIO_API_KEY is not set")
 
 
 def judge_identity():
@@ -61,14 +61,14 @@ def parse_band_response(value):
     return int(match.group(1)), match.group(2), match.group(3)
 
 
-# ── Gemini（AI Studio）判分后端 ────────────────────────────────────────────
+# ── Gemini (AI Studio) grading backend ────────────────────────────────────────────
 # The Gemini backend uses its own sampling settings and payload format.
 #
-# 两边消息格式不同，这里做转换：
+# Convert between the provider message formats:
 #   system            -> systemInstruction
 #   {"type":"text"}   -> {"text": ...}
 #   image_url(data:)  -> {"inlineData": {"mimeType", "data"}}
-# Gemini 3 是思考模型，回复里可能混 thought 部件，只取非 thought 的 text。
+# Gemini 3 responses may include thought parts; retain only non-thought text.
 _GEMINI_MODEL = os.environ.get("S12_GEMINI_MODEL", "gemini-3.1-pro-preview")
 _GEMINI_HOST = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -85,7 +85,7 @@ def chat_gemini(messages, max_tokens):
 def chat(messages, max_tokens):
     if os.environ.get("S12_JUDGE_PROVIDER", "gemini").lower() == "gemini":
         return chat_gemini(messages, max_tokens)
-    # ↓ 以下是 Azure/gpt-5.5 那条路
+    # Legacy Azure/gpt-5.5 path below
     # Keep the optional seed explicit when the configured Azure backend supports it.
     _body = {"model": A.model, "messages": messages,
              "max_completion_tokens": max_tokens}
@@ -115,27 +115,27 @@ def chat(messages, max_tokens):
 
 
 # ---------------------------------------------------------------------------
-# 时长：不调模型。题面给了目标，答案里带容差，够判了。
+# Duration is scored mechanically using the public target and answer-key tolerance.
 # ---------------------------------------------------------------------------
 def score_duration(key, sub_cuts):
-    """时长对不对，是算术问题，没有可判断的余地。
+    """Compute duration agreement without model judgment.
 
-    按百分比判，不按绝对秒数——19 秒的段落差 0.4 秒和 5 秒的段落差 0.4 秒不是一回事。
-    答案里的 `dur_tol_s`（4 帧）只当下限用：短段落上 3% 可能比 4 帧还小，那时候按
-    4 帧算，不能比逐帧对齐还苛刻。
+    Use relative error: a 0.4-second difference has different significance in a 19-second or 5-second chunk.
+    Use answer-key `dur_tol_s` (four frames) as an absolute tolerance floor. For short chunks,
+    3% can be less than four frames; apply the floor rather than requiring finer alignment.
 
-    题面写的是 "the lengths should add up to **close to** the target"——是软要求，
-    所以 3% 以内就算满分。19 秒的段落上那是 0.57 秒，一两个镜头的取舍空间。
+    The prompt asks for lengths adding up to **close to** the target, a soft constraint.
+    Differences within 3% receive full credit: 0.57 seconds for a 19-second chunk, allowing small editorial choices.
     """
     target = key.get("target_duration_s")
     frame_tol = key.get("dur_tol_s") or 0.1668
     total = round(sum(max(0.0, c.get("out_s", 0) - c.get("in_s", 0))
                       for c in sub_cuts), 4)
     if not target:
-        return {"band": None, "why": "题目没写目标时长"}
+        return {"band": None, "why": "The task does not specify a target duration"}
     delta = total - target
     pct = abs(delta) / target * 100
-    # 每档的绝对下限：不小于 4 帧，短段落不至于被百分比卡死
+    # Each band has a four-frame absolute floor so short chunks are not overconstrained by percentages
     def lim(p):
         return max(target * p / 100, frame_tol)
     band = (4 if abs(delta) <= lim(3) else
@@ -146,10 +146,10 @@ def score_duration(key, sub_cuts):
             "target_s": target, "assembled_s": total,
             "delta_s": round(delta, 4), "delta_pct": round(pct, 2),
             "frame_tol_s": frame_tol,
-            "why": (f"拼出来 {total:.3f}s，目标 {target:.3f}s，差 {delta:+.3f}s "
-                    f"({pct:.1f}%)" + ("，在 3% 以内" if band == 4 else "")),
-            "bands_note": "≤3% 4 分；≤8% 3 分；≤18% 2 分；≤35% 1 分；更差 0 分。"
-                          "每档另有 4 帧的绝对下限，短段落不会被百分比卡死"}
+            "why": (f"Assembled {total:.3f}s; target {target:.3f}s; difference {delta:+.3f}s "
+                    f"({pct:.1f}%)" + ("; within the full-credit tolerance" if band == 4 else "")),
+            "bands_note": "Bands: 4 for ≤3%; 3 for ≤8%; 2 for ≤18%; 1 for ≤35%; otherwise 0. "
+                          "Each band also has a four-frame absolute floor to avoid overconstraining short chunks."}
 
 
 # ---------------------------------------------------------------------------
@@ -324,22 +324,22 @@ def call(task, ev, r):
             out, err = retry_out, retry_err
             band, rows, why = parse_band_response(out)
         elif retry_err:
-            err = f"格式重试失败 — {retry_err}"
+            err = f"Format retry failed — {retry_err}"
     if band is None and out:
-        err = f"回答不符合完整 BAND/ROWS/WHY 单行格式 — {out[-160:]}"
+        err = f"Response does not match the complete one-line BAND/ROWS/WHY format — {out[-160:]}"
     return {"rubric": r["id"], "title": r["title"], "band": band,
             "rows": rows[:140], "why": why, "retried_format": retried_format, "saw_video": True,
             "sec": round(time.time() - t0, 1),
             "err": err if band is None else ""}
 
 
-W_DUR = 0.20   # 时长自成一档：它是硬约束，但不该盖过剪辑判断
+W_DUR = 0.20   # Duration has its own weight: a constraint that should not dominate editorial quality
 
 
 def judge(task):
     name = task.split("training_task/")[-1]
     if not os.path.exists(f"{task}/output/cuts.json"):
-        print(f"  {name:<30} ★ 没有 output/cuts.json", flush=True)
+        print(f"  {name:<30} ★ Missing output/cuts.json", flush=True)
         return None
     ev = evidence(task)
     dur = score_duration(ev["key"], json.load(open(f"{task}/output/cuts.json"))["cuts"])
@@ -363,7 +363,7 @@ def judge(task):
            "duration": dur, "rubrics": res,
            "partial": bool(missing), "missing": missing,
            "weight_answered": round(sum(ws[k] for k in bands), 3),
-           "penalty": (f"{len(zeros)} 条拿 0（{','.join(zeros)}），乘 "
+           "penalty": (f"{len(zeros)} zero-band rubrics ({','.join(zeros)}); multiply by "
                        f"{0.75 ** len(zeros):.2f}") if zeros else None}
     json.dump(out, open(f"{task}/evidence/s3_score_ref.json", "w"),
               ensure_ascii=False, indent=1)
@@ -372,7 +372,7 @@ def judge(task):
               f"dur {dur['band']}  " +
               "  ".join(f'{x["rubric"][:4]} {x["band"] if x["band"] is not None else "?"}'
                         for x in res), flush=True)
-        print(f"      时长: {dur['why']}", flush=True)
+        print(f"      Duration: {dur['why']}", flush=True)
         for x in res:
             if x["why"]:
                 print(f"      {x['title']}: {x['why'][:104]}", flush=True)
@@ -385,11 +385,11 @@ def judge(task):
 
 tasks = json.load(open(A.tasks)) if A.tasks else [A.task]
 _jid = judge_identity()
-print(f"参照式判分 {len(tasks)} 份 × (3 条 rubric + 时长)   "
-      f"判官 {_jid['model']} ({_jid['provider']})\n",
+print(f"Reference-based grading: {len(tasks)} submissions × (3 rubrics + duration)   "
+      f"judge {_jid['model']} ({_jid['provider']})\n",
       flush=True)
 with ThreadPoolExecutor(max_workers=A.workers) as ex:
     got = [x for x in ex.map(judge, tasks) if x is not None]
 if got:
     import statistics as st
-    print(f"\n中位 {st.median(got):.3f}   分布 {min(got):.2f}–{max(got):.2f}")
+    print(f"\nMedian {st.median(got):.3f}; range {min(got):.2f}–{max(got):.2f}")

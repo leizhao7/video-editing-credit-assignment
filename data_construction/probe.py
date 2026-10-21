@@ -65,8 +65,8 @@ def content_ratio(path, dur, n=20):
             w, h, _, _ = map(int, m[-1])
             if w > 40 and h > 40: rs.append(w / h)
     if len(rs) < 8:
-        raise RuntimeError(f"画幅测不出来: {len(rs)}/{n} 个采样点有结果 —— "
-                           f"cropdetect 失败，不是'没有黑边'  {os.path.basename(path)}")
+        raise RuntimeError(f"Cannot measure content aspect ratio: {len(rs)}/{n} samples returned results; "
+                           f"cropdetect failed; this does not mean there are no letterbox bars: {os.path.basename(path)}")
     rs = np.array(rs)
     # the mode is more robust than the mean: a few dark frames give silly crops
     hist, edges = np.histogram(rs, bins=np.arange(1.2, 3.0, 0.02))
@@ -77,8 +77,8 @@ def content_ratio(path, dur, n=20):
     if conf < 0.6:
         # genuinely variable — IMAX sections shift ratio mid-film. Not an error, but
         # the single number below is a compromise and downstream crops will be soft.
-        print(f"  ⚠ {os.path.basename(path)} 画幅不稳定: 众数只占 {conf:.0%}"
-              f" (范围 {rs.min():.2f}-{rs.max():.2f})，按 {r:.4f} 处理")
+        print(f"  Warning: {os.path.basename(path)} has a variable aspect ratio; the modal band covers only {conf:.0%}"
+              f" (range {rs.min():.2f}-{rs.max():.2f}); using {r:.4f}")
     return r
 
 

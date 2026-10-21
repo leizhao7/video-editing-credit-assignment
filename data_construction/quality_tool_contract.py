@@ -1,9 +1,8 @@
-"""Canonical S12 tool schemas shared by RL and teacher rollouts.
+"""English release translation of the recovered fixed S12 tool schema.
 
-The wire envelope differs between vLLM chat templates and the Responses API,
-but the names, descriptions, and JSON schemas must not.  Keeping the function
-definitions here makes drift a source-level error instead of a review-time
-guess.
+Tool names, parameter schemas, defaults and inspection limits are preserved;
+descriptions and fallback instructions are translated, not historical bytes.
+The chat/vLLM and Responses API envelopes share these same definitions.
 """
 
 from __future__ import annotations
@@ -14,13 +13,13 @@ from copy import deepcopy
 FUNCTIONS = [
     {
         "name": "bash",
-        "description": "在任务目录下执行一条 shell 命令，返回 stdout+stderr。",
+        "description": "Run one shell command in the task directory and return stdout and stderr.",
         "parameters": {
             "type": "object",
             "properties": {
                 "cmd": {
                     "type": "string",
-                    "description": "要执行的命令，例如 ls frames",
+                    "description": "The command to run, for example ls frames.",
                 },
             },
             "required": ["cmd"],
@@ -29,9 +28,11 @@ FUNCTIONS = [
     {
         "name": "view_image",
         "description": (
-            "查看一张或多张图片。传帧文件的相对路径，图片会作为观测返回。"
-            "所有 stage 都可查看预抽帧及工作区自制图片。预抽帧一次最多 32 张，自制图片一次最多 8 张。"
-            "模型上下文最多 192 张图片；S1/S2 无额外新增图片配额，S3/S4E 新增最多 96 张。重复查看也计入上下文。"
+            "View one or more images by supplying relative frame-file paths; the images are returned as observations. "
+            "All stages can inspect pre-extracted frames and images created in the workspace. "
+            "Each call allows at most 32 pre-extracted frames or 8 workspace-generated images. "
+            "The model context holds at most 192 images. S1/S2 have no separate quota for newly inspected images; "
+            "S3/S4E allow at most 96 additional images. Repeated views also count toward the context limit."
         ),
         "parameters": {
             "type": "object",
@@ -40,7 +41,7 @@ FUNCTIONS = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": (
-                        "图片路径列表，例如 [\"frames/k01_1.jpg\", "
+                        "List of image paths, for example [\"frames/k01_1.jpg\", "
                         "\"frames/k01_2.jpg\"]"
                     ),
                 },
@@ -50,30 +51,44 @@ FUNCTIONS = [
     },
     {
         "name": "inspect_video",
-        "description": "所有 stage：自由查看完整源 clip 或自制视频的任意时间点/区间。只传 path 默认给全片 8 张均匀采样图；可指定 timestamps_s，或 start_s/end_s/num_frames。可反复、分段查看。返回采样帧，不是连续播放。每次 1–8 帧，长边最多 448 像素；上下文最多 192 图，S1/S2 无额外新增图片配额，S3/S4E 新增最多 96 图。",
+        "description": (
+            "All stages: inspect any timestamps or intervals in full source clips or workspace-generated videos. "
+            "Supplying only path returns 8 evenly spaced frames across the video. Alternatively, supply timestamps_s "
+            "or start_s/end_s/num_frames. You may inspect intervals repeatedly. The tool returns sampled frames, "
+            "not continuous playback. Each call returns 1–8 frames, with a longest edge of at most 448 pixels. "
+            "The context holds at most 192 images. S1/S2 have no separate quota for newly inspected images; "
+            "S3/S4E allow at most 96 additional images."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "工作区视频路径，例如 initial_state/clips/k01.mp4 或 output/preview.mp4"},
+                "path": {"type": "string", "description": "Workspace video path, for example initial_state/clips/k01.mp4 or output/preview.mp4."},
                 "timestamps_s": {"type": "array", "items": {"type": "number", "minimum": 0}, "minItems": 1, "maxItems": 8,
-                                 "description": "文件内秒数，如 [1.8, 2.0, 2.2]；不能与 start_s/end_s/num_frames 同传"},
-                "start_s": {"type": "number", "minimum": 0, "description": "区间起点，默认 0；不与 timestamps_s 同传"},
-                "end_s": {"type": "number", "minimum": 0, "description": "区间终点，默认实际视频末尾；不与 timestamps_s 同传"},
-                "num_frames": {"type": "integer", "minimum": 1, "maximum": 8, "description": "区间内均匀抽样数量，默认 8；不与 timestamps_s 同传"},
+                                 "description": "Timestamps in seconds from the start of the file, such as [1.8, 2.0, 2.2]. Cannot be combined with start_s/end_s/num_frames."},
+                "start_s": {"type": "number", "minimum": 0, "description": "Interval start in seconds; defaults to 0. Cannot be combined with timestamps_s."},
+                "end_s": {"type": "number", "minimum": 0, "description": "Interval end in seconds; defaults to the actual end of the video. Cannot be combined with timestamps_s."},
+                "num_frames": {"type": "integer", "minimum": 1, "maximum": 8, "description": "Number of evenly spaced frames in the interval; defaults to 8. Cannot be combined with timestamps_s."},
             },
             "required": ["path"],
         },
     },
     {
         "name": "inspect_audio",
-        "description": "所有 stage：检查源 clip/音轨/成品一个窗口的实际时长、音量、静音及可选英文对白转录（CPU 离线 small.en）。转录可能漏字/误识别，无转录不等于无对白；不返回评分。每次最多 30 秒，可分段查看更长音频。S1/S2 无累计音频配额；S3/S4E 每轨迹最多请求 180 秒/12 次。",
+        "description": (
+            "All stages: inspect a window of a source clip, audio track or edited output for actual duration, "
+            "volume and silence, with optional English dialogue transcription using offline small.en on CPU. "
+            "Transcription may omit or misrecognize words; an empty transcript does not establish that no dialogue "
+            "is present. This tool returns no score. Each request covers at most 30 seconds; inspect longer audio "
+            "in separate windows. S1/S2 have no cumulative audio quota. S3/S4E allow at most 180 requested seconds "
+            "and 12 audio requests per trajectory."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "工作区视频或音频路径，包括 output/preview.mp4"},
-                "start_s": {"type": "number", "minimum": 0, "description": "文件内开始秒数，默认 0"},
-                "duration_s": {"type": "number", "minimum": 0.05, "maximum": 30, "description": "检查窗口秒数，默认 20"},
-                "transcribe": {"type": "boolean", "description": "默认 true；只检查音量/时长可设 false，加快执行"},
+                "path": {"type": "string", "description": "Workspace video or audio path, including output/preview.mp4."},
+                "start_s": {"type": "number", "minimum": 0, "description": "Start time in seconds from the beginning of the file; defaults to 0."},
+                "duration_s": {"type": "number", "minimum": 0.05, "maximum": 30, "description": "Inspection window in seconds; defaults to 20."},
+                "transcribe": {"type": "boolean", "description": "Defaults to true. Set false for faster checks when only volume and duration are needed."},
             },
             "required": ["path"],
         },
@@ -95,32 +110,31 @@ CHAT_TOOLS = chat_tools()
 RESPONSES_TOOLS = responses_tools()
 
 
-TOOLS_FALLBACK_SYSTEM = """你可以使用以下工具。每次要用工具时，输出一个工具调用块：
+TOOLS_FALLBACK_SYSTEM = """You can use the following tools. To use a tool, emit a tool-call block:
 
 <tool_call>{"name": "bash", "arguments": {"cmd": "ls frames"}}</tool_call>
 
-可用工具：
+Available tools:
 
-1. bash —— 在任务目录下执行一条 shell 命令，返回 stdout 和 stderr。
-   参数：cmd（字符串）
-   例：<tool_call>{"name": "bash", "arguments": {"cmd": "ls frames"}}</tool_call>
+1. bash — Run one shell command in the task directory and return stdout and stderr.
+   Parameter: cmd (string).
+   Example: <tool_call>{"name": "bash", "arguments": {"cmd": "ls frames"}}</tool_call>
 
-2. view_image —— 查看一张或多张图片。图片会作为观测返回给你，你能真正看到画面。
-   参数：paths（字符串数组）
-   例：<tool_call>{"name": "view_image", "arguments": {"paths": ["frames/k01_1.jpg", "frames/k01_2.jpg", "frames/k01_3.jpg"]}}</tool_call>
+2. view_image — View one or more images. The images are returned as visual observations.
+   Parameter: paths (array of strings).
+   Example: <tool_call>{"name": "view_image", "arguments": {"paths": ["frames/k01_1.jpg", "frames/k01_2.jpg", "frames/k01_3.jpg"]}}</tool_call>
 
-3. inspect_video —— 所有 stage 自由查看源视频或自制视频。只传 path 可概览全片；可选 timestamps_s（秒数数组），或 start_s/end_s/num_frames（区间均匀采样 1–8 帧），两种方式不混用。
-   例：<tool_call>{"name": "inspect_video", "arguments": {"path": "output/preview.mp4", "timestamps_s": [1.8, 2.0, 2.2]}}</tool_call>
+3. inspect_video — Inspect source videos or workspace-generated videos in any stage. Supplying only path gives an overview of the whole video. Optionally supply timestamps_s (an array of times in seconds), or start_s/end_s/num_frames (1–8 evenly spaced frames within an interval). Do not combine these two modes.
+   Example: <tool_call>{"name": "inspect_video", "arguments": {"path": "output/preview.mp4", "timestamps_s": [1.8, 2.0, 2.2]}}</tool_call>
 
-4. inspect_audio —— 所有 stage 查看源 clip 或音轨的时长、音量和离线英文对白转录。参数 path、start_s（默认 0）、duration_s（默认 20，最多 30）、transcribe（默认 true）。
-   只测音量可设 transcribe=false。无转录不证明无对白；ASR 不是评分器。
+4. inspect_audio — Inspect the duration, volume and offline English dialogue transcript of a source clip or audio track in any stage. Parameters: path, start_s (default 0), duration_s (default 20, maximum 30), transcribe (default true).
+   Set transcribe=false when only volume measurements are needed. An empty transcript does not prove that no dialogue is present; ASR does not grade the submission.
 
-完整源素材在 initial_state/；可用 bash/FFmpeg/ffprobe/Python 自行分析和抽帧，用 view_image 看自制图片。
-模型上下文最多容纳 192 张图。S1/S2 无额外新增图片或累计音频配额；S3/S4E 新增最多 96 图、音频最多 180 秒/12 次。
-预抽帧一次最多 32 张，自制图片一次最多 8 张，音频一次最多 30 秒。可自行选择并反复检查任意片段。上下文/轮次上限仍然适用。
-媒体解码在隔离 CPU 沙箱里执行，无网络。
+Full source assets are in initial_state/. Use bash/FFmpeg/ffprobe/Python for your own analysis and frame extraction, then view_image to inspect the images you create.
+The model context holds at most 192 images. S1/S2 have no separate quota for newly inspected images or cumulative audio use. S3/S4E allow at most 96 additional images, 180 requested seconds of audio and 12 audio requests.
+Each call allows at most 32 pre-extracted frames, 8 workspace-generated images or 30 seconds of audio. You may choose and repeatedly inspect any segment. Context and turn limits still apply.
+Media decoding runs in an isolated CPU sandbox without network access.
 
-**帧是图像，需要调 view_image 或 inspect_video 才看得见。** 不要凭任务描述猜画面内容 —— 那不是这道
-题要考的东西。要看某个片段，就把它的几帧一起传给 view_image。
+**Frames are images: call view_image or inspect_video to see them.** Do not infer visual content from the task description alone; this task requires inspecting the footage. To inspect a clip, pass several of its frames together to view_image.
 
-当你不再需要工具、答案已经写好时，直接输出最终回答，不要再带工具调用块。"""
+Once your answer has been written and no more tools are needed, provide your final response without a tool-call block."""
