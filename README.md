@@ -19,7 +19,7 @@
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
 </p>
 <p>
-<a href="#-overview">🎬 Overview</a> &nbsp;•&nbsp;
+<a href="#task-generation">🎬 Task generation</a> &nbsp;•&nbsp;
 <a href="#-findings">🔍 Findings</a> &nbsp;•&nbsp;
 <a href="#-results">📊 Results</a> &nbsp;•&nbsp;
 <a href="#-quick-start">🚀 Quick start</a> &nbsp;•&nbsp;
@@ -37,18 +37,19 @@
 - **[2026-10-21]** English task-generation and scoring interfaces, refreshed training setup documentation, and additional CPU checks.
 - **[2026-10-20]** Added a resumable project workflow for generating tasks from a movie and trailer, reviewing their quality, and scoring submitted edits.
 
-## 🎬 Overview
+<a id="task-generation"></a>
 
-**Scalable task generation.** Our framework aligns trailer shots with source-film footage, identifies narrative chunks, and creates editing briefs and task inputs. It generated **2,352 tasks from 49 films**; filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between splits. The dataset is not distributed; the [pipeline guide](docs/workflow.md) explains how to construct tasks from your own media.
+## 🎬 Turn Any Movie–Trailer Pair into RL Tasks
 
-| Task | Editing decision |
-| :--- | :--- |
-| **CS** · Content Selection | Select relevant shots from a candidate pool. |
-| **NS** · Narrative Sequencing | Arrange selected shots into a coherent sequence. |
-| **RC** · Rough Cut | Set clip in- and out-points within a fixed sequence. |
-| **FC** · Fine Cut | Edit dialogue, music, and transitions around fixed picture timing, then render the result. |
+Start with a source movie and its matching trailer. Our scalable pipeline aligns trailer shots with source footage, identifies narrative chunks, and constructs four types of editing tasks with **task briefs, starting media, private references, and outcome graders**.
 
-Each task is constructed independently; one task's output does not initialize another.
+<p align="center">
+<a href="docs/assets/editing-tasks.svg"><img src="docs/assets/editing-tasks.svg" width="100%" alt="Four independent editing task types: CS selects relevant shots, NS orders them, RC sets clip boundaries, and FC coordinates dialogue, music, and transitions over fixed picture timing."></a>
+</p>
+
+*Each task is constructed independently; one task's output does not initialize another. Fine Cut keeps picture and timing fixed while editing dialogue, music, and transitions.*
+
+**Generate, review, and sample.** We generated **2,352 tasks from 49 films**; filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between splits. The dataset is not distributed; the [pipeline guide](docs/workflow.md) explains how to construct and review tasks from your own media.
 
 **Multimodal agentic RL.** Our training framework combines **SkyRL**, **vLLM**, and an **OpenCode-based agent harness** for visual inspection and video-editing tool use. With **Qwen3.5-9B**, we compare outcome-only GRPO, GRPO+PRM, and on-policy self-distillation (OPSD) using reference answers or turn suggestions. Additional **Qwen3.6-35B-A3B** experiments cover outcome-only GRPO and fixed-weight GRPO+PRM. [Experiment settings →](docs/experiment_notes.md)
 

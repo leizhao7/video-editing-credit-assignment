@@ -43,4 +43,4 @@ The source figure is `teaser-editable-v6.pdf` (SHA-256: `0178cea1dcc1514c48fb13c
 
 The header [`film-poster-collage.png`](assets/film-poster-collage.png) contains one original poster for each of the 49 films, arranged for visual balance. It illustrates the source collection rather than task outputs or experimental results. [Poster credits](poster_credits.md) identify the public image sources; the artwork is excluded from the code license.
 
-The earlier [`editing-tasks.svg`](assets/editing-tasks.svg) is retained as an editable conceptual alternative; it contains no film frames or measured results. The paper figure, including its third-party film imagery, is not covered by the project's code license.
+The task-generation section uses [`editing-tasks.svg`](assets/editing-tasks.svg) to explain the four independently constructed task types. This editable conceptual diagram contains no film frames or measured results. The paper figure, including its third-party film imagery, is not covered by the project's code license.
