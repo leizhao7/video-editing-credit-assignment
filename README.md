@@ -49,9 +49,35 @@ Start with a source movie and its matching trailer. Our scalable pipeline aligns
 
 *Each task is constructed independently; one task's output does not initialize another. Fine Cut keeps picture and timing fixed while editing dialogue, music, and transitions.*
 
-**Generate, review, and sample.** We generated **2,352 tasks from 49 films**; filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between splits. The dataset is not distributed; the [pipeline guide](docs/workflow.md) explains how to construct and review tasks from your own media.
+Complete the [one-time setup](docs/workflow.md#1-set-up-once) for Python 3.12, media tools, Modal, an annotation CLI, and the Gemini review API. Then run these commands from the repository root:
 
-**Multimodal agentic RL.** Our training framework combines **SkyRL**, **vLLM**, and an **OpenCode-based agent harness** for visual inspection and video-editing tool use. With **Qwen3.5-9B**, we compare outcome-only GRPO, GRPO+PRM, and on-policy self-distillation (OPSD) using reference answers or turn suggestions. Additional **Qwen3.6-35B-A3B** experiments cover outcome-only GRPO and fixed-weight GRPO+PRM. [Experiment settings →](docs/experiment_notes.md)
+```bash
+# Create a new project outside the checkout.
+python video_editing.py init \
+  --project "$HOME/video-editing-demo" \
+  --movie '/path/to/movie.mkv' --trailer '/path/to/trailer.mp4' \
+  --name myfilm --backend claude --model sonnet
+
+# Check prerequisites and preview the workflow.
+python video_editing.py doctor --project "$HOME/video-editing-demo"
+python video_editing.py run --project "$HOME/video-editing-demo" --plan
+
+# Build tasks and run quality review.
+python video_editing.py run --project "$HOME/video-editing-demo"
+python video_editing.py status --project "$HOME/video-editing-demo"
+```
+
+Replace the media paths and choose an annotation model available to your account. Candidate tasks are written to the project's `training_task/myfilm/` directory; `accepted_tasks.json` lists candidates that passed quality review. **`run` can incur Modal and model usage.** Rerunning it resumes saved progress. [Setup and full workflow →](docs/workflow.md)
+
+<details>
+<summary>Backend selection, smaller first reviews, and resuming</summary>
+
+- Set `--backend` and `--model` at initialization; OpenCode uses a `provider/model` ID. The project saves the choice. [Agent setup](docs/agent_setup.md) covers installation, login, and optional live checks.
+- Append `--review-limit 1` to `run` to generate all candidates but review only one on the first run. Use `review --review-limit 5` to review up to five additional candidates.
+- `run --until probe` performs only a local media check. `run --until tasks` stops before Gemini quality review.
+- Rerunning construction or review resumes saved work. Progress and log links appear in the private project's `README.md`. [Manual stage commands](docs/one_film.md) remain available.
+
+</details>
 
 ## 🔍 Findings
 
@@ -93,39 +119,6 @@ Main **Qwen3.5-9B** validation results. Scores average four evaluation repetitio
 </details>
 
 ## 🚀 Quick start
-
-### 🎞️ Generate tasks from your own film
-
-Use **Python 3.12**, FFmpeg/FFprobe, Tesseract, Modal, and one authenticated annotation CLI: **Claude Code, Codex CLI, or OpenCode 1.x**. Gemini quality review and RC/FC scoring use a separate API key. No local GPU is required. Follow the [installation and account setup](docs/workflow.md#1-set-up-once) before running these commands from the repository root.
-
-```bash
-python video_editing.py init \
-  --project "$HOME/video-editing-demo" \
-  --movie '/path/to/movie.mkv' --trailer '/path/to/trailer.mp4' \
-  --name myfilm --backend claude --model sonnet
-
-python video_editing.py doctor --project "$HOME/video-editing-demo"
-python video_editing.py run --project "$HOME/video-editing-demo" --plan
-
-# Generate candidates, then review one task on the first run.
-python video_editing.py run --project "$HOME/video-editing-demo" --review-limit 1
-python video_editing.py status --project "$HOME/video-editing-demo"
-```
-
-Replace the media paths and choose an annotation model available to your account. The project directory must be new and outside the checkout. `init`, `doctor`, `status`, and `run --plan` make no cloud/model calls; **`run` can incur Modal and model usage**.
-
-The workflow prepares media, builds four task types, attaches scoring configuration, and reviews candidates. `accepted_tasks.json` records candidates that passed review. **An agent must submit an edit before it can receive an outcome score.** [Generation, review, and scoring guide →](docs/workflow.md)
-
-<details>
-<summary>Backend selection, smaller first runs, and resuming</summary>
-
-- Set `--backend` and `--model` at initialization; OpenCode uses a `provider/model` ID. The project saves the choice. [Agent setup](docs/agent_setup.md) covers installation, login, and optional live checks.
-- `run --until probe` performs only a local media check. `run --until tasks` stops before Gemini quality review.
-- Rerunning construction or review resumes saved work. Use `review --review-limit 5` to review up to five additional candidates.
-- `score` checks a submission locally; `score --execute` starts a fresh evaluation, using Gemini for RC/FC.
-- Progress and log links appear in the private project's `README.md`. [Manual stage commands](docs/one_film.md) remain available.
-
-</details>
 
 ### 🧪 Inspect the training code
 
