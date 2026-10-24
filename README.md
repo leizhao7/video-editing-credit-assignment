@@ -41,41 +41,37 @@
 
 ## 🎬 Turn Any Movie–Trailer Pair into RL Tasks
 
-Start with a source movie and its matching trailer. Our scalable pipeline aligns trailer shots with source footage, identifies narrative chunks, and constructs four types of editing tasks with **task briefs, starting media, private references, and outcome graders**.
+**Four editing task types, with grading included.** Start with a movie and its matching trailer. Our scalable pipeline aligns the footage, builds task briefs and media inputs, attaches outcome graders, and filters candidates through quality review.
 
 <p align="center">
 <a href="docs/assets/editing-tasks.svg"><img src="docs/assets/editing-tasks.svg" width="100%" alt="Four independent editing task types: CS selects relevant shots, NS orders them, RC sets clip boundaries, and FC coordinates dialogue, music, and transitions over fixed picture timing."></a>
 </p>
 
-*Each task is constructed independently; one task's output does not initialize another. Fine Cut keeps picture and timing fixed while editing dialogue, music, and transitions.*
+*The four task types are constructed independently. Fine Cut keeps picture and timing fixed.*
 
-Complete the [one-time setup](docs/workflow.md#1-set-up-once) for Python 3.12, media tools, Modal, an annotation CLI, and the Gemini review API. Then run these commands from the repository root:
+**Generate tasks from your own media.** Complete the [one-time setup](docs/workflow.md#1-set-up-once), replace the media paths below, and run from the repository root. Use a new project directory outside the checkout.
 
 ```bash
-# Create a new project outside the checkout.
 python video_editing.py init \
   --project "$HOME/video-editing-demo" \
   --movie '/path/to/movie.mkv' --trailer '/path/to/trailer.mp4' \
   --name myfilm --backend claude --model sonnet
 
-# Check prerequisites and preview the workflow.
 python video_editing.py doctor --project "$HOME/video-editing-demo"
-python video_editing.py run --project "$HOME/video-editing-demo" --plan
-
-# Build tasks and run quality review.
 python video_editing.py run --project "$HOME/video-editing-demo"
-python video_editing.py status --project "$HOME/video-editing-demo"
 ```
 
-Replace the media paths and choose an annotation model available to your account. Candidate tasks are written to the project's `training_task/myfilm/` directory; `accepted_tasks.json` lists candidates that passed quality review. **`run` can incur Modal and model usage.** Rerunning it resumes saved progress. [Setup and full workflow →](docs/workflow.md)
+**Output:** task folders in `training_task/myfilm/` and an **`accepted_tasks.json`** list of candidates that passed quality review, both inside your project. Each task includes its brief, media inputs, and private grading references.
+
+Rerunning `run` reuses completed work. It can incur Modal and model usage. [Full walkthrough →](docs/workflow.md)
 
 <details>
-<summary>Backend selection, smaller first reviews, and resuming</summary>
+<summary>Backend options, progress, and smaller first reviews</summary>
 
-- Set `--backend` and `--model` at initialization; OpenCode uses a `provider/model` ID. The project saves the choice. [Agent setup](docs/agent_setup.md) covers installation, login, and optional live checks.
-- Append `--review-limit 1` to `run` to generate all candidates but review only one on the first run. Use `review --review-limit 5` to review up to five additional candidates.
-- `run --until probe` performs only a local media check. `run --until tasks` stops before Gemini quality review.
-- Rerunning construction or review resumes saved work. Progress and log links appear in the private project's `README.md`. [Manual stage commands](docs/one_film.md) remain available.
+- **Annotation backends:** Claude Code, Codex CLI, or OpenCode 1.x. Choose `--backend` and a model available to your account with `--model` at initialization; OpenCode uses `provider/model`. [Backend setup →](docs/agent_setup.md)
+- **Preview or track progress:** use `run --plan` or `status` with the same `--project` path. The project's `README.md` links to stage logs.
+- **Review a smaller batch:** append `--review-limit 1` to `run` to generate all candidates but review only one. Use `review --review-limit 5` for up to five additional candidates.
+- **Stop before review:** `run --until tasks` builds candidates without Gemini quality review. `run --until probe` performs only a local media check.
 
 </details>
 
