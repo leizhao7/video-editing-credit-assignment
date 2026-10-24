@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-21",
+  "date": "2026-10-24",
   "scope": "Release-draft source and documentation identities, including the reviewed paper figure; historical source hashes remain separate. No runtime data or verification reports are included.",
   "files": [
     {
@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "bb8ca4c91cf809511b626a4ffb1ae7287999e635318f235f9117c85939b6542b",
-      "bytes": 11971
+      "sha256": "c907bc2b107c2ef20ae298d433445f726ae5030fabb1a61900d23b918dd147d7",
+      "bytes": 12808
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -514,8 +514,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "f631ffa287de16a91b457624dbf39c96b94f9ba9321d9bc1bb6bec22c480ce2b",
-      "bytes": 4877
+      "sha256": "f9c1ec26ac8877382bcdf2b3dc687e37d8cc24feea43dfd7bdb2784d8274f111",
+      "bytes": 4875
     },
     {
       "path": "docs/one_film.md",

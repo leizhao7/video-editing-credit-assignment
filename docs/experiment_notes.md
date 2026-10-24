@@ -33,7 +33,7 @@ The reward-hacking observation applies to the tested GRPO+PRM setup with LLM-jud
 
 ## Illustrations
 
-The [README](../README.md) opens with **Figure 1 from the paper**, rendered without content changes as [`paper-teaser.png`](assets/paper-teaser.png). It contains illustrative film thumbnails and aggregate experimental results, not a distributable task package or the underlying media and result files.
+The [README](../README.md) includes **Figure 1 from the paper**, rendered without content changes as [`paper-teaser.png`](assets/paper-teaser.png). It contains illustrative film thumbnails and aggregate experimental results, not a distributable task package or the underlying media and result files.
 
 - Panel (a) shows independent task schematics ordered by base-policy horizon. Turns and scores are task-type averages, not example-specific results; evaluation metrics average four repetitions. Fine Cut keeps picture and timing fixed.
 - Panel (b) reports final score differences from outcome-only GRPO.

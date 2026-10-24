@@ -1,62 +1,98 @@
 <div align="center">
 
-# When Fine-Grained Credit Assignment<br>Helps and Hurts
-### Multimodal Agentic Reinforcement Learning through Video Editing
+<h1>When Fine-Grained Credit Assignment<br>Helps and Hurts</h1>
+<p><strong>Multimodal Agentic Reinforcement Learning through Video Editing</strong></p>
 
-**[Lei Zhao](mailto:leizhao7@upenn.edu)<sup>1</sup> · [Zongheng Cao](mailto:tom@philolabs.ai)<sup>2</sup> · [Xinyu Hu](mailto:christine@philolabs.ai)<sup>2</sup>**
-
-<sup>1</sup> University of Pennsylvania &nbsp;&nbsp; <sup>2</sup> Philo Labs
-
-[Overview](#overview) · [Findings](#what-we-learn) · [Quick start](#quick-start) · [Agent setup](#set-up-an-annotation-agent) · [Documentation](#documentation) · [Citation](#citation) · [License](#license)
+<p>
+<a href="mailto:leizhao7@upenn.edu">Lei Zhao</a><sup>1</sup> · <a href="mailto:tom@philolabs.ai">Zongheng Cao</a><sup>2</sup> · <a href="mailto:christine@philolabs.ai">Xinyu Hu</a><sup>2</sup>
+</p>
+<p>
+<sup>1</sup>University of Pennsylvania &nbsp;&nbsp; <sup>2</sup>Philo Labs
+</p>
+<p>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0A8AA0?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT license"></a>
+<img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
+</p>
+<p>
+<a href="#-overview">🎬 Overview</a> &nbsp;•&nbsp;
+<a href="#-findings">🔍 Findings</a> &nbsp;•&nbsp;
+<a href="#-results">📊 Results</a> &nbsp;•&nbsp;
+<a href="#-quick-start">🚀 Quick start</a> &nbsp;•&nbsp;
+<a href="#-guides">🧭 Guides</a> &nbsp;•&nbsp;
+<a href="#-reproduction-status">🔁 Reproducibility</a> &nbsp;•&nbsp;
+<a href="#-citation">📌 Citation</a>
+</p>
 
 </div>
 
-We build a **scalable pipeline for generating video-editing tasks** from real films and their released trailers. The tasks reflect real editing workflows and support training and evaluation of multimodal agents.
+**When does feedback on intermediate actions help—and when does it hurt task completion?** We study this question through movie-trailer editing, where multimodal agents inspect media, reason, and use editing tools over many turns. This repository brings together our scalable task-generation pipeline, training implementations, and outcome graders.
 
-**When does feedback on intermediate actions help—and when does it hurt task completion?** Using these tasks, we compare trajectory-, turn-, and token-level learning signals for agents that combine visual inspection, reasoning, and tool use.
+## 🎉 News
 
-<p align="center">
-  <a href="docs/assets/paper-teaser.png"><img src="docs/assets/paper-teaser.png" width="100%" alt="Paper Figure 1: four editing tasks ordered by base-policy interaction horizon; score differences from outcome-only GRPO; and process/outcome reward curves with the fixed and decayed process-reward weights."></a>
-</p>
+- **[2026-10-21]** English task-generation and scoring interfaces, refreshed training setup documentation, and additional CPU checks.
+- **[2026-10-20]** Added a resumable project workflow for generating tasks from a movie and trailer, reviewing their quality, and scoring submitted edits.
 
-**Figure 1 · When process rewards help and hurt.** (a) Independent editing tasks, ordered by base-policy horizon; turns and base scores are task-type averages. (b) Final score differences from outcome-only GRPO. (c) Training rewards and the process-reward weight λ; shading marks the decay window over updates 20–30. [View full resolution](docs/assets/paper-teaser.png) · [Figure details](docs/experiment_notes.md#illustrations)
+## 🎬 Overview
 
-> **Try your own film:** The [project workflow](docs/workflow.md) connects task generation, quality review, and submission scoring. Its components have real-media checks; the new unified wrapper has not yet been rerun on a complete film. Full GPU training and benchmark reproduction remain unverified. [Validation scope →](docs/release_status.md)
-
-## Overview
-
-**Multimodal agentic RL.** Our experiments build on **SkyRL** for training, **vLLM** for generation, and an **OpenCode-based agent harness** for multi-turn visual inspection and video-editing tool use.
-
-With **Qwen3.5-9B**, the paper compares **outcome-only GRPO**, **GRPO+PRM**, and **on-policy self-distillation (OPSD)** with either reference answers or turn suggestions as teacher-only information. We also ran **outcome-only GRPO** and **GRPO+PRM** with **Qwen3.6-35B-A3B** in additional experiments. [Training framework](docs/training.md) · [OPSD implementation](docs/opsd.md)
-
-**Scalable data generation.** We develop a **data generation framework** that aligns trailer shots with source-film footage, divides trailers into narrative chunks, and generates editorial briefs. Each chunk yields four task types by varying the supplied media and required editing operation. These tasks are **constructed independently**: one task's output is not used to initialize the next.
-
-Using our framework, we generated **2,352 video-editing tasks from 49 films**. Filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between the two splits. Training on these tasks improved video-editing performance on held-out films. [Explore the task-generation pipeline →](docs/data_construction.md)
+**Scalable task generation.** Our framework aligns trailer shots with source-film footage, identifies narrative chunks, and creates editing briefs and task inputs. It generated **2,352 tasks from 49 films**; filtering and sampling retained **797 tasks: 716 for training and 81 for validation**, with no films shared between splits. The dataset is not distributed; the [pipeline guide](docs/workflow.md) explains how to construct tasks from your own media.
 
 | Task | Editing decision |
 | :--- | :--- |
 | **CS** · Content Selection | Select relevant shots from a candidate pool. |
 | **NS** · Narrative Sequencing | Arrange selected shots into a coherent sequence. |
-| **RC** · Rough Cut | Set each clip's in- and out-points within a fixed sequence. |
-| **FC** · Fine Cut | Select and trim dialogue, place music, choose transitions, and render the result. Picture and timing stay fixed. |
+| **RC** · Rough Cut | Set clip in- and out-points within a fixed sequence. |
+| **FC** · Fine Cut | Edit dialogue, music, and transitions around fixed picture timing, then render the result. |
 
-## What we learn
+Each task is constructed independently; one task's output does not initialize another.
 
-The main **Qwen3.5-9B** experiments show three patterns:
+**Multimodal agentic RL.** Our training framework combines **SkyRL**, **vLLM**, and an **OpenCode-based agent harness** for visual inspection and video-editing tool use. With **Qwen3.5-9B**, we compare outcome-only GRPO, GRPO+PRM, and on-policy self-distillation (OPSD) using reference answers or turn suggestions. Additional **Qwen3.6-35B-A3B** experiments cover outcome-only GRPO and fixed-weight GRPO+PRM. [Experiment settings →](docs/experiment_notes.md)
 
-- **When it helps.** Decaying process rewards provides the largest benefit on Fine Cut. Outcome-only GRPO remains competitive on the three shorter-horizon task types. Task demands, scoring criteria, and horizon vary together, so this comparison does not isolate a causal effect of horizon.
-- **When it hurts.** With a fixed process-reward weight, judge-preferred intermediate behaviors can increase while task completion and outcome scores decline. Reducing that weight to zero mitigates this pattern in our GRPO+PRM experiments.
-- **Dense feedback is not sufficient.** OPSD is sensitive to the teacher's privileged information. Teacher–student disagreement and gradient statistics reveal contrasting failure patterns; effective remedies remain an open question.
+## 🔍 Findings
 
-These process-reward findings concern **LLM-judged turn-level rewards in our GRPO+PRM setup**. They do not establish the behavior of untested methods such as GiGPO or Turn-PPO. The full experimental context and implementation limits are summarized in the [experiment notes](docs/experiment_notes.md).
+**1. Fine-grained feedback helps most on Fine Cut.** Decaying process rewards gives the largest improvement over outcome-only GRPO on Fine Cut. Outcome-only GRPO remains competitive on the three shorter-horizon task types. Task demands, scoring criteria, and horizon vary together, so this comparison does not isolate a causal effect of horizon.
 
-## Quick start
+**2. More process reward can hurt task completion.** With a fixed process-reward weight, judge-preferred intermediate behaviors increase while completion and outcome scores decline. Reducing the weight to zero mitigates this pattern and yields the highest overall score in our comparison.
 
-**[Start with the setup guide →](docs/workflow.md)** You need Python 3.12, local media tools, Modal, one authenticated annotation CLI, and a Gemini API key for quality review. The guide covers installation and account setup. No local GPU is required.
+**3. Dense token-level supervision is not sufficient.** OPSD is sensitive to the teacher's privileged information. Reference answers yield little change from the base model, while turn suggestions accompany a collapse in performance. Gradient and disagreement statistics characterize these patterns; their causes and effective remedies remain open questions.
 
-From the installed repository checkout, give the workflow a movie, its matching trailer, and a **new private project directory**:
+These findings concern the tested methods and tasks. In particular, the process-reward results apply to **LLM-judged turn-level rewards in GRPO+PRM**, not to untested methods such as GiGPO or Turn-PPO.
 
-```sh
+## 📊 Results
+
+<p align="center">
+<a href="docs/assets/paper-teaser.png"><img src="docs/assets/paper-teaser.png" width="100%" alt="Paper Figure 1: four editing tasks ordered by base-policy horizon, score gains over outcome-only GRPO, and process/outcome rewards with the fixed and decayed weight schedules."></a>
+</p>
+
+*Four editing tasks, their gains from intermediate feedback, and the reward-hacking pattern during training. [Figure details](docs/experiment_notes.md#illustrations).*
+
+Main **Qwen3.5-9B** validation results. Scores average four evaluation repetitions of each final checkpoint (**avg@4**); higher is better. Best values in each column are bold.
+
+| Method | CS | NS | RC | FC | Overall |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Base model | 0.657 | 0.303 | 0.205 | 0.152 | 0.284 |
+| Outcome-only GRPO | **0.821** | 0.500 | **0.356** | 0.201 | 0.413 |
+| GRPO+PRM (fixed λ) | 0.482 | 0.457 | 0.276 | 0.239 | 0.334 |
+| GRPO+PRM (decayed λ) | 0.804 | **0.552** | 0.348 | **0.293** | **0.447** |
+| OPSD (reference answers) | 0.606 | 0.267 | 0.219 | 0.162 | 0.277 |
+| OPSD (turn suggestions) | 0.129 | 0.063 | 0.032 | 0.000 | 0.044 |
+
+<details>
+<summary>How to read these scores</summary>
+
+- **avg@4** averages four outcome scores for each task, rather than selecting the best attempt. These are evaluation repetitions, not four independent training seeds.
+- **Overall** averages equally over all 81 validation tasks: 14 CS, 15 NS, 26 RC, and 26 FC. It is not the unweighted mean of the four task-type columns.
+- Task types have different scoring criteria. Their absolute scores are not a shared measure of task difficulty.
+- These are reported paper results, not a benchmark rerun from this repository. See the [experimental conventions](docs/experiment_notes.md#training-and-evaluation-conventions) and [reproduction status](#-reproduction-status).
+
+</details>
+
+## 🚀 Quick start
+
+### 🎞️ Generate tasks from your own film
+
+Use **Python 3.12**, FFmpeg/FFprobe, Tesseract, Modal, and one authenticated annotation CLI: **Claude Code, Codex CLI, or OpenCode 1.x**. Gemini quality review and RC/FC scoring use a separate API key. No local GPU is required. Follow the [installation and account setup](docs/workflow.md#1-set-up-once) before running these commands from the repository root.
+
+```bash
 python video_editing.py init \
   --project "$HOME/video-editing-demo" \
   --movie '/path/to/movie.mkv' --trailer '/path/to/trailer.mp4' \
@@ -65,73 +101,95 @@ python video_editing.py init \
 python video_editing.py doctor --project "$HOME/video-editing-demo"
 python video_editing.py run --project "$HOME/video-editing-demo" --plan
 
-# Paid preprocessing/annotation; review only one candidate on this first run.
+# Generate candidates, then review one task on the first run.
 python video_editing.py run --project "$HOME/video-editing-demo" --review-limit 1
 python video_editing.py status --project "$HOME/video-editing-demo"
 ```
 
-Replace the paths and choose an annotation model available to your account. `init`, `doctor`, `status`, and `run --plan` make no cloud/model calls. `run` performs preprocessing, annotation, four task builders, scoring preparation, and Gemini quality review; it can incur Modal and model usage. Use `run --until probe` for a local media check, or `run --until tasks` to stop before Gemini review.
+Replace the media paths and choose an annotation model available to your account. The project directory must be new and outside the checkout. `init`, `doctor`, `status`, and `run --plan` make no cloud/model calls; **`run` can incur Modal and model usage**.
 
-Progress and log links appear in the private project's `README.md`. Rerunning construction or review resumes saved work. `accepted_tasks.json` contains candidates that passed review; `review --review-limit 5` reviews up to five additional tasks. Task generation includes scoring rules, but **an agent must submit its edit before it can receive a score**. `score` checks submissions locally; `score --execute` starts a new evaluation, using Gemini for RC/FC.
-
-For source-only verification, run `python scripts/check_release.py` and `PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_release_tools.py'`. These standard-library checks do not exercise the full training or media pipeline.
-
-### Set up an annotation agent
-
-Task generation supports **Claude Code, Codex CLI, and OpenCode 1.x**. Install and sign in to one CLI, then pass `--backend` and `--model` to `video_editing.py init`. The project saves those choices, so it does not require sourcing a shell profile. OpenCode uses a `provider/model` ID; `--cli` selects a particular executable.
-
-For the [manual individual-stage workflow](docs/one_film.md), `python data_construction/setup_agent.py` remains available to create sourceable backend profiles. The optional [live CLI check](docs/agent_setup.md#3-verify-before-processing-media) tests file/image access and JSON output with a real model call.
-
-**[Installation, login, model selection, and troubleshooting →](docs/agent_setup.md)**
-
-## Documentation
-
-| I want to… | Guide | Source |
-| :--- | :--- | :--- |
-| Generate and review tasks from my movie/trailer | [Recommended project workflow](docs/workflow.md) | [`video_editing.py`](video_editing.py) |
-| Set up an annotation CLI | [Agent setup](docs/agent_setup.md) | [`setup_agent.py`](data_construction/setup_agent.py) |
-| Run individual construction stages | [Manual one-film reference](docs/one_film.md) | [`pipeline.py`](data_construction/pipeline.py) |
-| Explore the scalable task-generation pipeline | [Task generation](docs/data_construction.md) | [`data_construction/`](data_construction/) |
-| Review and sample generated tasks | [Quality review](docs/data_construction.md#quality-review-and-sampling) | [`task_quality.py`](data_construction/task_quality.py) · [`quality_selection.py`](data_construction/quality_selection.py) |
-| Inspect GRPO and fixed/decayed process rewards | [Training](docs/training.md) | [`training/`](training/) |
-| Inspect token-level self-distillation and teacher inputs | [OPSD](docs/opsd.md) | [`opsd/`](opsd/) |
-| Check and score completed edits | [Project scoring](docs/workflow.md#5-check-and-score-an-agents-edit) · [Evaluation details](docs/evaluation.md) | [`video_editing.py`](video_editing.py) · [`task_pipeline.py`](evaluation/task_pipeline.py) |
-| Find recorded settings and dependency identities | [Experiment notes](docs/experiment_notes.md) | [`configs/`](configs/) |
-| Check reproduction gaps and release boundaries | [Release status](docs/release_status.md) | [`scripts/check_release.py`](scripts/check_release.py) |
+The workflow prepares media, builds four task types, attaches scoring configuration, and reviews candidates. `accepted_tasks.json` records candidates that passed review. **An agent must submit an edit before it can receive an outcome score.** [Generation, review, and scoring guide →](docs/workflow.md)
 
 <details>
-<summary><strong>Repository map</strong></summary>
+<summary>Backend selection, smaller first runs, and resuming</summary>
+
+- Set `--backend` and `--model` at initialization; OpenCode uses a `provider/model` ID. The project saves the choice. [Agent setup](docs/agent_setup.md) covers installation, login, and optional live checks.
+- `run --until probe` performs only a local media check. `run --until tasks` stops before Gemini quality review.
+- Rerunning construction or review resumes saved work. Use `review --review-limit 5` to review up to five additional candidates.
+- `score` checks a submission locally; `score --execute` starts a fresh evaluation, using Gemini for RC/FC.
+- Progress and log links appear in the private project's `README.md`. [Manual stage commands](docs/one_film.md) remain available.
+
+</details>
+
+### 🧪 Inspect the training code
+
+The [training guide](docs/training.md#run-the-offline-cpu-tests) covers CPU setup and fixed/decayed PRM tests. [OPSD](docs/opsd.md#selected-cpu-verification) has separate numerical and checkpoint checks. **A portable GPU training launcher is still pending**, and generated tasks need a trainer preparation adapter before they can be used for RL.
+
+<details>
+<summary>Source-only checks and repository layout</summary>
+
+These checks require only Python 3.12 and do not start training or call a model:
+
+```bash
+python scripts/check_release.py
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests
+```
 
 ```text
-video_editing.py     Project setup, resumable generation, review, and scoring
-data_construction/   Task-generation pipeline, adapters, and generic prompts
-training/            Fixed-PRM source, separate decay overlay, and CPU tests
-opsd/                Forward-KL recipe, teacher-input code, and adapters
-evaluation/          Outcome graders and a separate decay overlay
-configs/             Recorded settings, dependency pins, and source hashes
-docs/                Component guides and paper figure
-scripts/             Dependency-free source verification
-tests/               Synthetic tests for release tools
+video_editing.py     Project setup, generation, review, and scoring
+data_construction/   Task-generation stages and annotation backends
+training/            GRPO/PRM runtime, decay overlay, and CPU tests
+opsd/                Distillation objectives, teacher inputs, and adapters
+evaluation/          Outcome graders and submission scoring
+configs/             Recorded experiment settings and source identities
+docs/                Setup guides, experiment notes, and paper figure
+scripts/             Source-release verification
+tests/               Offline source and interface regression checks
 ```
 
 </details>
 
-## Data and reproducibility
+## 🧭 Guides
 
-The dataset is not distributed. The README includes the paper's Figure 1, with illustrative film thumbnails and aggregate results. Underlying film media, generated task instances, reference answers, cached trajectories, model checkpoints, and raw benchmark result files are not distributed.
+| Goal | Start here |
+| :--- | :--- |
+| Generate and review tasks from a movie and trailer | [Project workflow](docs/workflow.md) · [Pipeline design](docs/data_construction.md) |
+| Choose and set up an annotation CLI | [Agent setup](docs/agent_setup.md) |
+| Review quality and sample tasks across films | [Quality review and sampling](docs/data_construction.md#quality-review-and-sampling) |
+| Validate and score an agent's edit | [Submission scoring](docs/workflow.md#5-check-and-score-an-agents-edit) · [Evaluation details](docs/evaluation.md) |
+| Inspect GRPO/PRM or token-level distillation | [Training](docs/training.md) · [OPSD](docs/opsd.md) |
+| Find experiment settings and interpretation limits | [Experiment notes](docs/experiment_notes.md) · [Recorded configurations](configs/) |
+| Check what has been verified | [Release status](docs/release_status.md) |
 
-The paper's four evaluation repetitions are **not four independent training seeds**. Recorded configurations and upstream commit IDs also do not reconstruct the original modified training environment. The final deterministic sampling procedure has been recovered; new semantic audits do not replay the historical task-by-task author repairs. Remaining environment, launch-service, evaluation-version and reference-answer OPSD gaps are tracked in [release status](docs/release_status.md).
+## 🔁 Reproduction status
 
-## Citation
+**Checked:** synthetic CPU tests, local workflow commands, and component-level construction, review, and scoring on real media. The full-film construction check involved debugging and resuming completed stages.
 
-Author and software metadata are available in [`CITATION.cff`](CITATION.cff). A formal paper link and publication citation will be added when available.
+**Still unverified:** a fresh complete-film run through the final unified workflow, full GPU training, and end-to-end reproduction of the paper's benchmark. The training build, public launch services, custom-task adapter, and original reference-answer OPSD snapshot still have gaps. [Detailed validation record →](docs/release_status.md)
 
-Part of this work was completed while Lei Zhao was an intern at Philo Labs. For questions, contact [Lei Zhao](mailto:leizhao7@upenn.edu), [Zongheng Cao](mailto:tom@philolabs.ai), or [Xinyu Hu](mailto:christine@philolabs.ai).
+**Data:** we provide code and the paper figure. The dataset, underlying film media, task instances, reference answers, rollouts, judge caches, and model checkpoints are not distributed.
 
-## Acknowledgments
+## 📌 Citation
 
-The implementation builds on OpenCode, SkyRL, vLLM, and Qwen3.5-9B. Exact identities are recorded in [`configs/dependency_pins.json`](configs/dependency_pins.json); local modifications must be considered alongside those pins.
+To cite the software:
 
-## License
+```bibtex
+@software{zhao2026videoediting,
+  title  = {When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing},
+  author = {Zhao, Lei and Cao, Zongheng and Hu, Xinyu},
+  year   = {2026},
+  url    = {https://github.com/leizhao7/video-editing-credit-assignment}
+}
+```
 
-Project-authored code is licensed under the [MIT License](LICENSE). Third-party components retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). The paper figure, external media, and model weights are not covered by this code license.
+Repository metadata is also available in [`CITATION.cff`](CITATION.cff). A verified paper link and formal paper citation will be added when available.
+
+## 🙏 Acknowledgments and license
+
+This implementation builds on **SkyRL**, **vLLM**, **OpenCode**, and **Qwen**. Recorded dependency identities are listed in [`configs/dependency_pins.json`](configs/dependency_pins.json).
+
+Project-authored code is licensed under [MIT](LICENSE). Third-party components retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). The paper figure, external media, and model weights are outside this code license.
+
+Part of this work was completed while Lei Zhao was an intern at Philo Labs.
+
+Contact: [Lei Zhao](mailto:leizhao7@upenn.edu) · [Zongheng Cao](mailto:tom@philolabs.ai) · [Xinyu Hu](mailto:christine@philolabs.ai).
