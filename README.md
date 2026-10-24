@@ -3,8 +3,9 @@
 <a href="docs/assets/film-poster-collage.png"><img src="docs/assets/film-poster-collage.png" width="100%" alt="All 49 films used in the study, shown as a three-row collage of their original posters."></a>
 <p><sub>49 real films · <a href="docs/poster_credits.md">Poster credits</a></sub></p>
 
-<h1>Teaching AI to Edit Video with 49 Real Films</h1>
-<p><strong>When Fine-Grained Credit Assignment Helps and Hurts:</strong><br>Multimodal Agentic Reinforcement Learning through Video Editing</p>
+<h1>When Fine-Grained Credit Assignment<br>Helps and Hurts</h1>
+<p><strong>Multimodal Agentic Reinforcement Learning through Video Editing</strong></p>
+<p><em>Teaching AI to Edit Video with 49 Real Films</em></p>
 
 <p>
 <a href="mailto:leizhao7@upenn.edu">Lei Zhao</a><sup>1</sup> · <a href="mailto:tom@philolabs.ai">Zongheng Cao</a><sup>2</sup> · <a href="mailto:christine@philolabs.ai">Xinyu Hu</a><sup>2</sup>
