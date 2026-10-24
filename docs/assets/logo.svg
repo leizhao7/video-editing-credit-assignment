@@ -1,52 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="168" viewBox="0 0 400 168" fill="none" role="img" aria-labelledby="title desc">
-  <title id="title">When fine-grained feedback helps and hurts</title>
-  <desc id="desc">An editing timeline receives small feedback signals. A teal arrow leads to completion, while a coral arrow loops back to an earlier action. This conceptual project mark contains no experimental measurements.</desc>
-
-  <!-- Small feedback signals connect to individual editing actions. -->
-  <g stroke="#94A3B8" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 5">
-    <path d="M77 39V58"/>
-    <path d="M151 39V58"/>
-    <path d="M225 39V58"/>
-  </g>
-  <circle cx="77" cy="29" r="6" fill="#278D8D"/>
-  <circle cx="151" cy="29" r="6" fill="#278D8D"/>
-  <circle cx="225" cy="29" r="6" fill="#D47C55"/>
-
-  <!-- Three clips form a filmstrip, with no supplied film imagery. -->
-  <rect x="38" y="59" width="226" height="58" rx="8" stroke="#718398" stroke-width="2.4"/>
-  <g fill="#718398">
-    <rect x="48" y="64" width="8" height="4" rx="1"/>
-    <rect x="73" y="64" width="8" height="4" rx="1"/>
-    <rect x="98" y="64" width="8" height="4" rx="1"/>
-    <rect x="123" y="64" width="8" height="4" rx="1"/>
-    <rect x="148" y="64" width="8" height="4" rx="1"/>
-    <rect x="173" y="64" width="8" height="4" rx="1"/>
-    <rect x="198" y="64" width="8" height="4" rx="1"/>
-    <rect x="223" y="64" width="8" height="4" rx="1"/>
-    <rect x="248" y="64" width="6" height="4" rx="1"/>
-    <rect x="48" y="108" width="8" height="4" rx="1"/>
-    <rect x="73" y="108" width="8" height="4" rx="1"/>
-    <rect x="98" y="108" width="8" height="4" rx="1"/>
-    <rect x="123" y="108" width="8" height="4" rx="1"/>
-    <rect x="148" y="108" width="8" height="4" rx="1"/>
-    <rect x="173" y="108" width="8" height="4" rx="1"/>
-    <rect x="198" y="108" width="8" height="4" rx="1"/>
-    <rect x="223" y="108" width="8" height="4" rx="1"/>
-    <rect x="248" y="108" width="6" height="4" rx="1"/>
-  </g>
-  <rect x="47" y="73" width="63" height="30" rx="3" fill="#DAE9F1"/>
-  <rect x="120" y="73" width="63" height="30" rx="3" fill="#D8EEEA"/>
-  <rect x="193" y="73" width="62" height="30" rx="3" fill="#F7E5DA"/>
-  <path d="M74 81L86 88L74 95Z" fill="#557D9A"/>
-  <path d="M147 81L159 88L147 95Z" fill="#278D8D"/>
-  <path d="M220 81L232 88L220 95Z" fill="#D47C55"/>
-
-  <!-- Useful feedback supports progress toward a completed edit. -->
-  <path d="M275 88H311M305 82L311 88L305 94" stroke="#278D8D" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="346" cy="88" r="23" fill="#278D8D" opacity="0.13"/>
-  <circle cx="346" cy="88" r="17" stroke="#278D8D" stroke-width="2.6"/>
-  <path d="M338 88L344 94L355 82" stroke="#278D8D" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Repeating locally rewarded actions can consume the interaction budget. -->
-  <path d="M225 121C225 158 151 158 151 123M145 130L151 123L157 130" stroke="#D47C55" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Video editing credit assignment</title>
+  <desc id="desc">A minimal play mark inside an open blue-to-teal film lens, with a separate coral segment suggesting an edit.</desc>
+  <defs>
+    <linearGradient id="lens" x1="42" y1="36" x2="111" y2="121" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#356F9D"/>
+      <stop offset="1" stop-color="#258D84"/>
+    </linearGradient>
+  </defs>
+  <path d="M113.94 113.94A48 48 0 1 1 88.34 32.73" stroke="url(#lens)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M107.53 40.68A48 48 0 0 1 127.82 75.82" stroke="#D58A63" stroke-width="16" stroke-linecap="round"/>
+  <path d="M69 62.5C67.67 61.72 66 62.68 66 64.22V95.78C66 97.32 67.67 98.28 69 97.5L96 81.72C97.32 80.95 97.32 79.05 96 78.28L69 62.5Z" fill="url(#lens)"/>
 </svg>

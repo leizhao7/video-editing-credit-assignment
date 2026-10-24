@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="300" alt="An editing timeline receives fine-grained feedback; a teal arrow leads to completion while a coral arrow loops back to an earlier action.">
+<img src="docs/assets/logo.svg" width="120" alt="A minimal play mark inside a blue-to-teal film lens with a coral editing accent.">
 
 <h1>When Fine-Grained Credit Assignment<br>Helps and Hurts</h1>
 <p><strong>Multimodal Agentic Reinforcement Learning through Video Editing</strong></p>

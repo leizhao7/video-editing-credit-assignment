@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "a349cc66b653618f956817bb0277bbf21b20c61c1fd7cdeaa13351c6ed8ac05a",
-      "bytes": 13716
+      "sha256": "14b58b95051919ffa7b3846e4ad1ffeeb9c7fe0242befd680f3964e06fc1dfa2",
+      "bytes": 13659
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -499,8 +499,8 @@
     },
     {
       "path": "docs/assets/logo.svg",
-      "sha256": "d9a9f3e5e87d670f322d92fc11ad62fef4dd3a6d2e2b29e0220a4a88cc278014",
-      "bytes": 3091
+      "sha256": "577fd7ddea002352ee8aa7b9b8dd84562e244bad79a65f0ea96b5087ffc7c853",
+      "bytes": 941
     },
     {
       "path": "docs/assets/paper-teaser.png",
