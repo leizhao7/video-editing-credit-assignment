@@ -39,6 +39,8 @@ The [README](../README.md) includes **Figure 1 from the paper**, rendered withou
 - Panel (b) reports final score differences from outcome-only GRPO.
 - Panel (c) shows fixed-weight process and outcome rewards, with decayed-weight outcome rewards available from update 21. Faint lines connect recorded observations; thick lines show centered five-observation means. The aligned strip shows fixed and cubic-decay weights λ, with the update 20–30 decay window shaded.
 
-The source figure is `teaser-editable-v6.pdf` (SHA-256: `0178cea1dcc1514c48fb13ce5dbdb36d46bf398cbc27f3853387584a8d51af5d`). It was rendered with Poppler at 2,600 pixels wide, preserving its aspect ratio. Only this reviewed PNG is permitted by the release check; its exact path and SHA-256 are pinned in [`check_release.py`](../scripts/check_release.py), and its bytes are also tracked in the source manifest.
+The source figure is `teaser-editable-v6.pdf` (SHA-256: `0178cea1dcc1514c48fb13ce5dbdb36d46bf398cbc27f3853387584a8d51af5d`). It was rendered with Poppler at 2,600 pixels wide, preserving its aspect ratio. The reviewed paper PNG and the README poster banner have their exact paths and SHA-256 hashes pinned in [`check_release.py`](../scripts/check_release.py), and their bytes are also tracked in the source manifest.
+
+The header [`film-poster-collage.png`](assets/film-poster-collage.png) contains one original poster for each of the 49 films, arranged for visual balance. It illustrates the source collection rather than task outputs or experimental results. [Poster credits](poster_credits.md) identify the public image sources; the artwork is excluded from the code license.
 
 The earlier [`editing-tasks.svg`](assets/editing-tasks.svg) is retained as an editable conceptual alternative; it contains no film frames or measured results. The paper figure, including its third-party film imagery, is not covered by the project's code license.

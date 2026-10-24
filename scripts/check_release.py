@@ -38,9 +38,10 @@ APPROVED_METADATA_PATHS = {
     'training/third_party/OpenCode/package.json',
     'training/third_party/OpenCode/packages/opencode/package.json',
 }
-# Reviewed paper artwork only; other images remain excluded from the release.
+# Reviewed documentation artwork only; other images remain excluded from the release.
 APPROVED_DOCUMENTATION_IMAGES = {
     'docs/assets/paper-teaser.png': '9377e1b3bb536b1bdf251bc77e6907ab8eeece37cac70c47c14e5b763f6cd680',
+    'docs/assets/film-poster-collage.png': '242d40baf383e8b07f2ccc5408e9bbd38d0c25f209cdc315491ceb7da5dc492b',
 }
 
 

@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="120" alt="A minimal play mark inside a blue-to-teal film lens with a coral editing accent.">
+<a href="docs/assets/film-poster-collage.png"><img src="docs/assets/film-poster-collage.png" width="100%" alt="All 49 films used in the study, shown as a three-row collage of their original posters."></a>
+<p><sub>49 real films · <a href="docs/poster_credits.md">Poster credits</a></sub></p>
 
 <h1>When Fine-Grained Credit Assignment<br>Helps and Hurts</h1>
 <p><strong>Multimodal Agentic Reinforcement Learning through Video Editing</strong></p>
@@ -171,7 +172,7 @@ tests/               Offline source and interface regression checks
 
 **Still unverified:** a fresh complete-film run through the final unified workflow, full GPU training, and end-to-end reproduction of the paper's benchmark. The training build, public launch services, custom-task adapter, and original reference-answer OPSD snapshot still have gaps. [Detailed validation record →](docs/release_status.md)
 
-**Data:** we provide code and the paper figure. The dataset, underlying film media, task instances, reference answers, rollouts, judge caches, and model checkpoints are not distributed.
+**Data:** we provide code, the paper figure, and the poster banner. The dataset, underlying film media, task instances, reference answers, rollouts, judge caches, and model checkpoints are not distributed.
 
 ## 📌 Citation
 
@@ -192,7 +193,7 @@ Repository metadata is also available in [`CITATION.cff`](CITATION.cff). A verif
 
 This implementation builds on **SkyRL**, **vLLM**, **OpenCode**, and **Qwen**. Recorded dependency identities are listed in [`configs/dependency_pins.json`](configs/dependency_pins.json).
 
-Project-authored code is licensed under [MIT](LICENSE). Third-party components retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). The paper figure, external media, and model weights are outside this code license.
+Project-authored code is licensed under [MIT](LICENSE). Third-party components retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). The paper figure, [poster artwork](docs/poster_credits.md), external media, and model weights are outside this code license.
 
 Part of this work was completed while Lei Zhao was an intern at Philo Labs.
 

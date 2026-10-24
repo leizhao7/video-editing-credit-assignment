@@ -1,6 +1,6 @@
 {
   "date": "2026-10-24",
-  "scope": "Release-draft source and documentation identities, including the reviewed paper figure; historical source hashes remain separate. No runtime data or verification reports are included.",
+  "scope": "Release-draft source and documentation identities, including the reviewed paper figure and poster banner; historical source hashes remain separate. No runtime data or verification reports are included.",
   "files": [
     {
       "path": ".env.example",
@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "b68b7ebc05ff114a039c83523201325fa9ea5c5435d91cbdb73a074e13553a37",
-      "bytes": 13721
+      "sha256": "edfc5a7ef8dc7c44ce07d09b09fea87916147e3578c83d6ebf2feab930a58fc7",
+      "bytes": 13943
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -498,6 +498,11 @@
       "bytes": 6919
     },
     {
+      "path": "docs/assets/film-poster-collage.png",
+      "sha256": "242d40baf383e8b07f2ccc5408e9bbd38d0c25f209cdc315491ceb7da5dc492b",
+      "bytes": 484465
+    },
+    {
       "path": "docs/assets/logo.svg",
       "sha256": "577fd7ddea002352ee8aa7b9b8dd84562e244bad79a65f0ea96b5087ffc7c853",
       "bytes": 941
@@ -519,8 +524,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "f9c1ec26ac8877382bcdf2b3dc687e37d8cc24feea43dfd7bdb2784d8274f111",
-      "bytes": 4875
+      "sha256": "8ed6f9b30a59f25f46fda6665d46f8758bf8e880ff36631f69ec4191c18a509f",
+      "bytes": 5243
     },
     {
       "path": "docs/one_film.md",
@@ -533,9 +538,14 @@
       "bytes": 8775
     },
     {
+      "path": "docs/poster_credits.md",
+      "sha256": "396ba800475a68632a965a40f19f7d36abb54ad125498bfc2a64ccf888781f3e",
+      "bytes": 9247
+    },
+    {
       "path": "docs/release_status.md",
-      "sha256": "6c5df2466347632184c7a5b5572fa2a33ff7dcf7c7727c6dd1fe59c13b528c84",
-      "bytes": 13135
+      "sha256": "9c902f6740e6ed9c6c4032363a3b0a1841c1a303500071b9e711d744bdc09f87",
+      "bytes": 13297
     },
     {
       "path": "docs/training.md",
@@ -929,8 +939,8 @@
     },
     {
       "path": "scripts/check_release.py",
-      "sha256": "08aa2b1de6410d8823abc890d68f305250e0c93bcbcdc71f62bb46e255090ff3",
-      "bytes": 8453
+      "sha256": "96983b6c6c64b9fecc12bce16cfec563fdf46a9e8a874f9f5c2ec016fdcf4e54",
+      "bytes": 8572
     },
     {
       "path": "tests/test_grading_refusal_compatibility.py",
