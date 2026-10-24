@@ -20,9 +20,9 @@
 </p>
 <p>
 <a href="#task-generation">🎬 Task generation</a> &nbsp;•&nbsp;
+<a href="#agent-rl">🤖 Agent RL</a> &nbsp;•&nbsp;
 <a href="#-findings">🔍 Findings</a> &nbsp;•&nbsp;
 <a href="#-results">📊 Results</a> &nbsp;•&nbsp;
-<a href="#-quick-start">🚀 Quick start</a> &nbsp;•&nbsp;
 <a href="#-guides">🧭 Guides</a> &nbsp;•&nbsp;
 <a href="#-reproduction-status">🔁 Reproducibility</a> &nbsp;•&nbsp;
 <a href="#-citation">📌 Citation</a>
@@ -74,6 +74,22 @@ Rerunning `run` reuses completed work. It can incur Modal and model usage. [Full
 - **Stop before review:** `run --until tasks` builds candidates without Gemini quality review. `run --until probe` performs only a local media check.
 
 </details>
+
+<a id="agent-rl"></a>
+
+## 🤖 RL for Long-Horizon Multimodal Agents
+
+**Learn across long multimodal editing trajectories.** Our runtime combines **SkyRL** training, **vLLM** inference, and an **OpenCode agent harness** for repeated frame inspection, reasoning, and editing-tool use. Rollouts are configured for up to **100 turns** and **128K tokens of context**.
+
+| Method | Learning signal | Implementation |
+| :--- | :--- | :--- |
+| **Outcome-only GRPO** | Trajectory-level feedback from the final task reward. | [Advantage construction](training/src/opencode_rl/training.py) |
+| **GRPO+PRM** | Outcome feedback plus turn-level judge rewards, with optional process-weight decay. | [Process judge](training/src/prm_v2/judge_v5.py) · [Decay schedule](training/overlays/decay/prm_v2/live_config_v5.py) |
+| **OPSD** | Token-level distillation from a frozen teacher given reference answers or turn suggestions. | [Distillation objective](opsd/examples/train/answer_self_distillation/topk.py) |
+
+**Paper models:** **Qwen3.5-9B** for the main comparison; **Qwen3.6-35B-A3B** for additional GRPO/PRM experiments. [Experiment settings →](docs/experiment_notes.md)
+
+Implementation and CPU checks: [GRPO/PRM guide](docs/training.md#run-the-offline-cpu-tests) · [OPSD guide](docs/opsd.md#selected-cpu-verification) · [GPU setup status](docs/training.md#what-can-i-run-now).
 
 ## 🔍 Findings
 
