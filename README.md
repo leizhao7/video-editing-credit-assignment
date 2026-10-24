@@ -29,7 +29,7 @@
 
 </div>
 
-**When does feedback on intermediate actions help—and when does it hurt task completion?** We study this question through movie-trailer editing, where multimodal agents inspect media, reason, and use editing tools over many turns. This repository brings together our scalable task-generation pipeline, training implementations, and outcome graders.
+**Teaching AI to Edit Video with 49 Real Films.** We turn movies and their trailers into video-editing tasks, then train multimodal agents to inspect footage, reason about editing decisions, and use editing tools. Evaluation on held-out films shows when finer-grained feedback helps or hurts task performance. This repository includes our scalable task-generation pipeline, RL training code, and outcome graders.
 
 ## 🎉 News
 
