@@ -81,11 +81,11 @@ Rerunning `run` reuses completed work. It can incur Modal and model usage. [Full
 
 **Learn across long multimodal editing trajectories.** Our runtime combines **SkyRL** training, **vLLM** inference, and an **OpenCode agent harness** for repeated frame inspection, reasoning, and editing-tool use. Rollouts are configured for up to **100 turns** and **128K tokens of context**.
 
-| Method | Learning signal | Implementation |
-| :--- | :--- | :--- |
-| **Outcome-only GRPO** | Trajectory-level feedback from the final task reward. | [Advantage construction](training/src/opencode_rl/training.py) |
-| **GRPO+PRM** | Outcome feedback plus turn-level judge rewards, with optional process-weight decay. | [Process judge](training/src/prm_v2/judge_v5.py) · [Decay schedule](training/overlays/decay/prm_v2/live_config_v5.py) |
-| **OPSD** | Token-level distillation from a frozen teacher given reference answers or turn suggestions. | [Distillation objective](opsd/examples/train/answer_self_distillation/topk.py) |
+| Method | Credit-assignment granularity | Learning signal | Implementation |
+| :--- | :--- | :--- | :--- |
+| **Outcome-only GRPO** | Trajectory-level | Final task reward. | [Advantage construction](training/src/opencode_rl/training.py) |
+| **GRPO+PRM** | Turn-level + trajectory-level | Process-judge rewards plus the final task reward, with optional process-weight decay. | [Process judge](training/src/prm_v2/judge_v5.py) · [Decay schedule](training/overlays/decay/prm_v2/live_config_v5.py) |
+| **OPSD** | Token-level | Distillation from a frozen teacher given reference answers or turn suggestions. | [Distillation objective](opsd/examples/train/answer_self_distillation/topk.py) |
 
 **Paper models:** **Qwen3.5-9B** for the main comparison; **Qwen3.6-35B-A3B** for additional GRPO/PRM experiments. [Experiment settings →](docs/experiment_notes.md)
 
