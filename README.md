@@ -93,21 +93,40 @@ Implementation and CPU checks: [GRPO/PRM guide](docs/training.md#run-the-offline
 
 ## 🔍 Findings
 
-**1. Fine-grained feedback helps most on Fine Cut.** Decaying process rewards gives the largest improvement over outcome-only GRPO on Fine Cut. Outcome-only GRPO remains competitive on the three shorter-horizon task types. Task demands, scoring criteria, and horizon vary together, so this comparison does not isolate a causal effect of horizon.
+### 1. Process rewards help most on Fine Cut
 
-**2. More process reward can hurt task completion.** With a fixed process-reward weight, judge-preferred intermediate behaviors increase while completion and outcome scores decline. Reducing the weight to zero mitigates this pattern and yields the highest overall score in our comparison.
-
-**3. Dense token-level supervision is not sufficient.** OPSD is sensitive to the teacher's privileged information. Reference answers yield little change from the base model, while turn suggestions accompany a collapse in performance. Gradient and disagreement statistics characterize these patterns; their causes and effective remedies remain open questions.
-
-These findings concern the tested methods and tasks. In particular, the process-reward results apply to **LLM-judged turn-level rewards in GRPO+PRM**, not to untested methods such as GiGPO or Turn-PPO.
-
-## 📊 Results
+Decaying process rewards yields a **45.4% relative gain** over outcome-only GRPO on Fine Cut. On the three shorter-horizon task types, outcome-only GRPO remains competitive: the largest additional gain is **10.4%**, with no improvement on CS or RC.
 
 <p align="center">
-<a href="docs/assets/paper-teaser.png"><img src="docs/assets/paper-teaser.png" width="100%" alt="Paper Figure 1: four editing tasks ordered by base-policy horizon, score gains over outcome-only GRPO, and process/outcome rewards with the fixed and decayed weight schedules."></a>
+<a href="docs/assets/finding-task-gains.svg"><img src="docs/assets/finding-task-gains.svg" width="100%" alt="Relative score changes from outcome-only GRPO with decayed process rewards: NS +10.4%, RC -2.2%, CS -2.1%, and FC +45.4%."></a>
 </p>
 
-*Four editing tasks, their gains from intermediate feedback, and the reward-hacking pattern during training. [Figure details](docs/experiment_notes.md#illustrations).*
+### 2. More process reward can hurt task completion
+
+With a fixed weight, **process reward keeps rising while outcome reward declines after update 30**. Decaying the weight to zero mitigates this pattern: validation truncation falls from **44.1% to 6.2%**, and the overall score rises from **0.334 to 0.447**.
+
+<p align="center">
+<a href="docs/assets/finding-reward-hacking.svg"><img src="docs/assets/finding-reward-hacking.svg" width="100%" alt="Fixed-weight process reward rises while outcome reward declines after update 30. Decaying lambda from 0.5 to zero over updates 20–30 mitigates this pattern; validation truncation falls from 44.1% to 6.2%."></a>
+</p>
+
+### 3. Dense supervision does not guarantee better performance
+
+**OPSD depends strongly on the teacher's privileged information.** Reference answers yield little change from the base model, while turn suggestions accompany a collapse in performance. The two variants share the loss, student, frozen teacher, and hyperparameters.
+
+<p align="center">
+<a href="docs/assets/finding-opsd.svg"><img src="docs/assets/finding-opsd.svg" width="100%" alt="Overall validation scores: base model 0.284, OPSD with reference answers 0.277, and OPSD with turn suggestions 0.044, a relative decline of 84.4% from base."></a>
+</p>
+
+<details>
+<summary>Scope and figure sources</summary>
+
+These findings concern the tested methods and tasks. Task demands, scoring criteria, and horizon vary together; the comparison does not isolate horizon alone. The reward-hacking result concerns LLM-judged turn-level rewards in GRPO+PRM; GiGPO and Turn-PPO are not evaluated. OPSD diagnostics describe failure patterns without establishing their causes.
+
+[Figure sources and reading notes →](docs/experiment_notes.md#illustrations)
+
+</details>
+
+## 📊 Results
 
 Main **Qwen3.5-9B** validation results. Scores average four evaluation repetitions of each final checkpoint (**avg@4**); higher is better. Best values in each column are bold.
 

@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "7aa81c2c57cca81fd03a63bfd1d4e2cbdc3e688f3646516d1ded6238cee28a05",
-      "bytes": 14088
+      "sha256": "b8278c62f4c74889318b31fd29f9e00c79f66ae9e8f048d18680634f10090ad9",
+      "bytes": 14755
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -503,6 +503,21 @@
       "bytes": 484465
     },
     {
+      "path": "docs/assets/finding-opsd.svg",
+      "sha256": "1293d78cd5504ce652bdbfca77eb6aaa697d6af9decfb775aa8cf4a9a165eab7",
+      "bytes": 60225
+    },
+    {
+      "path": "docs/assets/finding-reward-hacking.svg",
+      "sha256": "043585bbd58ddb6758e0f81de409770f7dfa62cb16a2c8afaf864d859059b5ba",
+      "bytes": 50359
+    },
+    {
+      "path": "docs/assets/finding-task-gains.svg",
+      "sha256": "76f5d9d7d332f028be1016961905f1ef45fe7836d5d0bf2e18ca8e903e969429",
+      "bytes": 58050
+    },
+    {
       "path": "docs/assets/logo.svg",
       "sha256": "577fd7ddea002352ee8aa7b9b8dd84562e244bad79a65f0ea96b5087ffc7c853",
       "bytes": 941
@@ -524,8 +539,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "f632188e87bc5e07a02e5ceb30f8e0037fe4650e0d11c9ed4449bea4ab3e9c4a",
-      "bytes": 5301
+      "sha256": "dfd1310aec2f578bdd2a256a21fecb7441ce55cb07b5cacf8d6af435e0c65d66",
+      "bytes": 7338
     },
     {
       "path": "docs/one_film.md",

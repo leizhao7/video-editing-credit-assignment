@@ -33,7 +33,15 @@ The reward-hacking observation applies to the tested GRPO+PRM setup with LLM-jud
 
 ## Illustrations
 
-The [README](../README.md) includes **Figure 1 from the paper**, rendered without content changes as [`paper-teaser.png`](assets/paper-teaser.png). It contains illustrative film thumbnails and aggregate experimental results, not a distributable task package or the underlying media and result files.
+The [README](../README.md) highlights three findings with SVG charts redrawn from the paper's aggregate results. They contain no task instances, film media, private grading references, or rollout exports.
+
+- **[Task-dependent gains](assets/finding-task-gains.svg):** relative score changes from outcome-only GRPO to GRPO+PRM with decayed λ. Percentages use the audited four-decimal evaluation means, in the paper figure's task order (NS, RC, CS, FC): outcome-only scores `0.5000, 0.3557, 0.8206, 0.2015`; decayed-PRM scores `0.5518, 0.3477, 0.8037, 0.2929`. Thus Fine Cut gains 45.4%, and the other three changes are +10.4%, −2.2%, and −2.1%. These are relative changes, not percentage-point changes or a common measure of task difficulty. Fine Cut has the longest mean interaction horizon under both the base model and outcome-only GRPO.
+- **[Reward hacking and mitigation](assets/finding-reward-hacking.svg):** the same observations and centered five-observation means as paper Figure 1(c), including the decayed outcome curve from update 21. Lines connect available observations. The aligned strip shows λ held at 0.5 or decayed cubically from 0.5 to zero over updates 20–30. Shading marks this decay window. The large percentages are **held-out validation truncation rates** from the model-behavior table, separate from the **training rewards** in the curves. These are individual training runs, not independent seed averages.
+- **[OPSD sensitivity](assets/finding-opsd.svg):** overall validation scores from the main-results table: base `0.2841`, reference-answer OPSD `0.2765`, and turn-suggestion OPSD `0.0442`, displayed to three decimals. The −84.4% change is calculated from the four-decimal base and turn-suggestion means. The teacher-information comparison is between the two OPSD variants; the base model is an evaluation reference. The figure does not establish a causal mechanism for the collapse.
+
+All held-out scores use the main Qwen3.5-9B comparison and avg@4. No additional experiments, uncertainty estimates, or datasets are introduced by these charts.
+
+**[Figure 1 from the paper](assets/paper-teaser.png)** remains available as an unchanged rendering. It contains illustrative film thumbnails and aggregate experimental results, not a distributable task package or the underlying media and result files.
 
 - Panel (a) shows independent task schematics ordered by base-policy horizon. Turns and scores are task-type averages, not example-specific results; evaluation metrics average four repetitions. Fine Cut keeps picture and timing fixed.
 - Panel (b) reports final score differences from outcome-only GRPO.
