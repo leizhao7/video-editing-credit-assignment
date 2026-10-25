@@ -93,34 +93,20 @@ Implementation and CPU checks: [GRPO/PRM guide](docs/training.md#run-the-offline
 
 ## 🔍 Findings
 
-### 1. Process rewards help most on Fine Cut
+**1. Fine-grained feedback helps more complex tasks.** Decaying process rewards yields a **45.4% relative gain** over outcome-only GRPO on the more complex Fine Cut task. On the other three task types, outcome-only GRPO remains competitive, with at most a **10.4%** additional gain.
 
-Decaying process rewards yields a **45.4% relative gain** over outcome-only GRPO on Fine Cut. On the three shorter-horizon task types, outcome-only GRPO remains competitive: the largest additional gain is **10.4%**, with no improvement on CS or RC.
+**2. Process rewards can lead to reward hacking.** With a fixed weight, process reward keeps rising while outcome reward declines after update 30. Decaying the weight to zero mitigates this behavior and reduces validation truncation from **44.1% to 6.2%**.
 
-<p align="center">
-<a href="docs/assets/finding-task-gains.svg"><img src="docs/assets/finding-task-gains.svg" width="100%" alt="Relative score changes from outcome-only GRPO with decayed process rewards: NS +10.4%, RC -2.2%, CS -2.1%, and FC +45.4%."></a>
-</p>
-
-### 2. More process reward can hurt task completion
-
-With a fixed weight, **process reward keeps rising while outcome reward declines after update 30**. Decaying the weight to zero mitigates this pattern: validation truncation falls from **44.1% to 6.2%**, and the overall score rises from **0.334 to 0.447**.
+**3. Finer-grained feedback encourages desirable behaviors.** Compared with outcome-only GRPO, GRPO+PRM with decayed process rewards produces **more visual inspection, longer reasoning, and more frequent self-correction markers**. These changes accompany the highest overall task score in our comparison.
 
 <p align="center">
-<a href="docs/assets/finding-reward-hacking.svg"><img src="docs/assets/finding-reward-hacking.svg" width="100%" alt="Fixed-weight process reward rises while outcome reward declines after update 30. Decaying lambda from 0.5 to zero over updates 20–30 mitigates this pattern; validation truncation falls from 44.1% to 6.2%."></a>
-</p>
-
-### 3. Dense supervision does not guarantee better performance
-
-**OPSD depends strongly on the teacher's privileged information.** Reference answers yield little change from the base model, while turn suggestions accompany a collapse in performance. The two variants share the loss, student, frozen teacher, and hyperparameters.
-
-<p align="center">
-<a href="docs/assets/finding-opsd.svg"><img src="docs/assets/finding-opsd.svg" width="100%" alt="Overall validation scores: base model 0.284, OPSD with reference answers 0.277, and OPSD with turn suggestions 0.044, a relative decline of 84.4% from base."></a>
+<a href="docs/assets/findings-overview.svg"><img src="docs/assets/findings-overview.svg" width="100%" alt="Three findings: decayed process rewards improve Fine Cut by 45.4% over GRPO; fixed process rewards exhibit reward hacking, mitigated by decay; and decayed PRM increases visual inspection, reasoning length, and self-correction markers by 1.54, 1.67, and 1.89 times relative to GRPO."></a>
 </p>
 
 <details>
 <summary>Scope and figure sources</summary>
 
-These findings concern the tested methods and tasks. Task demands, scoring criteria, and horizon vary together; the comparison does not isolate horizon alone. The reward-hacking result concerns LLM-judged turn-level rewards in GRPO+PRM; GiGPO and Turn-PPO are not evaluated. OPSD diagnostics describe failure patterns without establishing their causes.
+These findings concern the tested methods and tasks. Task complexity, scoring criteria, and horizon vary together; the comparison does not isolate their individual effects. The process-reward findings concern LLM-judged turn-level rewards in GRPO+PRM; GiGPO and Turn-PPO are not evaluated. Longer reasoning and more self-correction markers do not establish reasoning quality or the correctness of corrections, and desirable behaviors alone do not ensure task completion.
 
 [Figure sources and reading notes →](docs/experiment_notes.md#illustrations)
 
