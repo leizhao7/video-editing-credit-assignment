@@ -1,0 +1,20 @@
+# Copy outside the checkout and set EDITING_TRAINING_CONFIG to its absolute path.
+# Each profile needs a distinct app name; deploying replaces that app's functions.
+app = "editing-grpo"
+profile = "grpo" # grpo | prm_fixed | prm_decay | opsd_reference | opsd_suggestions
+release_volume = "editing-release"
+model_volume = "editing-models"
+logs_volume = "editing-training-logs"
+checkpoint_volume = "editing-checkpoints"
+asr_cache = "editing-asr-cache"
+judge_secret = "editing-judge" # Must contain GOOGLE_AI_STUDIO_API_KEY.
+# Required for prm_* and opsd_suggestions; use a distinct name to isolate quota.
+process_secret = "editing-process-judge"
+# Optional; console logging needs no W&B secret.
+logger = "console" # console | wandb
+wandb_secret = ""
+# Conservative whole-trajectory cache admission for the PRM/GRPO source runtime.
+# Tune only after measuring KV capacity; this does not change sampling or loss.
+residency_limits = [2, 2, 2, 2]
+# Input-token quota for turn-suggestion generation, shared across its containers.
+demonstrator_tokens_per_minute = 500000

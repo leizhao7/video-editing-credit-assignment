@@ -41,7 +41,8 @@ def check_plan(plan, contract, cfg):
             require_direct_start_authorization(plan['direct_start_authorization'], contract)
         else:
             report = json.loads(Path(plan['readiness_report']).read_bytes())
-            require_training_ready(report, contract, process_enabled=cfg.generator.ocrl_process_weight != 0)
+            require_training_ready(report, contract, process_enabled=cfg.generator.ocrl_process_weight != 0,
+                                   release_sha256=plan.get('release_sha256'))
             if report.get('grader_hashes') != plan['grader_hashes'] or report.get('prepared_sha256') != plan['prepared_sha256']:
                 raise ParityError('Training readiness does not cover this grader/prepared release')
         if (cfg.trainer.train_batch_size != 16 or cfg.trainer.policy_mini_batch_size != 16 or
@@ -105,7 +106,8 @@ def classes():
 
         def get_train_dataset(self):
             p = self.plan
-            result = PreparedDataset(p['prepared_manifest'], p['prepared_bundles'], p['release_path'])
+            result = PreparedDataset(p['prepared_manifest'], p['prepared_bundles'], p['release_path'],
+                                     expected_release_sha256=p.get('release_sha256'))
             if result.sha256 != p['prepared_sha256']:
                 raise ParityError('Prepared training release changed')
             return result
@@ -114,8 +116,12 @@ def classes():
             v = self.plan.get('validation')
             if not v:
                 return None
-            result = PreparedDataset(v['manifest'], v['bundles'], self.plan['release_path'], split='val')
-            if len(result) != 81 or result.sha256 != v['sha256']:
+            result = PreparedDataset(v['manifest'], v['bundles'], self.plan['release_path'], split='val',
+                                     expected_release_sha256=self.plan.get('release_sha256'))
+            expected_count = v.get('task_count', 81)
+            if self.plan.get('release_sha256') is None and expected_count != 81:
+                raise ParityError('Historical validation identity requires 81 tasks')
+            if type(expected_count) is not int or expected_count < 1 or len(result) != expected_count or result.sha256 != v['sha256']:
                 raise ParityError('Prepared validation release changed')
             return result
 

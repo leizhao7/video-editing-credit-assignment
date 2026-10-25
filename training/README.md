@@ -1,7 +1,5 @@
-# Training runtime draft
+# Training
 
-Fixed-PRM source, a separate decay overlay, provenance hashes and synthetic CPU tests are included here. See [the training guide](../docs/training.md) for the code map, exact decay schedule, test commands and build limitations.
+Recovered GRPO/PRM sources, decay and OPSD harness overlays, the training environment lock, full SkyRL patch, task-release adapter, and public Modal deployment/launch code are included here.
 
-Start with the [CPU setup and test commands](../docs/training.md#run-the-offline-cpu-tests). The fixed and decay suites pass in a fresh Python 3.12 CPU environment. These checks do not launch training.
-
-A portable GPU training build and public cloud launcher remain pending. Newly generated tasks also need a [trainer preparation adapter](../docs/training.md#using-your-own-tasks); changing dataset paths is not sufficient. Retained historical source guards must not be bypassed.
+Start with the [training guide](../docs/training.md) for preparation and launch commands, hardware requirements, provenance and verification status. The public GPU deployment still needs an optimizer smoke run; CPU/source/native-build checks do not certify it.

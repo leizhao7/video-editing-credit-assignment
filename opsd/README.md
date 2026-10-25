@@ -1,5 +1,5 @@
-# OPSD algorithm and CPU-test draft
+# On-policy self-distillation
 
-This directory contains the paper's OPSD algorithm modules, selected runtime utilities, and synthetic CPU tests. It does not yet provide an end-to-end training launcher.
+Both reference-answer and turn-suggestion recipes are included, with separately recorded source hashes. The public launcher selects a coherent source runtime and creates fresh contracts; it does not impersonate the historical frozen deployments.
 
-See [OPSD documentation](../docs/opsd.md) for the two paper settings, configuration boundaries, source provenance, missing build dependencies, and CPU test instructions. [source_map.json](source_map.json) maps every copied file to its retained source hash. Test commands and their verification scope are documented there; generated reports are excluded from this source-only tree.
+See [OPSD settings and provenance](../docs/opsd.md), [training setup](../docs/training.md), and [source_map.json](source_map.json). GPU execution of the public adapter remains unqualified. Only code and synthetic tests are distributed.

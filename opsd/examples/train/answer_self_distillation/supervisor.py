@@ -12,7 +12,7 @@ from .launch import MODULE
 async def supervise(plan, contract, argv, commit):
     import append_agent_rl.launch as frozen
     require(argv[2] == MODULE, "Wrong OPSD trainer entrypoint")
-    require(plan["opsd"]["runtime_profile"] == "frozen_v15", "Require the verified deployed supervisor")
+    require(plan["opsd"]["runtime_profile"] in ("source", "frozen_v15"), "Unknown supervisor source profile")
     source = inspect.getsource(frozen.supervise)
     anchor = "argv[2] != 'append_agent_rl.train_entrypoint'"
     require(source.count(anchor) == 1, "Frozen supervisor entrypoint anchor changed")

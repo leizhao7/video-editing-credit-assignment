@@ -8,6 +8,11 @@
       "bytes": 407
     },
     {
+      "path": ".gitattributes",
+      "sha256": "da3ac66309f860a37e7ffe87682cb4e32f9e94f3106950ddfd4eb6d98ce83250",
+      "bytes": 97
+    },
+    {
       "path": ".gitignore",
       "sha256": "ea715a7ec72b75ad9a1aab09504d4ef334f5477c6eee4d5c1ba028614e58e192",
       "bytes": 540
@@ -24,18 +29,18 @@
     },
     {
       "path": "README.md",
-      "sha256": "4fcee1614c7b87782b7d2bafb6559a94d7d1d3837565bb9a58ee37953795f6b1",
-      "bytes": 13237
+      "sha256": "357c8bfab69d7dbff4149c9d7c2d00ceb24c04bd4749c642b128f5b6a4840f22",
+      "bytes": 14729
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "f6b37150819bba1b7f45e0bf012b9cb2b3e478888ecf3e97e58b08ba0cb722a3",
-      "bytes": 1486
+      "sha256": "07150d0ecff1cae7c5fa00ead9df7e5e5bf4739dd481ca7a8dc09d23de786f02",
+      "bytes": 1570
     },
     {
       "path": "configs/dependency_pins.json",
-      "sha256": "e668f89ba32e426f1071ec09f9b025f45deefad12f7557f0d171cb4ef1f32e04",
-      "bytes": 416
+      "sha256": "2981f82512f27f11f19b8b77248ef5cad9d93ea8357b97b78e76e60b9db0e031",
+      "bytes": 565
     },
     {
       "path": "configs/evaluation_sources.json",
@@ -49,8 +54,8 @@
     },
     {
       "path": "configs/opsd.json",
-      "sha256": "0d4e3292f92b22b85f471fb0970171fc07db512565e4eae01ae20c6dd7c2d762",
-      "bytes": 839
+      "sha256": "0b05b8478bf06429c757f061c6b6e37b8fed10a272417a0c0416b2bcbdbd0ef8",
+      "bytes": 858
     },
     {
       "path": "configs/prm_decay.json",
@@ -539,8 +544,8 @@
     },
     {
       "path": "docs/opsd.md",
-      "sha256": "c9f0eade3414f9bea8acb937080cecb4e4b653cb4e3769328439a3a791403dcd",
-      "bytes": 8775
+      "sha256": "6ce4c2fbd46196bb484a56fca9874bd5293fb73bee335ea77579bfbee7328fa1",
+      "bytes": 8629
     },
     {
       "path": "docs/poster_credits.md",
@@ -549,13 +554,13 @@
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "9c902f6740e6ed9c6c4032363a3b0a1841c1a303500071b9e711d744bdc09f87",
-      "bytes": 13297
+      "sha256": "4eb9c5ba34993c8beae882d2e22fd76c80b389eee8eba3f3de69a6a2d8ba03d2",
+      "bytes": 14751
     },
     {
       "path": "docs/training.md",
-      "sha256": "d496711a5bc5ab4face04985c214a47c16d1e09bc938820c9eb2d0d7f366417e",
-      "bytes": 13659
+      "sha256": "aad5e58f5eb6b1a9b7aafcb85d9ea612a310df93ac0e4fa7c9ab597d70013162",
+      "bytes": 13674
     },
     {
       "path": "docs/workflow.md",
@@ -724,8 +729,8 @@
     },
     {
       "path": "opsd/README.md",
-      "sha256": "cb0d154f4e8aa3afba45c2f775a50bed864822ba46b92cba535339fa37fa892f",
-      "bytes": 589
+      "sha256": "2a8809a943fd43847ec155ca1edefe0b8e8f3fb12c4958a4cdc2ff240cf3edb7",
+      "bytes": 514
     },
     {
       "path": "opsd/adapters/frozen_v15/append_refusal_boundary.py",
@@ -814,8 +819,8 @@
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/supervisor.py",
-      "sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
-      "bytes": 1025
+      "sha256": "28f57539e57c9868f80d47cff374a52c4739de2fa1efe24555e6957a1e192f14",
+      "bytes": 1030
     },
     {
       "path": "opsd/examples/train/answer_self_distillation/teacher_inputs.py",
@@ -898,6 +903,86 @@
       "bytes": 9478
     },
     {
+      "path": "opsd/recipes/reference_answers/__init__.py",
+      "sha256": "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9",
+      "bytes": 79
+    },
+    {
+      "path": "opsd/recipes/reference_answers/answers.py",
+      "sha256": "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8",
+      "bytes": 10102
+    },
+    {
+      "path": "opsd/recipes/reference_answers/configuration.py",
+      "sha256": "bd63fa8b145359d2fa8567d3f9aa2549df351a5af1e64b6dabeadfc93cebb193",
+      "bytes": 6692
+    },
+    {
+      "path": "opsd/recipes/reference_answers/frozen_runtime.py",
+      "sha256": "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61",
+      "bytes": 2582
+    },
+    {
+      "path": "opsd/recipes/reference_answers/generator.py",
+      "sha256": "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9",
+      "bytes": 2119
+    },
+    {
+      "path": "opsd/recipes/reference_answers/install.py",
+      "sha256": "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc",
+      "bytes": 6258
+    },
+    {
+      "path": "opsd/recipes/reference_answers/launch.py",
+      "sha256": "9d5f16fc30fbc0b2d81850ddec4d80f00bfbf79101f0025b961d9896a59b04c9",
+      "bytes": 7035
+    },
+    {
+      "path": "opsd/recipes/reference_answers/main_answer_opsd.py",
+      "sha256": "74465959b5718b64a41d66290536cc690fd94105d0241feca7b84ec557d41d6d",
+      "bytes": 9134
+    },
+    {
+      "path": "opsd/recipes/reference_answers/objective.py",
+      "sha256": "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118",
+      "bytes": 3825
+    },
+    {
+      "path": "opsd/recipes/reference_answers/supervisor.py",
+      "sha256": "28f57539e57c9868f80d47cff374a52c4739de2fa1efe24555e6957a1e192f14",
+      "bytes": 1030
+    },
+    {
+      "path": "opsd/recipes/reference_answers/teacher_inputs.py",
+      "sha256": "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440",
+      "bytes": 4909
+    },
+    {
+      "path": "opsd/recipes/reference_answers/topk.py",
+      "sha256": "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99",
+      "bytes": 8970
+    },
+    {
+      "path": "opsd/recipes/reference_answers/topk_install.py",
+      "sha256": "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a",
+      "bytes": 2972
+    },
+    {
+      "path": "opsd/recipes/reference_answers/topk_trainer.py",
+      "sha256": "438416a49824f225f04c969f2d8153b19267d96b7968c579c6ca8aaf701c164e",
+      "bytes": 4877
+    },
+    {
+      "path": "opsd/recipes/reference_answers/topk_worker.py",
+      "sha256": "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400",
+      "bytes": 7771
+    },
+    {
+      "path": "opsd/recipes/reference_answers/trainer.py",
+      "sha256": "5af5be5f82330fd42fc45d881547f6e7857710e18a123b55c12ef4a38e099572",
+      "bytes": 9250
+    },
+    {
       "path": "opsd/runtime/opsd_demo_admitted_request.py",
       "sha256": "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4",
       "bytes": 4408
@@ -914,8 +999,8 @@
     },
     {
       "path": "opsd/source_map.json",
-      "sha256": "e116882dcfdac448a885c0836cf9bffd62d2bf1cf86a032291251491515c83ff",
-      "bytes": 28793
+      "sha256": "ab15f6e4e4b94ec01e7237e2a7d0b356f80a190f46094cfc0f545780b86cdae3",
+      "bytes": 36986
     },
     {
       "path": "opsd/tests/run_cpu.py",
@@ -963,9 +1048,234 @@
       "bytes": 14157
     },
     {
+      "path": "tests/test_training_release.py",
+      "sha256": "98dad8840634658dcf9b84591aaf5b8574d10b0caf79a5dbfbcae70e39e39845",
+      "bytes": 9021
+    },
+    {
       "path": "training/README.md",
-      "sha256": "dfbcef95cf796a4763cf4a4fd9561810506ff18642f1bfbec30b0233ad141f87",
-      "bytes": 735
+      "sha256": "260663d50a89f4939cb1f8261182a0f8817b6b7a6424619db849dcb168c4674c",
+      "bytes": 465
+    },
+    {
+      "path": "training/cloud.example.toml",
+      "sha256": "f706cc8f294eafea7bdcfda89ffcbd2eeff364761c0815e019f4b1be1e2f84e3",
+      "bytes": 1062
+    },
+    {
+      "path": "training/cloud.py",
+      "sha256": "dc05dfced5eaa05219e04f9727019f9a194abe4a503925766619c6017cd1f6f9",
+      "bytes": 3791
+    },
+    {
+      "path": "training/configuration.py",
+      "sha256": "8dd580c8840a3e0ddcb350cc6e3d7991fee44791bfce9b400f63f1ada518d66f",
+      "bytes": 2898
+    },
+    {
+      "path": "training/environment/base-overrides.toml",
+      "sha256": "7497e134134da0581658edc304fd04b8a9f5ed73c1297b7c6784205e54161db1",
+      "bytes": 4074
+    },
+    {
+      "path": "training/environment/images.py",
+      "sha256": "515e595c6ec7f8416f2586303c28d7ebb58285284391f1471e7baaa2a71edfa1",
+      "bytes": 7750
+    },
+    {
+      "path": "training/environment/installed-packages.txt",
+      "sha256": "0dd541aa77e604c6d40223394f5efff21bf30d40a40276a91340a4b08b7452ba",
+      "bytes": 5829
+    },
+    {
+      "path": "training/environment/manifest.toml",
+      "sha256": "1521175fa301abd7669a3cbf701340f7e4cd36523a755502016c2331416dbf40",
+      "bytes": 18249
+    },
+    {
+      "path": "training/environment/opencode.bun.lock",
+      "sha256": "42d49c4b808ffb50ab2793264699988d95109a5c9567b35122648d641e3e45ff",
+      "bytes": 871180
+    },
+    {
+      "path": "training/environment/patches/async_failure_propagation.py",
+      "sha256": "873de5651bd8adf0a13ae173aa01645e6022ab24873ba41623276c3a0b4bca1b",
+      "bytes": 5133
+    },
+    {
+      "path": "training/environment/patches/async_final_checkpoint_step.py",
+      "sha256": "7ad56eadf2d2abd3ec0f9efc793a29442b529d0040493f9dd1aa6ea2172fd20b",
+      "bytes": 3078
+    },
+    {
+      "path": "training/environment/patches/async_schedule_metadata.py",
+      "sha256": "2163c1df388c7f196e92fcaf8b7a07c9ba353159b90a16dce1d174453db4826e",
+      "bytes": 2775
+    },
+    {
+      "path": "training/environment/patches/clip_grad_cpu_fix.py",
+      "sha256": "c3daea7e3b642a7c71241f38132ea2a2279419301b343441d2dd0180ab9a4722",
+      "bytes": 4472
+    },
+    {
+      "path": "training/environment/patches/freeze_vision.py",
+      "sha256": "24ea91555012db5e4d860bbbef5e453c37954afd6ffa24e711971e3367c1a368",
+      "bytes": 5176
+    },
+    {
+      "path": "training/environment/patches/fused_ce.py",
+      "sha256": "f964cc9e8ce180393a23a18c509229663b821c90b239d0328e4fbab816ccf3c5",
+      "bytes": 21316
+    },
+    {
+      "path": "training/environment/patches/grpo_masked_advantage.py",
+      "sha256": "2a52089ce2e8ea8ef95a9d726eb8f9f762ff6e8bc25ce73b38806349df5b8231",
+      "bytes": 5956
+    },
+    {
+      "path": "training/environment/patches/hard_staleness.py",
+      "sha256": "5993cce0f7f08f17cf761e384ed76a87b772ca57490493ff974b6767b33f5ae2",
+      "bytes": 2866
+    },
+    {
+      "path": "training/environment/patches/ipv6_fix.py",
+      "sha256": "64f1279a884c396f879ab9de11d583d836f4474ef7e686aa0fe2bf0108e5dc73",
+      "bytes": 14187
+    },
+    {
+      "path": "training/environment/patches/microbatch_trim.py",
+      "sha256": "6414b1672216387606653d77a1da970374cd2ae05f83ea9c5a4c4d01e5ddfd77",
+      "bytes": 18518
+    },
+    {
+      "path": "training/environment/patches/mm_cache_miss_fix.py",
+      "sha256": "7ebc86850718952ddfd4adca4c9858f8227d500d06c389b7da6e1c3a7929a8be",
+      "bytes": 2728
+    },
+    {
+      "path": "training/environment/patches/offpolicy_metric_fix.py",
+      "sha256": "c001794ff627a903084eddaca9a6eb5915020c349656b3557a74707ef7b77642",
+      "bytes": 2419
+    },
+    {
+      "path": "training/environment/patches/qwen35_position_ids.py",
+      "sha256": "1a33e494e7d1f660d4e053c02f735ce425f3a55df8508f315ac3991ecda7b354",
+      "bytes": 3134
+    },
+    {
+      "path": "training/environment/patches/response_alignment_guard.py",
+      "sha256": "538eced61f44a7180fc1e9079fe706f6d5ce049957386f88f171f1de913f42fe",
+      "bytes": 2108
+    },
+    {
+      "path": "training/environment/patches/rl_fb_output_fix.py",
+      "sha256": "d69c33df56ff4d0314c8e2e3cc8288ef8ed02b7dca5002f63ae4906e538adfc9",
+      "bytes": 4429
+    },
+    {
+      "path": "training/environment/patches/sitecustomize.py",
+      "sha256": "d088eec76bbcc37f4f3303e9fd6648e5923ae1db7fe952e488504b8300bfe5c5",
+      "bytes": 7017
+    },
+    {
+      "path": "training/environment/patches/triton_scalar_fix.py",
+      "sha256": "b35db8cb1d7035e0b52632b80937c6fdb636ddf3be17421949ba44a064d9f422",
+      "bytes": 1707
+    },
+    {
+      "path": "training/environment/patches/vl_dummy_fix.py",
+      "sha256": "abe623fb1a68fc2ea411d15a96d52456a7ef5b9155796ea462e9e609ec9d0c95",
+      "bytes": 13395
+    },
+    {
+      "path": "training/environment/patches/vllm_nccl_drain_fix.py",
+      "sha256": "697d794777ed18efc7c42bfa1628b536127be544145ac0836cc71d9189c49be4",
+      "bytes": 1444
+    },
+    {
+      "path": "training/environment/patches/vlm_device_fix.py",
+      "sha256": "d14f8e2696253330966c63d7d07d4511406fe43c83ec1706475333e2c14173d6",
+      "bytes": 5569
+    },
+    {
+      "path": "training/environment/patches/weight_sync_failure.py",
+      "sha256": "f8279e16fe9f618858196a41620de93d0b74760205ff622aa86dc2073899b549",
+      "bytes": 5862
+    },
+    {
+      "path": "training/environment/preflight.py",
+      "sha256": "6c66c324b1fcb39ee15ba46f4c45dd579546e7e354a651de0e1842786b443d36",
+      "bytes": 1938
+    },
+    {
+      "path": "training/environment/prepare_opencode.py",
+      "sha256": "21e02102d3e267150b97e54d7444aa355abfb96642893e6ee777e2f95392497f",
+      "bytes": 2136
+    },
+    {
+      "path": "training/environment/reconstruct.py",
+      "sha256": "966a6d67c63cca313a6bf6770a9f7b91c56841a75c9c0aa3109d9f5051598245",
+      "bytes": 6867
+    },
+    {
+      "path": "training/environment/skyrl-full.patch",
+      "sha256": "e404d1fa7065fdc3d15161311cf7995f5b60d9bb832e559cb5f922fdd754cf7e",
+      "bytes": 53836
+    },
+    {
+      "path": "training/environment/support/command_owner.py",
+      "sha256": "9b5d05aee1f07a323e80dc0980a6fe165b8fb8ba613fd9870ce42c1a3e8ceb38",
+      "bytes": 4548
+    },
+    {
+      "path": "training/environment/support/grader_service.py",
+      "sha256": "c64fae66e741540d679de77e97eb3c66c1677a2a3517425c0081e2328ade456e",
+      "bytes": 20951
+    },
+    {
+      "path": "training/environment/support/modal_append_prm_train.py",
+      "sha256": "6665163d92f00a65133ddc1210242309a2c51664db80a276e633f4cf053339a2",
+      "bytes": 1935
+    },
+    {
+      "path": "training/environment/support/observation_worker.py",
+      "sha256": "8e4c2f7fd8653c2be8fb8fdace24df462f5efd2978f5801db33c7511a6bfece1",
+      "bytes": 13827
+    },
+    {
+      "path": "training/environment/support/opsd_demo_admitted_request.py",
+      "sha256": "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4",
+      "bytes": 4408
+    },
+    {
+      "path": "training/environment/support/opsd_demo_quota.py",
+      "sha256": "78b22d4e6dc5658b01291551a2e6762445db198d636bc8aa7c7b9f814c52285a",
+      "bytes": 5092
+    },
+    {
+      "path": "training/environment/support/opsd_demo_retry_after.py",
+      "sha256": "44ce9f77084dd3e901cac914ae77665023d11d0c3094ea77c51d8f2a23500f2f",
+      "bytes": 1803
+    },
+    {
+      "path": "training/environment/support/tool_schema.py",
+      "sha256": "22821de3b8a5542b518019d9e42712fd3a819953160569f72504f0a192d7a245",
+      "bytes": 6876
+    },
+    {
+      "path": "training/environment/uv.lock",
+      "sha256": "c029426336f4a2362a6c2a803f05c91b10651f8dfa8e50859fc5ba890ce5a5c3",
+      "bytes": 2602027
+    },
+    {
+      "path": "training/launcher.py",
+      "sha256": "403b6b91e8b7646106444964c15e9e1c8d1a9675d988388b290c18f1bdf0340a",
+      "bytes": 9870
+    },
+    {
+      "path": "training/modal_train.py",
+      "sha256": "8ee2a443144374a4ea8abe21e25382c634eaeddc8a2d0783371be78cf240f8c3",
+      "bytes": 12513
     },
     {
       "path": "training/overlays/decay/append_agent_rl/client.py",
@@ -1008,6 +1318,111 @@
       "bytes": 36531
     },
     {
+      "path": "training/overlays/opsd/append_agent_rl/backend.py",
+      "sha256": "89dc565185c786fcf64cc6c941a30c2f0137b8e9992a7934c8cc511859963cb9",
+      "bytes": 16142
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/controller.py",
+      "sha256": "794fa45be154a5de293674196c3b2cd76e5f842aadb42d6130baf829881b7bfd",
+      "bytes": 6079
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/copying.py",
+      "sha256": "cfba8d2b6e6790ff9ba8810ed45098089e4a33d597c45699e55556498405750e",
+      "bytes": 1858
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/generator.py",
+      "sha256": "cebb67341bc925e1c3268ce3654d02c9e13e0499bef55fa897e1c5173efa2441",
+      "bytes": 1023
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/launch.py",
+      "sha256": "91159cd38a027bb1d8754b96a5f99df7f720db8be02268f45f53aa1d72b225ba",
+      "bytes": 7909
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/loop.py",
+      "sha256": "6136262d604818fa44aeaf2fb07c296e278e95a4f1b0e0b8195c05c7f88cce6e",
+      "bytes": 10945
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/renderer.py",
+      "sha256": "dadec6a9bf5f94a5e7897ea92bcad5facd0e14b22e8b99330150f1ced7989688",
+      "bytes": 4439
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/routes.py",
+      "sha256": "c076d856e5ed01f0d176db5d83a302206442fb91bbb009d88a75675d41a2dd3c",
+      "bytes": 3332
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/server.py",
+      "sha256": "05e2418c7d9eca60758e279e8acfe9d914814b7656b6dfc1ac3a1fc1ec2ce2c4",
+      "bytes": 4809
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/task_rollout.py",
+      "sha256": "bbc7f40eb1cb4f68a1e0d516b56379fa9a8e3178ece7e6d507c09819efc5a914",
+      "bytes": 8936
+    },
+    {
+      "path": "training/overlays/opsd/append_agent_rl/train_entrypoint.py",
+      "sha256": "544aa0b506abaa78b43f93b8252ccc2becb4efe2f6604aa845c60816b7272abe",
+      "bytes": 4409
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/editing_tools.py",
+      "sha256": "e9f348c2a1372f30c12d60dcfed559b1c286bb26b43f0a35a5e7efdd95a23658",
+      "bytes": 44825
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/mcp_tools.py",
+      "sha256": "e18945a6c81f398a218f23cc56a8331f2db552577aed0270233699f7f384463c",
+      "bytes": 9461
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/prefix_backward.py",
+      "sha256": "cbb03d3f49a8f48b330cd3b01df1f6ba02436ab85fb4ee59bec437017d4c089f",
+      "bytes": 10472
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/prefix_transport.py",
+      "sha256": "74390d6c925a10d9851fd555fbbdc9e7802e1766a9707fe8e63298b8fa0639a1",
+      "bytes": 4764
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/records.py",
+      "sha256": "149bffd9f1520f907d7980076cba7c0521d7df2f69b9a2a6bddd01bfd08d7a72",
+      "bytes": 6602
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/skyrl_adapter.py",
+      "sha256": "d4be27c707b34017dced22ceae9c165ea096b8ff7fdb9c39aae1f808f4dcb27a",
+      "bytes": 9743
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/train_config.py",
+      "sha256": "353954f6144d2d18a2a75517820ac2af706e28de64f02ec8df4ed8979ffa4c70",
+      "bytes": 703
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/train_generator.py",
+      "sha256": "05a3f62fd1780d63cb13d2e014ad5fe86519064abca166e55dddea98ff397ec0",
+      "bytes": 13274
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/train_persistence.py",
+      "sha256": "3ab492640e84148b59a8513ad617f97859b55a4729b71946b4109af48673406a",
+      "bytes": 7508
+    },
+    {
+      "path": "training/overlays/opsd/opencode_rl/training.py",
+      "sha256": "a2eee7aced3924f16e85be07e64a96a1e15d29a30a323438d724f407118d86cf",
+      "bytes": 18341
+    },
+    {
       "path": "training/patches/skyrl/manifest.json",
       "sha256": "e5de9973a33f57fc6330faecae77e71a3517bc2e9b1aaeafe6892fa27c0d2ea6",
       "bytes": 873
@@ -1018,19 +1433,24 @@
       "bytes": 1472
     },
     {
+      "path": "training/prepare.py",
+      "sha256": "014f1f9608ea02988eb165eb041eb1d7990fe70174d35282bdf0aee25376f1a2",
+      "bytes": 11529
+    },
+    {
       "path": "training/provenance.json",
-      "sha256": "bfea47b8ca419a95d7dcf8718853483bd3e0774ce44560da17ba5bd4bc6f2f3e",
-      "bytes": 50057
+      "sha256": "e371f5b246189de9558160d44bd651037fac5d19b1a2f54300bfd639ec27d53d",
+      "bytes": 58765
     },
     {
       "path": "training/requirements-cpu.txt",
-      "sha256": "100f67cabf3b9fdab75468fa1cbf5081bd15a0cac37eba8fd44706f54155f24e",
-      "bytes": 116
+      "sha256": "572d14b80a67e4ed9536c979468ad1ed668ecd6619bb50cc40bdc09fc495508c",
+      "bytes": 149
     },
     {
       "path": "training/scripts/materialize.py",
-      "sha256": "53c843f93831d0e2e0da91890119b63445fbaa328c106804a7d732c329a5a8cd",
-      "bytes": 2772
+      "sha256": "5a82ec45c4be5e7ee9984db93292dd094f694d89afdbd1fe5637a70d9030126f",
+      "bytes": 2798
     },
     {
       "path": "training/scripts/run_cpu_tests.py",
@@ -1374,8 +1794,8 @@
     },
     {
       "path": "training/src/opencode_rl/readiness.py",
-      "sha256": "09247656a66fd908ac19fc6da1eeedd498683eef0bf98bb7035b226acd4b84c7",
-      "bytes": 2589
+      "sha256": "5115d0698d76aec4d8caa850c626501cc6b625d489e53214c6387e9df842288f",
+      "bytes": 3044
     },
     {
       "path": "training/src/opencode_rl/records.py",
@@ -1419,8 +1839,8 @@
     },
     {
       "path": "training/src/opencode_rl/stage_grading.py",
-      "sha256": "a15ef12546fe1bdc16e90758aee080208289ddbe49c0db67349a55b8fe01c439",
-      "bytes": 2961
+      "sha256": "fc6936a4d182922b3a59c7719471d04edd59a1bee136874c1d6cccbad24af631",
+      "bytes": 3031
     },
     {
       "path": "training/src/opencode_rl/stdio_relay.py",
@@ -1444,8 +1864,8 @@
     },
     {
       "path": "training/src/opencode_rl/task_bundle.py",
-      "sha256": "46b766e6fd3ad0a7855cfdcbf051383eb72b29ab047290e0a832fdb64fbf5960",
-      "bytes": 5812
+      "sha256": "72d15113032323a3cd88c8e15c1a948c3c751b9d2e28bd3d9d438e764a7a13b3",
+      "bytes": 6494
     },
     {
       "path": "training/src/opencode_rl/task_rollout.py",
@@ -1464,13 +1884,13 @@
     },
     {
       "path": "training/src/opencode_rl/train_dataset.py",
-      "sha256": "5f03be05c42dcbf0ac0789096a381b1839ac967c81e3bfa5fb0560acd0c06ee5",
-      "bytes": 4954
+      "sha256": "487f1495aa39f32d3c7085a0c182a5d1de0db33e8fab027baf62a25c4cb1249b",
+      "bytes": 5308
     },
     {
       "path": "training/src/opencode_rl/train_entrypoint.py",
-      "sha256": "13adae71701ce521b2f6220a9843f064b95c085b67810a05899d09cb8fbddf0a",
-      "bytes": 9939
+      "sha256": "838c2c4f6b3c3942343ab62732b8e40e4f28b22996ac310368821b7073ca9a2a",
+      "bytes": 10486
     },
     {
       "path": "training/src/opencode_rl/train_generator.py",

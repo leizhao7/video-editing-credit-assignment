@@ -1,7 +1,210 @@
 {
   "schema_version": 1,
-  "scope": "Reviewable fixed-PRM runtime and decay overlay; not a qualified portable training build.",
+  "scope": "Recovered GRPO/PRM and OPSD source runtimes, with portable build and launch adapters; GPU qualification is separate.",
   "files": [
+    {
+      "path": "overlays/decay/append_agent_rl/client.py",
+      "source_relative_path": "overlays/decay/append_agent_rl/client.py",
+      "source_sha256": "fd45dfa5a182ce90d3597acb6013f26e644e1e5b6e2e77642ac17ac529ad2734",
+      "public_sha256": "fd45dfa5a182ce90d3597acb6013f26e644e1e5b6e2e77642ac17ac529ad2734",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/append_agent_rl/train_entrypoint.py",
+      "source_relative_path": "overlays/decay/append_agent_rl/train_entrypoint.py",
+      "source_sha256": "b7010443e263ee0ed6bdddb657f8d14a3f79bd687318c1947ab09a3ce8526ac7",
+      "public_sha256": "b7010443e263ee0ed6bdddb657f8d14a3f79bd687318c1947ab09a3ce8526ac7",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/opencode_rl/grading_client.py",
+      "source_relative_path": "overlays/decay/opencode_rl/grading_client.py",
+      "source_sha256": "e7a910811c22a1c16bc55433494300571d4a66d9f7f10213795daa79f25a1d51",
+      "public_sha256": "d3f8fbb9603d0ebf116c4548860813b5b35d8ccef87164caff60b2f8c5f07ba6",
+      "transformation": "public compatibility: recognize both English and historical Chinese provider-refusal errors; preserve terminal/refusal semantics"
+    },
+    {
+      "path": "overlays/decay/opencode_rl/skyrl_adapter.py",
+      "source_relative_path": "overlays/decay/opencode_rl/skyrl_adapter.py",
+      "source_sha256": "9e9aa17f51e607336fb0166f93a7ae34a0ea2301c2c6aef15b0ea727d4d140b2",
+      "public_sha256": "9e9aa17f51e607336fb0166f93a7ae34a0ea2301c2c6aef15b0ea727d4d140b2",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/opencode_rl/train_generator.py",
+      "source_relative_path": "overlays/decay/opencode_rl/train_generator.py",
+      "source_sha256": "bf55e57fdd5be60118670f077c6676bc6a0a7939c516e1b4b1a8f064804c62e4",
+      "public_sha256": "bf55e57fdd5be60118670f077c6676bc6a0a7939c516e1b4b1a8f064804c62e4",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/opencode_rl/train_persistence.py",
+      "source_relative_path": "overlays/decay/opencode_rl/train_persistence.py",
+      "source_sha256": "bcda3c29ea994d2ad12d8e0de23e9d27542e91823b812e89b52a184ce54d4626",
+      "public_sha256": "bcda3c29ea994d2ad12d8e0de23e9d27542e91823b812e89b52a184ce54d4626",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/prm_v2/live_config_v5.py",
+      "source_relative_path": "overlays/decay/prm_v2/live_config_v5.py",
+      "source_sha256": "210665e9140e8daa4a2d7946074102a5fb38aefe15b5c08bea6dd40faf8680ee",
+      "public_sha256": "210665e9140e8daa4a2d7946074102a5fb38aefe15b5c08bea6dd40faf8680ee",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/decay/prm_v2/live_judge_v5.py",
+      "source_relative_path": "overlays/decay/prm_v2/live_judge_v5.py",
+      "source_sha256": "91dc4ac76bbcb07d92c5ad5e362038cf258d3fe0406b38f07d65f737f506f0a6",
+      "public_sha256": "91dc4ac76bbcb07d92c5ad5e362038cf258d3fe0406b38f07d65f737f506f0a6",
+      "transformation": "byte-identical"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/backend.py",
+      "source_relative_path": "append_agent_rl/backend.py",
+      "source_sha256": "89dc565185c786fcf64cc6c941a30c2f0137b8e9992a7934c8cc511859963cb9",
+      "public_sha256": "89dc565185c786fcf64cc6c941a30c2f0137b8e9992a7934c8cc511859963cb9",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/controller.py",
+      "source_relative_path": "append_agent_rl/controller.py",
+      "source_sha256": "794fa45be154a5de293674196c3b2cd76e5f842aadb42d6130baf829881b7bfd",
+      "public_sha256": "794fa45be154a5de293674196c3b2cd76e5f842aadb42d6130baf829881b7bfd",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/copying.py",
+      "source_relative_path": "append_agent_rl/copying.py",
+      "source_sha256": "cfba8d2b6e6790ff9ba8810ed45098089e4a33d597c45699e55556498405750e",
+      "public_sha256": "cfba8d2b6e6790ff9ba8810ed45098089e4a33d597c45699e55556498405750e",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/generator.py",
+      "source_relative_path": "append_agent_rl/generator.py",
+      "source_sha256": "cebb67341bc925e1c3268ce3654d02c9e13e0499bef55fa897e1c5173efa2441",
+      "public_sha256": "cebb67341bc925e1c3268ce3654d02c9e13e0499bef55fa897e1c5173efa2441",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/launch.py",
+      "source_relative_path": "append_agent_rl/launch.py",
+      "source_sha256": "91159cd38a027bb1d8754b96a5f99df7f720db8be02268f45f53aa1d72b225ba",
+      "public_sha256": "91159cd38a027bb1d8754b96a5f99df7f720db8be02268f45f53aa1d72b225ba",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/loop.py",
+      "source_relative_path": "append_agent_rl/loop.py",
+      "source_sha256": "6136262d604818fa44aeaf2fb07c296e278e95a4f1b0e0b8195c05c7f88cce6e",
+      "public_sha256": "6136262d604818fa44aeaf2fb07c296e278e95a4f1b0e0b8195c05c7f88cce6e",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/renderer.py",
+      "source_relative_path": "append_agent_rl/renderer.py",
+      "source_sha256": "dadec6a9bf5f94a5e7897ea92bcad5facd0e14b22e8b99330150f1ced7989688",
+      "public_sha256": "dadec6a9bf5f94a5e7897ea92bcad5facd0e14b22e8b99330150f1ced7989688",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/routes.py",
+      "source_relative_path": "append_agent_rl/routes.py",
+      "source_sha256": "c076d856e5ed01f0d176db5d83a302206442fb91bbb009d88a75675d41a2dd3c",
+      "public_sha256": "c076d856e5ed01f0d176db5d83a302206442fb91bbb009d88a75675d41a2dd3c",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/server.py",
+      "source_relative_path": "append_agent_rl/server.py",
+      "source_sha256": "05e2418c7d9eca60758e279e8acfe9d914814b7656b6dfc1ac3a1fc1ec2ce2c4",
+      "public_sha256": "05e2418c7d9eca60758e279e8acfe9d914814b7656b6dfc1ac3a1fc1ec2ce2c4",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/task_rollout.py",
+      "source_relative_path": "append_agent_rl/task_rollout.py",
+      "source_sha256": "bbc7f40eb1cb4f68a1e0d516b56379fa9a8e3178ece7e6d507c09819efc5a914",
+      "public_sha256": "bbc7f40eb1cb4f68a1e0d516b56379fa9a8e3178ece7e6d507c09819efc5a914",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/append_agent_rl/train_entrypoint.py",
+      "source_relative_path": "opt/append_agent_rl/train_entrypoint.py",
+      "source_sha256": "544aa0b506abaa78b43f93b8252ccc2becb4efe2f6604aa845c60816b7272abe",
+      "public_sha256": "544aa0b506abaa78b43f93b8252ccc2becb4efe2f6604aa845c60816b7272abe",
+      "transformation": "byte-identical reference-image source runtime"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/editing_tools.py",
+      "source_relative_path": "opencode_rl/editing_tools.py",
+      "source_sha256": "e9f348c2a1372f30c12d60dcfed559b1c286bb26b43f0a35a5e7efdd95a23658",
+      "public_sha256": "e9f348c2a1372f30c12d60dcfed559b1c286bb26b43f0a35a5e7efdd95a23658",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/mcp_tools.py",
+      "source_relative_path": "opencode_rl/mcp_tools.py",
+      "source_sha256": "e18945a6c81f398a218f23cc56a8331f2db552577aed0270233699f7f384463c",
+      "public_sha256": "e18945a6c81f398a218f23cc56a8331f2db552577aed0270233699f7f384463c",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/prefix_backward.py",
+      "source_relative_path": "opencode_rl/prefix_backward.py",
+      "source_sha256": "cbb03d3f49a8f48b330cd3b01df1f6ba02436ab85fb4ee59bec437017d4c089f",
+      "public_sha256": "cbb03d3f49a8f48b330cd3b01df1f6ba02436ab85fb4ee59bec437017d4c089f",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/prefix_transport.py",
+      "source_relative_path": "opencode_rl/prefix_transport.py",
+      "source_sha256": "74390d6c925a10d9851fd555fbbdc9e7802e1766a9707fe8e63298b8fa0639a1",
+      "public_sha256": "74390d6c925a10d9851fd555fbbdc9e7802e1766a9707fe8e63298b8fa0639a1",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/records.py",
+      "source_relative_path": "opencode_rl/records.py",
+      "source_sha256": "149bffd9f1520f907d7980076cba7c0521d7df2f69b9a2a6bddd01bfd08d7a72",
+      "public_sha256": "149bffd9f1520f907d7980076cba7c0521d7df2f69b9a2a6bddd01bfd08d7a72",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/skyrl_adapter.py",
+      "source_relative_path": "opencode_rl/skyrl_adapter.py",
+      "source_sha256": "d4be27c707b34017dced22ceae9c165ea096b8ff7fdb9c39aae1f808f4dcb27a",
+      "public_sha256": "d4be27c707b34017dced22ceae9c165ea096b8ff7fdb9c39aae1f808f4dcb27a",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/train_config.py",
+      "source_relative_path": "opencode_rl/train_config.py",
+      "source_sha256": "353954f6144d2d18a2a75517820ac2af706e28de64f02ec8df4ed8979ffa4c70",
+      "public_sha256": "353954f6144d2d18a2a75517820ac2af706e28de64f02ec8df4ed8979ffa4c70",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/train_generator.py",
+      "source_relative_path": "opencode_rl/train_generator.py",
+      "source_sha256": "05a3f62fd1780d63cb13d2e014ad5fe86519064abca166e55dddea98ff397ec0",
+      "public_sha256": "05a3f62fd1780d63cb13d2e014ad5fe86519064abca166e55dddea98ff397ec0",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/train_persistence.py",
+      "source_relative_path": "opencode_rl/train_persistence.py",
+      "source_sha256": "3ab492640e84148b59a8513ad617f97859b55a4729b71946b4109af48673406a",
+      "public_sha256": "3ab492640e84148b59a8513ad617f97859b55a4729b71946b4109af48673406a",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
+    {
+      "path": "overlays/opsd/opencode_rl/training.py",
+      "source_relative_path": "opencode_rl/training.py",
+      "source_sha256": "a2eee7aced3924f16e85be07e64a96a1e15d29a30a323438d724f407118d86cf",
+      "public_sha256": "a2eee7aced3924f16e85be07e64a96a1e15d29a30a323438d724f407118d86cf",
+      "transformation": "byte-identical reference-image harness overlay"
+    },
     {
       "path": "src/append_agent_rl/__init__.py",
       "source_relative_path": "src/append_agent_rl/__init__.py",
@@ -461,8 +664,8 @@
       "path": "src/opencode_rl/readiness.py",
       "source_relative_path": "src/opencode_rl/readiness.py",
       "source_sha256": "09247656a66fd908ac19fc6da1eeedd498683eef0bf98bb7035b226acd4b84c7",
-      "public_sha256": "09247656a66fd908ac19fc6da1eeedd498683eef0bf98bb7035b226acd4b84c7",
-      "transformation": "byte-identical"
+      "public_sha256": "5115d0698d76aec4d8caa850c626501cc6b625d489e53214c6387e9df842288f",
+      "transformation": "public adaptation: new SHA-bound release support; plain trusted grader callable; original defaults and mathematical checks retained"
     },
     {
       "path": "src/opencode_rl/records.py",
@@ -524,8 +727,8 @@
       "path": "src/opencode_rl/stage_grading.py",
       "source_relative_path": "src/opencode_rl/stage_grading.py",
       "source_sha256": "a15ef12546fe1bdc16e90758aee080208289ddbe49c0db67349a55b8fe01c439",
-      "public_sha256": "a15ef12546fe1bdc16e90758aee080208289ddbe49c0db67349a55b8fe01c439",
-      "transformation": "byte-identical"
+      "public_sha256": "fc6936a4d182922b3a59c7719471d04edd59a1bee136874c1d6cccbad24af631",
+      "transformation": "public adaptation: new SHA-bound release support; plain trusted grader callable; original defaults and mathematical checks retained"
     },
     {
       "path": "src/opencode_rl/stdio_relay.py",
@@ -559,8 +762,8 @@
       "path": "src/opencode_rl/task_bundle.py",
       "source_relative_path": "src/opencode_rl/task_bundle.py",
       "source_sha256": "46b766e6fd3ad0a7855cfdcbf051383eb72b29ab047290e0a832fdb64fbf5960",
-      "public_sha256": "46b766e6fd3ad0a7855cfdcbf051383eb72b29ab047290e0a832fdb64fbf5960",
-      "transformation": "byte-identical"
+      "public_sha256": "72d15113032323a3cd88c8e15c1a948c3c751b9d2e28bd3d9d438e764a7a13b3",
+      "transformation": "public adaptation: explicit SHA-bound user task releases; historical identity stays the default"
     },
     {
       "path": "src/opencode_rl/task_rollout.py",
@@ -587,15 +790,15 @@
       "path": "src/opencode_rl/train_dataset.py",
       "source_relative_path": "src/opencode_rl/train_dataset.py",
       "source_sha256": "5f03be05c42dcbf0ac0789096a381b1839ac967c81e3bfa5fb0560acd0c06ee5",
-      "public_sha256": "5f03be05c42dcbf0ac0789096a381b1839ac967c81e3bfa5fb0560acd0c06ee5",
-      "transformation": "byte-identical"
+      "public_sha256": "487f1495aa39f32d3c7085a0c182a5d1de0db33e8fab027baf62a25c4cb1249b",
+      "transformation": "public adaptation: explicit SHA-bound user task releases; historical identity stays the default"
     },
     {
       "path": "src/opencode_rl/train_entrypoint.py",
       "source_relative_path": "src/opencode_rl/train_entrypoint.py",
       "source_sha256": "13adae71701ce521b2f6220a9843f064b95c085b67810a05899d09cb8fbddf0a",
-      "public_sha256": "13adae71701ce521b2f6220a9843f064b95c085b67810a05899d09cb8fbddf0a",
-      "transformation": "byte-identical"
+      "public_sha256": "838c2c4f6b3c3942343ab62732b8e40e4f28b22996ac310368821b7073ca9a2a",
+      "transformation": "public adaptation: new SHA-bound release support; plain trusted grader callable; original defaults and mathematical checks retained"
     },
     {
       "path": "src/opencode_rl/train_generator.py",
@@ -794,59 +997,10 @@
       "transformation": "byte-identical"
     },
     {
-      "path": "overlays/decay/append_agent_rl/client.py",
-      "source_relative_path": "overlays/decay/append_agent_rl/client.py",
-      "source_sha256": "fd45dfa5a182ce90d3597acb6013f26e644e1e5b6e2e77642ac17ac529ad2734",
-      "public_sha256": "fd45dfa5a182ce90d3597acb6013f26e644e1e5b6e2e77642ac17ac529ad2734",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/append_agent_rl/train_entrypoint.py",
-      "source_relative_path": "overlays/decay/append_agent_rl/train_entrypoint.py",
-      "source_sha256": "b7010443e263ee0ed6bdddb657f8d14a3f79bd687318c1947ab09a3ce8526ac7",
-      "public_sha256": "b7010443e263ee0ed6bdddb657f8d14a3f79bd687318c1947ab09a3ce8526ac7",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/opencode_rl/grading_client.py",
-      "source_relative_path": "overlays/decay/opencode_rl/grading_client.py",
-      "source_sha256": "e7a910811c22a1c16bc55433494300571d4a66d9f7f10213795daa79f25a1d51",
-      "public_sha256": "d3f8fbb9603d0ebf116c4548860813b5b35d8ccef87164caff60b2f8c5f07ba6",
-      "transformation": "public compatibility: recognize both English and historical Chinese provider-refusal errors; preserve terminal/refusal semantics"
-    },
-    {
-      "path": "overlays/decay/opencode_rl/skyrl_adapter.py",
-      "source_relative_path": "overlays/decay/opencode_rl/skyrl_adapter.py",
-      "source_sha256": "9e9aa17f51e607336fb0166f93a7ae34a0ea2301c2c6aef15b0ea727d4d140b2",
-      "public_sha256": "9e9aa17f51e607336fb0166f93a7ae34a0ea2301c2c6aef15b0ea727d4d140b2",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/opencode_rl/train_generator.py",
-      "source_relative_path": "overlays/decay/opencode_rl/train_generator.py",
-      "source_sha256": "bf55e57fdd5be60118670f077c6676bc6a0a7939c516e1b4b1a8f064804c62e4",
-      "public_sha256": "bf55e57fdd5be60118670f077c6676bc6a0a7939c516e1b4b1a8f064804c62e4",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/opencode_rl/train_persistence.py",
-      "source_relative_path": "overlays/decay/opencode_rl/train_persistence.py",
-      "source_sha256": "bcda3c29ea994d2ad12d8e0de23e9d27542e91823b812e89b52a184ce54d4626",
-      "public_sha256": "bcda3c29ea994d2ad12d8e0de23e9d27542e91823b812e89b52a184ce54d4626",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/prm_v2/live_config_v5.py",
-      "source_relative_path": "overlays/decay/prm_v2/live_config_v5.py",
-      "source_sha256": "210665e9140e8daa4a2d7946074102a5fb38aefe15b5c08bea6dd40faf8680ee",
-      "public_sha256": "210665e9140e8daa4a2d7946074102a5fb38aefe15b5c08bea6dd40faf8680ee",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "overlays/decay/prm_v2/live_judge_v5.py",
-      "source_relative_path": "overlays/decay/prm_v2/live_judge_v5.py",
-      "source_sha256": "91dc4ac76bbcb07d92c5ad5e362038cf258d3fe0406b38f07d65f737f506f0a6",
-      "public_sha256": "91dc4ac76bbcb07d92c5ad5e362038cf258d3fe0406b38f07d65f737f506f0a6",
+      "path": "tests/decay/test_decay.py",
+      "source_relative_path": "tests/decay/test_decay.py",
+      "source_sha256": "ce0298946ae878f07e0ab11bc76f22576275fcf4041a12e00b1145faf9e23b81",
+      "public_sha256": "ce0298946ae878f07e0ab11bc76f22576275fcf4041a12e00b1145faf9e23b81",
       "transformation": "byte-identical"
     },
     {
@@ -875,13 +1029,6 @@
       "source_relative_path": "tests/fixed/test_live_packet_v5.py",
       "source_sha256": "fa7ecd9ad12943c211b1aa50114c2559fefeadfac04f654071611a91b2786faf",
       "public_sha256": "fa7ecd9ad12943c211b1aa50114c2559fefeadfac04f654071611a91b2786faf",
-      "transformation": "byte-identical"
-    },
-    {
-      "path": "tests/decay/test_decay.py",
-      "source_relative_path": "tests/decay/test_decay.py",
-      "source_sha256": "ce0298946ae878f07e0ab11bc76f22576275fcf4041a12e00b1145faf9e23b81",
-      "public_sha256": "ce0298946ae878f07e0ab11bc76f22576275fcf4041a12e00b1145faf9e23b81",
       "transformation": "byte-identical"
     },
     {

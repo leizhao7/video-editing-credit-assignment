@@ -22,7 +22,8 @@ def grade_stage(payload, service):
     stage = payload['stage']
     if stage in ('s_3', 's_4e'):
         # Executes the newly baked v5 image, not a mutable named live service.
-        result = service.grade_judged.get_raw_f()(payload)
+        judged = service.grade_judged
+        result = (judged.get_raw_f() if hasattr(judged, 'get_raw_f') else judged)(payload)
         result['service_contract'] = service_contract(service)
         return result
     if stage not in ('s_1', 's_2'):

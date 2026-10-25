@@ -33,6 +33,7 @@
 
 ## 🎉 News
 
+- **[2026-10-24]** Recovered the complete training source patch and environment records, both OPSD recipes, reviewed-task preparation and public Modal launch adapters.
 - **[2026-10-21]** English task-generation and scoring interfaces, refreshed training setup documentation, and additional CPU checks.
 - **[2026-10-20]** Added a resumable project workflow for generating tasks from a movie and trailer, reviewing their quality, and scoring submitted edits.
 
@@ -103,12 +104,31 @@ PYTHONPATH=opsd PYTHONDONTWRITEBYTECODE=1 \
   python -m pytest -q -p no:cacheprovider opsd/tests/test_paper_top64.py
 ```
 
-**Full GPU training** still requires the public environment build, deployment launcher, and an adapter from reviewed tasks to trainer inputs. See the [GRPO/PRM setup](docs/training.md#what-can-i-run-now) and [OPSD setup](docs/opsd.md#selected-cpu-verification) for current support and remaining steps.
+**Prepare and launch training (Modal).** The recovered environment build, reviewed-task adapter and public launcher are included. Configure your own volumes and judge secrets using the [training setup](docs/training.md#configure-and-deploy), then:
+
+```bash
+# Freeze reviewed tasks; keep private material outside the repository.
+python training/prepare.py \
+  --accepted-tasks /path/to/project/accepted_tasks.json \
+  --destination /path/to/private/training-release \
+  --validation-film held-out-film-slug --prepare-inputs
+
+export EDITING_TRAINING_CONFIG=/path/to/private/training.toml
+python training/cloud.py upload --config "$EDITING_TRAINING_CONFIG" \
+  --release-directory /path/to/private/training-release
+python -m modal deploy training/modal_train.py
+python -m modal run training/modal_train.py --action prepare-model
+python -m modal run training/modal_train.py --action check --name smoke-001
+# Explicitly allocates eight H200 GPUs, capped at two optimizer updates:
+python -m modal run training/modal_train.py --action smoke --name smoke-001 --steps 2
+```
+
+Choose `grpo`, `prm_fixed`, `prm_decay`, `opsd_reference`, or `opsd_suggestions` in the TOML; reference-answer OPSD also needs `--reference-answers` during preparation. **The public GPU deployment still needs an optimizer smoke run.** Formal training retains the source, dataset and numerical qualification gates. [Build, hardware and validation details →](docs/training.md)
 
 <details>
 <summary>Source-only checks and repository layout</summary>
 
-These checks require only Python 3.12 and do not start training or call a model:
+The static check uses Python 3.12. The optional real preparation regression also needs FFmpeg/FFprobe and the CPU dependencies above. These commands do not start training or call a model:
 
 ```bash
 python scripts/check_release.py
@@ -166,7 +186,7 @@ These findings concern the tested methods and tasks. Task complexity, scoring cr
 
 **Checked:** synthetic CPU tests, local workflow commands, and component-level construction, review, and scoring on real media. The full-film construction check involved debugging and resuming completed stages.
 
-**Still unverified:** a fresh complete-film run through the final unified workflow, full GPU training, and end-to-end reproduction of the paper's benchmark. The training build, public launch services, custom-task adapter, and original reference-answer OPSD snapshot still have gaps. [Detailed validation record →](docs/release_status.md)
+**Still unverified:** a fresh complete-film run through the final unified workflow, full GPU training, and end-to-end reproduction of the paper's benchmark. Training sources, environment records, the reference-answer recipe, task preparation and launch adapters have been restored; the public GPU build and services still need full integration qualification. [Detailed validation record →](docs/release_status.md)
 
 **Data:** we provide code, the paper figure, and the poster banner. The dataset, underlying film media, task instances, reference answers, rollouts, judge caches, and model checkpoints are not distributed.
 

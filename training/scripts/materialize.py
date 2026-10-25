@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def materialize(variant, destination):
-    if variant not in ('fixed', 'decay'):
+    if variant not in ('fixed', 'decay', 'opsd'):
         raise ValueError('Unknown variant')
     destination = Path(destination)
     if destination.exists() or destination.is_symlink():
@@ -19,7 +19,7 @@ def materialize(variant, destination):
     rows = file_rows(manifest, ('public_sha256',))
     selected = {}
     # Apply layers explicitly: manifest ordering must never change the runtime.
-    layers = ('src/',) if variant == 'fixed' else ('src/', 'overlays/decay/')
+    layers = ('src/',) if variant == 'fixed' else ('src/', 'overlays/' + variant + '/')
     for prefix in layers:
         layer = {row['path'][len(prefix):]: row for row in rows if row['path'].startswith(prefix)}
         if not layer:
@@ -50,7 +50,7 @@ def materialize(variant, destination):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variant', choices=('fixed', 'decay'), required=True)
+    parser.add_argument('--variant', choices=('fixed', 'decay', 'opsd'), required=True)
     parser.add_argument('--destination', type=Path, required=True)
     args = parser.parse_args(argv)
     try:

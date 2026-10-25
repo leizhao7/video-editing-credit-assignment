@@ -12,10 +12,16 @@ TRAINING_REQUIRED = ('actual_optimizer_step', 'all_four_inference_weight_sync',
                      'checkpoint_resume', 'durable_trajectories')
 
 
-def require_ready(report, contract, *, process_enabled=True):
+def require_ready(report, contract, *, process_enabled=True, release_sha256=None):
     if report.get("contract_sha256") != contract.sha256:
         raise ParityError("Readiness report belongs to another runtime")
     required = [key for key in REQUIRED if process_enabled or key != 'prm_contributions']
+    if release_sha256 is not None:
+        from .contract import HASH
+        if (not isinstance(release_sha256, str) or not HASH.fullmatch(release_sha256)
+                or report.get('release_sha256') != release_sha256):
+            raise ParityError('Readiness report belongs to another task release')
+        required[required.index('dataset_release_797')] = 'dataset_release'
     missing = [key for key in required if report.get("checks", {}).get(key) is not True]
     if missing:
         raise ParityError("Training is not enabled; missing real checks: " + ", ".join(missing))
@@ -25,8 +31,8 @@ def require_ready(report, contract, *, process_enabled=True):
         raise ParityError("No durable parity evidence")
 
 
-def require_training_ready(report, contract, *, process_enabled=False):
-    require_ready(report, contract, process_enabled=process_enabled)
+def require_training_ready(report, contract, *, process_enabled=False, release_sha256=None):
+    require_ready(report, contract, process_enabled=process_enabled, release_sha256=release_sha256)
     missing = [key for key in TRAINING_REQUIRED if report.get('checks', {}).get(key) is not True]
     if missing:
         raise ParityError('Full RL still requires real hardware acceptance: ' + ', '.join(missing))

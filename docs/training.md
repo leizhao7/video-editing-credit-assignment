@@ -1,52 +1,157 @@
-# Training code
+# Training
 
-This draft contains the fixed-PRM training runtime and the changes used for the decayed-PRM run. The core algorithms are available for inspection, and the synthetic CPU tests pass. **A portable GPU training build has not yet been qualified.** The historical deployment launchers and private cloud resource identifiers are excluded.
+The repository now includes recovered training sources, the full SkyRL patch and environment lock, reviewed-task preparation, and public Modal image/service/launch adapters. **The new public GPU deployment has not completed an optimizer smoke run.** Source recovery, CPU checks and native tool-host builds are verified separately below.
 
 ## What can I run now?
 
-| Goal | Current support |
-| --- | --- |
-| Inspect GRPO/PRM losses and run synthetic CPU checks | Supported by the instructions below; no media, model, or cloud account is needed. |
-| Train on tasks from `video_editing.py` | Not connected yet. The trainer still requires the historical dataset identity; see [using your own tasks](#using-your-own-tasks). |
-| Launch the paper's GPU runs from this checkout | A public environment build, service deployment, and launch plan are still required. Files in `configs/` record settings; they are not executable presets. |
-| Run OPSD checks or training | Separate dependencies and remaining gaps are documented in [OPSD](opsd.md). The PRM CPU requirements do not provide an OPSD environment. |
+| Goal | Entry point | Verification |
+| --- | --- | --- |
+| GRPO/PRM algorithm checks | `training/scripts/run_cpu_tests.py` | Fixed and decay CPU suites |
+| Reviewed tasks → frozen trainer inputs | `training/prepare.py` | Real FFmpeg preparation, film holdout, input integrity and private-answer separation tests |
+| Rebuild the patched SkyRL sources | `training/environment/reconstruct.py` | All 22 files match recovered postimages; decay adds two checked changes |
+| Rebuild the native OpenCode tool host | `training/environment/images.py` | Fresh Linux CPU build and offline binary startup passed |
+| Deploy graders and inspect a training plan | `training/modal_train.py` | Configuration/import checked; complete public service deployment pending |
+| GPU optimization | `training/modal_train.py --action smoke` | Public 4-inference + 4-training GPU configuration supplied; GPU execution pending |
+| Formal training | `--action train` | Requires real, current-source qualification evidence; no receipt is fabricated |
 
-The retained supervisor uses four inference GPUs and four training GPUs. It does not provide a validated single-GPU or smaller smoke configuration. Installing an annotation CLI for data generation does not install the pinned OpenCode training harness, SkyRL, or vLLM.
+The launch adapter currently targets **Qwen3.5-9B on one H200:8 node**, with four independent inference engines and four FSDP policy/reference GPUs. It does not offer a validated single-GPU or Qwen3.6-35B-A3B preset. The larger model's reported results remain documented in [experiment notes](experiment_notes.md).
+
+## Using your own tasks
+
+First generate and review tasks with [the project workflow](workflow.md). Its `accepted_tasks.json` contains the accepted task directories. Prepare a new private release **outside this checkout**:
+
+```bash
+python3.12 training/prepare.py \
+  --accepted-tasks /path/to/project/accepted_tasks.json \
+  --destination /path/to/private/training-release \
+  --validation-film held-out-film-slug \
+  --prepare-inputs \
+  --reference-answers
+```
+
+Install `training/requirements-cpu.txt` and FFmpeg/FFprobe first. Music preparation also needs `GOOGLE_AI_STUDIO_API_KEY`; it caches labels for the original music. `--reference-answers` is needed only for reference-answer OPSD and prepares a separate teacher-only catalog. No answers are sent to student rollout workers.
+
+Supply each held-out film with another `--validation-film`. Every task from that film goes into validation. There must be at least one training task. Formal training and both OPSD profiles require a nonempty validation split. With no held-out film, a train-only release can be used for a bounded GRPO/PRM smoke check.
+
+The output contains:
+
+```text
+training-release/
+  release.json                 # SHA-bound task identities and source-file hashes
+  release_receipt.json
+  preparation_receipt.json
+  corpus/_tt_train|_tt_val/     # Trusted media, task definitions and verifier material
+  prepared/train|val/          # Public agent input bundles and frozen manifests
+  private/reference_answers.json  # Optional, teacher-only training catalog
+```
+
+Agent archives contain only `task.json`, `task_prompt.md`, `initial_state/`, and extracted `frames/`. Private verifiers, answers and `probe.json` stay in the trusted corpus. Existing prepared outputs are checked before reuse; source changes, corrupted inputs and symlinks fail closed. Use a new destination after changing the accepted task collection or film split.
+
+New releases have explicit SHA-256 identities. Omitting that identity still selects the historical release guard; historical runs are not silently admitted as a new collection. New validation counts are bound to the new manifest; the old default remains 81.
+
+## Configure and deploy
+
+Use a separate Python 3.12 environment with `modal==1.6.2`, authenticate to your own Modal workspace, and copy the template outside the repository:
+
+```bash
+cp training/cloud.example.toml /path/to/private/training.toml
+export EDITING_TRAINING_CONFIG=/path/to/private/training.toml
+python training/cloud.py validate --config "$EDITING_TRAINING_CONFIG"
+```
+
+Choose one profile in the TOML:
+
+| Profile | Training feedback |
+| --- | --- |
+| `grpo` | Outcome-only GRPO |
+| `prm_fixed` | Outcome reward plus fixed-weight online process rewards |
+| `prm_decay` | Outcome reward plus process rewards that decay to zero |
+| `opsd_reference` | Forward top-64 + tail KL, teacher conditioned on private reference answers |
+| `opsd_suggestions` | Same forward KL, teacher conditioned on turn suggestions |
+
+Use a distinct app name for each deployed profile. The release, models, logs and checkpoints use separate operator-owned volumes. The secret names are configuration inputs: the outcome judge needs `GOOGLE_AI_STUDIO_API_KEY`; PRM and turn-suggestion generation need a configured process secret with that variable. Console logging needs no W&B credential. The dataset, film media, model weights and credentials are never committed to GitHub.
+
+Upload the prepared release to a **new, empty** release volume, then build/deploy the source images:
+
+```bash
+python training/cloud.py upload \
+  --config "$EDITING_TRAINING_CONFIG" \
+  --release-directory /path/to/private/training-release
+python -m modal deploy training/modal_train.py
+```
+
+Deployment builds CUDA dependencies and downloads the pinned native host/ASR components. It does not submit an RL run or allocate the H200:8 training node. The GPU image rebuild itself remains unqualified; dependency or source mismatches stop the build rather than replacing a pin.
+
+Download the fixed model revision into your model volume, then inspect the command and run an import/source preflight:
+
+```bash
+python -m modal run training/modal_train.py --action prepare-model
+python -m modal run training/modal_train.py --action check --name smoke-001
+python -m modal run training/modal_train.py --action preflight --name smoke-001
+```
+
+These commands allocate CPU containers only. The plan binds the actual model tokenizer/template, source packages, tool host, sandbox image, prepared inputs and grader hashes. It creates fresh run identities rather than impersonating the paper's private deployments.
+
+## Start a bounded GPU smoke run
+
+The following command explicitly requests **eight H200 GPUs**, uses at most two optimizer updates, and submits a detached job:
+
+```bash
+python -m modal run training/modal_train.py \
+  --action smoke --name smoke-001 --steps 2
+```
+
+A GRPO/PRM smoke uses two tasks with two rollouts each and smaller microbatches; its results are infrastructure checks, not paper scores. OPSD preserves the required 16-task, one-rollout shape even during smoke checks. Model generation and RC/FC grading may call paid judge APIs. Run directories are immutable; use a new name for each attempt.
+
+A successful process exit is insufficient: the supervisor checks the requested completed-step checkpoint, preserves failures/logs and terminates only its own children. Checkpoints and traces remain on separate volumes.
+
+For formal training:
+
+```bash
+python -m modal run training/modal_train.py \
+  --action train --name experiment-001 --steps 50 \
+  --readiness /logs/qualification/current-runtime.json
+```
+
+The readiness file must contain **real evidence** for the current contract, dataset, grader, token/image/logprob/gradient parity, collectives, sandbox tools, optimizer step, all-engine weight sync, checkpoint resume and durable trajectories. A new release requires its own `release_sha256` and `checks.dataset_release`; historical `dataset_release_797` evidence is not accepted for another collection. The retained guards in `opencode_rl/readiness.py` and the training entrypoints enforce these requirements. PRM additionally requires its current all-rank gradient probe evidence. Import or CPU unit-test reports do not satisfy this gate.
+
+`--resume /checkpoints/<prior-run>/rolling/<checkpoint>` creates a new named continuation only when checkpoint receipts match the contract, prepared inputs, grader and objective. It cannot convert GRPO optimizer state into OPSD or migrate fixed PRM to decay by changing a path. The paper's decay run branched from the fixed run at update 20; the public decay profile from base is a new run, and does not claim to reproduce that historical optimizer migration.
+
+## Losses and runtime boundaries
+
+The trainer requires `loss_reduction=token_mean` and rejects extra batch-level advantage normalization. Outcome rewards are normalized across task siblings. Process scores are normalized among eligible siblings at the same ordinal turn, with the process coefficient applied **after** normalization. Prompt/tool gaps, masked actions and data-parallel padding do not enter policy loss.
+
+The fixed process coefficient is 0.5. Decay follows the consumer optimizer's global step: 0.5 through update 20, then `0.5 * (1 - (step - 20) / 10)^3`, reaching zero at update 30. It is cubic, not linear. Resume preserves the global step. The online process judge uses ten-turn windows, three votes and `gemini-3.8-flash`. Provider failures retain the existing infrastructure/exclusion handling rather than becoming a policy reward.
+
+The public grader reconstructs sources from the trusted, hash-checked corpus. CS/NS use task verifiers; RC/FC run evidence generation, blind/reference judging and aggregation. Judge credentials and private references are never mounted into rollout sandboxes. The grader checks source hashes again; unavailable grading is not a model zero. The shared ASR cache uses a separate Modal Volume in the public adapter.
+
+Historical Chinese model-facing environment prompts are retained. Translating them changes the model's inputs and needs a new source identity; the English task-generation interface does not silently rewrite them.
 
 ## Layout and provenance
 
-- `training/src/`: fixed-PRM runtime, including the append-only agent harness, native OpenCode tool host, GRPO/PRM advantage construction, causal packing and integrity checks.
-- `training/overlays/decay/`: eight changed files to apply over the fixed runtime. These preserve the decayed run's scheduling, transport, collection and persistence changes.
-- `training/patches/skyrl/`: the two native SkyRL startup changes as a patch, with required before/after hashes. Whole modified SkyRL files are not vendored.
-- `training/provenance.json`: per-file source/public hashes and public portability and source-only adaptations.
-- `training/third_party/`: preserved upstream licenses, package metadata and lockfiles. These are provenance artifacts, not a newly resolved training environment.
-- `training/tests/`: synthetic examples only; no film assets, task corpus or reference answers.
+- `training/src/`: GRPO/PRM runtime, append-only agent loop, native tool host and integrity guards.
+- `training/overlays/decay/`: eight decayed-PRM replacements; apply over the base runtime.
+- `training/overlays/opsd/`: differing files from the coherent reference-image harness; unchanged files are shared with the base layer. Do not mix its generator with the later PRM runtime.
+- `training/environment/`: actual training `uv.lock`, 277 installed-package version records, complete SkyRL patch, 21 `/patch` helpers, native host build and trusted service support.
+- `opsd/recipes/reference_answers/`: recovered reference-answer algorithm; `opsd/examples/train/answer_self_distillation/` contains the final turn-suggestion variant. See [OPSD](opsd.md).
+- `training/provenance.json` and `opsd/source_map.json`: historical source hashes and separately recorded public adaptations.
+- `training/third_party/`: preserved OpenCode/SkyRL licenses and upstream metadata.
 
-The internal archive matches all 114 files in the fixed runtime manifest and all 116 files in the decay runtime manifest. The public fixed source includes 113 files: the private historical launcher is excluded, and Azure transport configuration, offline calibration inputs, and provider-error compatibility are adapted as described below. The decay variant adds eight replacement files and the two-file SkyRL patch. This is a PRM runtime snapshot; it does not independently establish an exact final outcome-only GRPO snapshot. See `opsd/` for separately organized distillation code.
+The upstream pins are SkyRL `59d4daedee24c7b1a79d857bbf322a6d195c3792`, OpenCode `d7a6e1daaf2271bcd0b611fbb27d4956806e475a`, Bun 1.3.14 and vLLM 0.26.0. The recovered CUDA environment uses PyTorch 2.11.0+cu130, Transformers 5.8.0 and Ray 2.57.0. `installed-packages.txt` is an inspection record; the build uses the recovered lock and explicit runtime additions.
 
-## Code map
+The native host pins the already-resolved ghostty commit from the recovered lock before frozen installation. A separate bundle-metafile check requires that ghostty is absent from the tool-only binary. The new build has its own binary hash; it is not relabeled as the original binary.
 
-| Component | Main files |
-| --- | --- |
-| Append-only agent and native editing tools | [loop.py](../training/src/append_agent_rl/loop.py), [native/tool_host.ts](../training/src/append_agent_rl/native/tool_host.ts), [task_rollout.py](../training/src/append_agent_rl/task_rollout.py) |
-| Capture and validate exact model inputs/actions | [records.py](../training/src/opencode_rl/records.py), [causal_prefix.py](../training/src/opencode_rl/causal_prefix.py), [prefix_transport.py](../training/src/opencode_rl/prefix_transport.py) |
-| Construct outcome and turn-level process advantages | [training.py](../training/src/opencode_rl/training.py) |
-| Integrate with the native SkyRL trainer | [skyrl_adapter.py](../training/src/opencode_rl/skyrl_adapter.py), [prefix_backward.py](../training/src/opencode_rl/prefix_backward.py), [train_entrypoint.py](../training/src/append_agent_rl/train_entrypoint.py) |
-| Process judge protocol, evidence and collection | [judge_v5.py](../training/src/prm_v2/judge_v5.py), [live_packet_v5.py](../training/src/prm_v2/live_packet_v5.py), [live_judge_v5.py](../training/src/prm_v2/live_judge_v5.py) |
-| Runtime source and gradient checks | [prm_training_source.py](../training/src/prm_training_source.py), [gradient_source_guard_v5.py](../training/src/prm_v2/gradient_source_guard_v5.py) |
-| Optimizer-step decay schedule | [live_config_v5.py](../training/overlays/decay/prm_v2/live_config_v5.py) |
+To reconstruct source only in an external pinned SkyRL checkout:
 
-The trainer requires `loss_reduction=token_mean` and rejects additional batch-level advantage normalization. Outcome rewards are normalized across trajectories for a task. Process scores are normalized among eligible trajectories at the same ordinal turn; the process coefficient is applied **after** this normalization. Prompt/tool gaps, masked action tokens and data-parallel padding are excluded from policy loss. These checks remain in the public code.
+```bash
+python3.12 training/environment/reconstruct.py \
+  --skyrl-root /path/to/pinned/SkyRL --profile prm_fixed
+# --profile prm_decay additionally applies the two-file decay patch.
+```
 
-Fixed PRM uses a coefficient of 0.5. The decay overlay uses the consumer optimizer's global step: 0.5 through step 20, then `0.5 * (1 - (step - 20) / 10)^3`, reaching zero at step 30 and remaining zero. This is a cubic schedule, not a linear ramp. The global step is preserved on resume. The overlay stops collecting new process rewards at the zero boundary and preserves outcome learning.
-
-The recorded decay experiment branches from the fixed-PRM checkpoint after update 20, including optimizer state; it does not restart from the initial model. See [the recorded decay settings](../configs/prm_decay.json).
-
-The judge configuration records ten-turn windows, three votes and `gemini-3.8-flash`. A failed process assessment zeros only that process contribution, retaining the outcome reward. Provider availability and credentials are deployment inputs; importing the configuration does not call a provider.
+This does not install dependencies or certify GPU behavior. Both complete preimages and already-complete postimages are accepted; partial or corrupted trees are rejected. Runtime installation is restricted to an explicitly selected isolated Linux image build. The old two-file patch alone cannot rebuild the original base.
 
 ## Run the offline CPU tests
-
-From the repository root, create a Python 3.12 environment outside the checkout and install the CPU dependencies. Package installation uses the network; the tests themselves run offline. This requirements file covers tests only, has unpinned dependencies, and is not a GPU training lockfile.
 
 ```bash
 python3.12 -m venv "$HOME/.venvs/video-editing-training-cpu"
@@ -54,54 +159,10 @@ source "$HOME/.venvs/video-editing-training-cpu/bin/activate"
 python -m pip install -r training/requirements-cpu.txt
 export PYTHONDONTWRITEBYTECODE=1
 python training/scripts/run_cpu_tests.py
-# Or select one variant:
-python training/scripts/run_cpu_tests.py --variant decay
-# Source assembly, checkpoint identity, and grading-error compatibility:
 python -m unittest discover -s tests
+PYTHONPATH=opsd python -m pytest -q -p no:cacheprovider opsd/tests/test_paper_top64.py
 ```
 
-The runner verifies the public hashes, assembles each variant in a separate temporary directory, disables outbound socket connections, hides CUDA devices and runs each variant in its own process. It needs no credentials, Modal account, media files or model checkpoints. Directly running all test directories in one Python process can mix fixed and decay imports; use this runner.
+The algorithm runner verifies source hashes, assembles variants in separate temporary directories, disables outbound sockets and hides CUDA devices. CPU requirements are test dependencies, not the GPU environment lock. FFmpeg/FFprobe enable the real synthetic-media preparation regression.
 
-The assembly helper validates manifest paths, duplicate entries, file hashes and symlinks before creating a runtime. Decay files override the base layer regardless of manifest ordering. It writes the bytes that were verified, preserves executable permissions, refuses existing destinations and removes its new destination if writing fails. The dependency-free release-tool tests in `tests/test_release_tools.py` cover these boundaries and patch verification. These helpers do not alter training losses or reward calculations.
-
-Revalidated on 2026-10-21 in a fresh CPU environment: **68 fixed tests plus 3 subtests, and 24 decay tests passed**, with both variant exit codes equal to zero. This check used Python 3.12.14, PyTorch 2.14.1, pytest 9.1.1, NumPy 2.5.4, and SciPy 1.18.1. These are test-environment versions, not a recovered production lockfile. Coverage includes judge protocol validation, synthetic evidence serialization, causal packing, original-action gradients, advantage decomposition, process coefficients after normalization, padding masks, restart step handling and the zero-weight boundary. These tests do not measure judge quality, model performance, native GPU numerical parity or a complete training run.
-
-To inspect an assembled CPU runtime without starting anything:
-
-```bash
-python training/scripts/materialize.py --variant decay --destination /tmp/editing-decay-runtime
-```
-
-The destination must not already exist. This command does not install or patch SkyRL, create cloud resources or satisfy the historical training qualification checks.
-
-## Using your own tasks
-
-`accepted_tasks.json` from the project workflow is not yet a trainer input. [task_bundle.py](../training/src/opencode_rl/task_bundle.py) binds preparation to the original dataset release SHA-256, [train_dataset.py](../training/src/opencode_rl/train_dataset.py) enforces that identity and task ordering, and [train_entrypoint.py](../training/src/opencode_rl/train_entrypoint.py) requires 81 validation tasks when validation is enabled. Changing dataset paths alone cannot admit a new collection.
-
-A public adapter must turn reviewed tasks into a new, validated release manifest and prepared bundles, separate public task inputs from private scoring material, and bind their identities into a new training plan. The original checks must remain intact for historical runs. The `prm_v2/dataset.py` adapter described below prepares offline judge-calibration inputs; it does not connect generated tasks to the RL trainer.
-
-Some retained training environment/tool prompts are Chinese, including those in `runtime.py`, `mcp_tools.py`, and `submission_policy.py`. They are model inputs, not just interface text. An English training prompt set needs a new prompt/source identity and validation; the English data-generation interface does not change these historical training inputs.
-
-## Dependencies and configuration changes
-
-The recorded upstream versions are OpenCode `d7a6e1daaf2271bcd0b611fbb27d4956806e475a`, SkyRL `59d4daedee24c7b1a79d857bbf322a6d195c3792`, vLLM `0.26.0` / `568afb3a13806beb53bb2e6bd518269357b237c0`, and Bun `1.3.14`. SkyRL and OpenCode licenses are preserved. The OpenCode lockfile contains a historical floating `ghostty-web` dependency whose frozen installation still needs resolution; the saved lockfile is not evidence of a successful fresh build.
-
-In the public fixed copy, `azure_gpt55_transport.py` is adapted: an account-specific endpoint and deployment default are replaced with required configuration. Set `AZURE_OPENAI_CHAT_COMPLETIONS_URL` and `AZURE_OPENAI_DEPLOYMENT` before importing the Azure evaluation transport. The endpoint can alternatively be passed explicitly to its constructor. Deployment metadata uses the same configured value as the request. Sampling checks and request/context mapping are unchanged; no Azure request is made by the CPU test suite. The original and public hashes are recorded in `training/provenance.json`.
-
-The offline calibration adapter `prm_v2/dataset.py` requires explicit `--source` and `--output` arguments. Optional `--challenge STAGE=TASK_ID` arguments replace corpus-specific task IDs. Sources, outputs and task choices belong to the operator; no original rollout archive or fixed challenge list is bundled. The ranking calculation is unchanged. Synthetic test fixtures use generic tool-markup descriptions, and generated test reports remain outside this repository.
-
-Both grading-client variants recognize provider-refusal errors from the current English evaluation adapter as well as their historical Chinese forms. This compatibility change preserves terminal refusal handling and does not convert a provider failure into a policy score. Original and public source identities remain separately recorded.
-
-Gemini transports read `GOOGLE_AI_STUDIO_API_KEY`. Cloud image, application, volume, checkpoint and dataset locations are supplied by a training plan. No working private plan is included. Container paths such as `/opt/SkyRL` describe the original runtime contract and remain in source; they are not a portable installation recipe.
-
-The SkyRL patch applies only to the already-qualified parent files identified by its manifest, not automatically to a pristine checkout of the upstream commit. Before using it, run `python training/scripts/verify_skyrl_patch.py before <SkyRL-root>`; after applying the patch, use the same command with `after`. A hash mismatch must be resolved by reconstructing the intended parent build, not by removing or updating the guard to match an unrelated file.
-
-## Remaining build work
-
-1. Reconstruct the complete dependency/image build and public deployment wrapper, including media tools, model files and task-bundle locations; resolve the OpenCode frozen-build issue.
-2. Requalify source, tokenizer/template, tools, numerical parity and gradient checks for the new build and issue a matching contract. The historical source guards still require the excluded launcher and original hashes; they intentionally do not certify this adapted public copy.
-3. Connect the released grading components under `evaluation/` to a public service wrapper and plan. Their core sources are present; the private historical Modal service wrapper is not part of the portable recipe.
-4. Add the reviewed-task adapter and public dataset/plan validation described above, with explicit GPU allocation and model presets.
-5. Complete dependency notices/licenses and GPU smoke/numerical tests, then execute an end-to-end training and evaluation run before claiming full reproducibility.
-
-The dataset and film assets are not distributed. The data-construction code documents how task inputs are produced. Evaluation repetitions are separate from training seeds; four evaluation repetitions must not be presented as four independent training runs.
+On 2026-10-24, source reconstruction and eight new release/launch-boundary tests passed. The full root suite passed 46 tests; GRPO/PRM passed 68 fixed tests plus 3 subtests and 24 decay tests, and the top-64 KL check passed 3 tests. The restored demonstrator quota/retry helpers passed 38 support tests; one additional client test requires full SkyRL fixtures/dependencies and was excluded from that isolated helper run. The fresh native host built from the pinned source and frozen dependencies, reported 2,767 bundle inputs with no ghostty dependency, and started in a network-blocked CPU sandbox. No GPU was allocated. These checks do not establish full training, all-rank numerical parity, service-level grading integration or benchmark reproduction. See [release status](release_status.md) for verification limits.

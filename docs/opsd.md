@@ -1,6 +1,6 @@
 # OPSD
 
-The OPSD draft contains the training objective, teacher-input construction, sparse target transport, selected runtime adapters, and CPU tests. A complete public training environment and launcher are still being assembled. No dataset, reference-answer catalog, film/audio material, cached teacher response, model weight, or cloud credential is included.
+Both OPSD recipes, their coherent source runtime, teacher-input construction, sparse targets, environment sources and public Modal launch adapters are included. GPU execution of the public build remains unqualified; see the [training commands](training.md#configure-and-deploy). No dataset, reference-answer catalog, film/audio material, cached teacher response, model weight, or cloud credential is included.
 
 ## Paper settings
 
@@ -13,7 +13,7 @@ Both experiments use a frozen initial Qwen3.5-9B teacher, forward KL on the teac
 
 `topk.py`, `topk_worker.py`, `topk_trainer.py`, `trainer.py`, `teacher_inputs.py`, and `turn_teacher.py` are unchanged from the retained source snapshot. They retain full-vocabulary softmax normalization rather than renormalizing only the top-64 entries. The aggregate tail does not preserve relative preferences within that tail.
 
-The original API also supports reverse KL and contains a legacy sampled objective for comparison. A paper configuration must explicitly set `direction="forward"`, `top_k=64`, `mode="train"`, and `steps=50`; do not rely on the original API defaults. The n8 and turn-reference experiments are excluded.
+The original recipe API also supports reverse KL and contains a legacy sampled objective for comparison. The public launcher explicitly selects forward KL and top-64 targets by default; formal paper settings use `--action train --steps 50`. The underlying recipe API retains its original defaults, so direct callers must specify `direction="forward"`. The n8 and turn-reference experiments are excluded.
 
 ## Source provenance
 
@@ -24,7 +24,7 @@ The original API also supports reverse KL and contains a legacy sampled objectiv
 | OpenCode | `d7a6e1daaf2271bcd0b611fbb27d4956806e475a` |
 | Qwen3.5-9B | `c202236235762e1c871ad0ccb60c8ee5ba337b9a` |
 
-The retained final turn-suggestion recipe has SHA256 `aa076cdab138da59f584e1fb3edc9fc485fca81e54b7b792bbccb39881df0cab`. The original reference-answer recipe has SHA256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`; that complete historical snapshot has not yet been recovered. The current code contains reference-answer mode, but it is not represented as the byte-identical original answer experiment snapshot.
+The retained final turn-suggestion recipe has SHA256 `aa076cdab138da59f584e1fb3edc9fc485fca81e54b7b792bbccb39881df0cab`. The original reference-answer recipe was recovered from its historical training image on 2026-10-24. All 17 files reproduce the recorded aggregate SHA256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`. Its algorithm is published separately under `opsd/recipes/reference_answers/`. The private deployment file is replaced by the common public launcher, and the supervisor also accepts the explicitly selected source profile; the public recipe therefore has a new hash.
 
 The public draft has a new source hash because deployment coupling and test fixture paths were changed. `opsd/source_map.json` records original and public SHA256 values and the exact change category for every copied file. No historical hash is reassigned to this draft.
 
@@ -32,18 +32,11 @@ The original turn-suggestion run used reviewed transport and admission repairs a
 
 ## Configuration and deployment boundary
 
-`deployment.py` is omitted because it embeds historical run paths, a private catalog checksum, and cloud deployment metadata. No included module imports it. `launch.new_plan` and `launch.training_command` remain plan/command construction functions; they require a correctly prepared harness configuration and do not constitute a standalone launcher.
+The private `deployment.py` files are replaced by `training/launcher.py`, `training/modal_train.py` and `training/cloud.example.toml`. The profiles are `opsd_reference` and `opsd_suggestions`. Both use the coherent recovered OPSD harness overlay, fixed initial teacher, one rollout per task, and fresh source-bound contracts. The public supervisor accepts `runtime_profile="source"`; historical frozen-profile checks are retained and are not waived or impersonated.
 
-Application names can be supplied through:
+Prepare reviewed tasks with `training/prepare.py --prepare-inputs`. Reference-answer OPSD also requires `--reference-answers`; its catalog stays under the private release directory. Turn suggestions use the same app's `generate` service and a single shared `DemonstrationQuota` class. `demonstrator_tokens_per_minute` is an explicit operator setting; request validation, CountTokens admission, raw response retention and bounded training-side retries are preserved. The new deployment does not assume the authors' API quota or credentials.
 
-- `OPSD_DEMONSTRATOR_APP`: the user's demonstration service application; the neutral default is `opsd-turn-demonstrator`.
-- `OPSD_QUOTA_APP`: the user's quota service application; the neutral default is `opsd-demo-quota`.
-
-These variables change service routing only. The Gemini prompt/schema, teacher history boundary, model identity, retry limits, and quota arithmetic are preserved. No service is created by the CPU test runner. The service core receives authentication headers from its caller; credentials must stay outside the repository.
-
-For a public build, restore the matching `append_agent_rl`, `opencode_rl`, and `/patch` sources and the production source preimages required by the hash-checked installer. The included seven adapter files are a subset, not a replacement for that complete dependency tree. `install.py` expects the documented container layout (`/opt/SkyRL`, `/patch`, and `/opt` receipts), so a future public Dockerfile must create that layout or expose a separately reviewed path configuration. A private cloud image identifier is not a build specification.
-
-A new public CLI should take model, prepared-task, private-catalog, run-output, and checkpoint paths from user configuration, construct fresh source-bound identities, and select the two paper presets explicitly. Optimizer, sampling, microbatch, staleness, tool, and validation settings must be recovered from the recorded configuration; they must not be guessed from later experiments. The exact CUDA/PyTorch/Ray training dependency manifest is still missing. Keep upstream license/notice files when assembling the full build.
+The recovered `training/environment/uv.lock`, installed package record, complete SkyRL patch and 21 dependency/runtime helpers supply the previously missing environment sources. The OPSD installer adds its checked validity-only admission and top-K worker/head paths on top of that reconstructed base. No private image identifier is used as a public build recipe. The older files in `opsd/adapters/frozen_v15/` remain historical utilities; the public source profile does not depend on an incomplete frozen adapter tree.
 
 Users must prepare their own authorized media and task artifacts. Exact score replication requires the original evaluation data, which is not distributed.
 

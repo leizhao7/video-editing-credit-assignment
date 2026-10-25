@@ -6,7 +6,7 @@ This is a source-release preparation draft. No dataset or original task instance
 
 - Fixed PRM: all 114 files in the recorded final process-source manifest were recovered with matching SHA-256 hashes in the internal snapshot.
 - Decayed PRM: all 116 files in the final process-source manifest were recovered or exactly reconstructed. Two SkyRL startup files were reconstructed using the preserved, hash-checked transformation, and their output hashes match the final run. Portable copies and patches are kept separate from the original snapshots.
-- OPSD: the final turn-suggestion recipe matches its recorded source identity. Its original 20-file snapshot is retained internally; the public draft excludes the private deployment module and includes portable configuration and selected CPU tests. This is not the original reference-answer recipe.
+- OPSD: the final turn-suggestion recipe matches its recorded source identity. Its original 20-file snapshot is retained internally; the public draft excludes the private deployment module and includes portable configuration and selected CPU tests. The reference-answer recipe was recovered separately on 2026-10-24; see the training recovery record below.
 - Outcome evaluation: the recovered fixed-PRM grader modules match the recorded source hashes; public portability and failure-handling adaptations have separate hashes. `evaluation/task_pipeline.py` now connects private constructed tasks to rubric preparation, submission checks, evidence extraction and scoring. The decay changes remain in a separate overlay; the local entry point is not the historical remote service.
 - Quality review and sampling: a portable semantic-audit command binds the public task, media, runtime tools and private grading evidence, then writes accepted task lists. The recovered deterministic sampler exactly reproduces the final 797 task IDs and film allocations from the original private 925-task parent. It preserves the existing film splits and does not rank tasks by policy rewards. The 128 sampled-out tasks are not quality rejections. Historical author repairs remain distinct from new model assessments.
 
@@ -46,15 +46,24 @@ On 2026-10-21, the task-construction and main scoring interfaces were translated
 
 All 406 regression tests passed (296 construction/workflow and 110 scoring/release tests). Seven real local CLI checks with synthetic media produced English output and resumed the probe without repeating it. A synthetic report rendered successfully, its ten filters ran, and both English and historical vocabulary headings parsed correctly. Tool schemas/quotas and scoring calculations were checked against the preceding revision; the rubric aggregators matched on 1,728 combinations of missing and 0–4 scores. No annotation, quality-audit, or scoring provider was called during this language pass, and no complete-film run was repeated. The workflow guide now includes an overview of each stage and distinguishes model-based preprocessing, agent annotation, programmatic assembly, quality filtering, and outcome scoring.
 
+## Training source recovery on 2026-10-24
+
+A source-only extraction from historical Modal images recovered the original reference-answer OPSD recipe, all 21 `/patch` helpers, the actual training dependency lock and 277 installed-package versions. The original 17-file reference recipe exactly matches `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`; its private deployment metadata stays out of the public tree. The public replacement has a new source identity.
+
+A complete 22-file SkyRL patch now reconstructs the recovered parent from its pinned upstream commit. Applying it, reapplying it, applying the two-file decay extension and reapplying that extension all produced the expected hashes. A deliberately corrupted file was rejected. Coherent OPSD harness differences are preserved in a separate overlay rather than mixed into the later PRM runtime.
+
+Public adapters now provide image construction, frozen reviewed-task release preparation, model preparation, trusted grading services, plan inspection, source/import preflight, bounded smoke submission and guarded formal training. Task-release tests use synthetic video through actual FFmpeg extraction and archive preparation, check film holdout and SHA binding, exclude private scoring material from agent archives, and reject changed inputs. Eight new boundary tests passed. The root suite passed 46 tests; algorithm checks passed 68 fixed tests plus 3 subtests, 24 decay tests and 3 top-64 KL tests.
+
+A fresh Linux CPU image installed the pinned Bun/OpenCode sources with frozen dependencies, built the native tool host and started it in a network-blocked sandbox. The build reported 2,767 input modules, no ghostty dependency, and binary SHA256 `3c887994fb1380d8b9e7372fdd8a6bd2c867c293a05e0fb6b45c654af01c2fff`. The retained official OpenCode fallback archive also passed its checksum. No GPU, dataset volume, private catalog or credential was attached to this build check.
+
+These checks do not establish a fresh GPU environment build, all-rank numerical parity, remote grading integration, optimizer/checkpoint behavior or benchmark reproduction. The public launcher currently covers Qwen3.5-9B with four inference plus four training GPUs. It does not certify the archived frozen adapters or provide a validated 35B preset.
+
 ## Work still needed before claiming full reproducibility
 
-1. Restore the original reference-answer OPSD recipe with aggregate SHA-256 `43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018`. The final turn-suggestion recipe must not be silently substituted.
-2. Recover the complete frozen environment build/install records, including local SkyRL/vLLM patches and the OPSD installation preimages. Commit pins alone do not reconstruct a modified environment.
-3. Complete distributed training, sandbox, remote grader and storage service entry points with operator-supplied paths and credentials. The local task-scoring CLI is available; the distributed service integration remains separate. Preserve source and rollout consistency checks while replacing historical private cloud identifiers.
-4. The deterministic 925-to-797 sampling is recovered, but the earlier semantic audit and task-by-task author repair history is not an automated replay. New audits can recommend repairs without applying them. A fresh model audit is not expected to recreate the historical candidate set.
-5. Recover the earlier outcome-only grader media adapter and document differences between evaluation versions. Verify the complete grading pipeline and its aggregation against the recorded outputs before using it to regenerate tables.
-6. Complete offline integration and then an explicitly configured small GPU smoke run on independently supplied or synthetic media. Passing CPU unit tests does not establish that the distributed training stack works.
-7. Add the formal paper link when available. Project-authored code is licensed under [MIT](../LICENSE); third-party components retain their original licenses. The confirmed author order and contact information are recorded in `README.md` and `CITATION.cff`.
+1. Complete the public CUDA image build and service integration, then run the explicit bounded eight-GPU smoke and retain actual token/image/logprob/gradient, synchronization and checkpoint evidence. CPU/source/native-build checks cannot satisfy the formal training gate.
+2. Verify the full scoring-version and aggregation history against recorded outputs before regenerating paper tables. The new service is source-bound but has not replayed the original benchmark.
+3. The deterministic 925-to-797 sampling is recovered, but the earlier semantic audit and task-by-task author repair history is not an automated replay. A fresh model audit is not expected to recreate the historical candidate set.
+4. Add the formal paper link when available. Project-authored code is MIT; third-party components retain their original licenses.
 
 ## Publication boundary
 

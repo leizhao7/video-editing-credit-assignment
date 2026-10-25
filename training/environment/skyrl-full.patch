@@ -1,0 +1,1145 @@
+--- a/skyrl/backends/skyrl_train/distributed/fsdp_utils.py
++++ b/skyrl/backends/skyrl_train/distributed/fsdp_utils.py
+@@ -245,8 +245,29 @@
+         # prevent generators from being exhausted
+         parameters = list(parameters)
+     grads = [p.grad for p in parameters if p.grad is not None]
+-    total_norm = _get_total_norm(grads, norm_type, error_if_nonfinite, foreach)
+-    total_norm = total_norm.to(torch.cuda.current_device(), non_blocking=True)
++    # S12_CLIP_CPU_FIX：见 /patch/clip_grad_cpu_fix.py。cpu_offload 下梯度的本地
++    # 分片在 CPU 上，而 _get_total_norm 最后一步（clip_grad.py:106）要对
++    # 一串 Partial DTensor 做归约 —— 那一步 all_reduce，CPU 张量撞 CUDA mesh。
++    # 逐个梯度的 vector_norm 只在本地算不通信，所以把**标量**范数搬到 GPU
++    # 再做最后一步就够，梯度本体（13.5GB/rank）一个都不用搬。
++    _s12_dev = torch.cuda.current_device()
++
++    def _s12_on_cpu(t):
++        _lt = getattr(t, '_local_tensor', None)
++        return (_lt if _lt is not None else t).device.type == 'cpu'
++
++    if grads and any(_s12_on_cpu(g) for g in grads):
++        _s12_norms = [torch.linalg.vector_norm(g, norm_type).to(_s12_dev)
++                      for g in grads]
++        total_norm = torch.linalg.vector_norm(torch.stack(_s12_norms), norm_type)
++        if error_if_nonfinite and torch.logical_or(total_norm.isnan(),
++                                                   total_norm.isinf()):
++            raise RuntimeError(
++                f'The total norm of order {norm_type} for gradients from '
++                '`parameters` is non-finite, so it cannot be clipped.')
++    else:
++        total_norm = _get_total_norm(grads, norm_type, error_if_nonfinite, foreach)
++    total_norm = total_norm.to(_s12_dev, non_blocking=True)
+     _clip_grads_with_norm_(parameters, max_norm, total_norm, foreach)
+     return total_norm
+ 
+--- a/skyrl/backends/skyrl_train/distributed/megatron/fused_linear_logprob_triton.py
++++ b/skyrl/backends/skyrl_train/distributed/megatron/fused_linear_logprob_triton.py
+@@ -471,7 +471,7 @@
+         global_logprobs_scalar = tl.sum(global_logprobs, axis=0)
+         tl.atomic_add(global_logprobs_scalar_ptr, global_logprobs_scalar)
+     elif reduction == 2:
+-        global_logprobs_scalar = tl.sum(global_logprobs, axis=0) / num_tokens.to(tl.float32)
++        global_logprobs_scalar = tl.sum(global_logprobs, axis=0) / num_tokens
+         tl.atomic_add(global_logprobs_scalar_ptr, global_logprobs_scalar)
+ 
+ 
+@@ -593,7 +593,7 @@
+         logprobs_scalar = tl.sum(logprobs, axis=0)
+         tl.atomic_add(logprobs_scalar_ptr, logprobs_scalar)
+     elif reduction == 2:
+-        logprobs_scalar = tl.sum(logprobs, axis=0) / num_tokens.to(tl.float32)
++        logprobs_scalar = tl.sum(logprobs, axis=0) / num_tokens
+         tl.atomic_add(logprobs_scalar_ptr, logprobs_scalar)
+ 
+ 
+@@ -900,7 +900,7 @@
+         d_logprobs = tl.load(d_logprobs_ptr)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     else:  # mean
+-        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens.to(tl.float32))
++        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens * 1.0)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     d_logprobs = -1 * d_logprobs
+ 
+@@ -1061,7 +1061,7 @@
+         d_logprobs = tl.load(d_logprobs_ptr)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     else:
+-        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens.to(tl.float32))
++        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens * 1.0)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     d_logprobs = -1 * d_logprobs
+ 
+@@ -1190,7 +1190,7 @@
+             d_logprobs = tl.load(d_logprobs_ptr)
+             d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+         else:
+-            d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens.to(tl.float32))
++            d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens * 1.0)
+             d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+         d_logprobs = -1 * d_logprobs
+ 
+@@ -1323,7 +1323,7 @@
+         d_logprobs = tl.load(d_logprobs_ptr)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     else:  # mean
+-        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens.to(tl.float32))
++        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens * 1.0)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     d_logprobs = -1 * d_logprobs
+ 
+@@ -1473,7 +1473,7 @@
+         d_logprobs = tl.load(d_logprobs_ptr)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     else:
+-        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens.to(tl.float32))
++        d_logprobs = tl.fdiv(tl.load(d_logprobs_ptr), num_tokens * 1.0)
+         d_logprobs = tl.broadcast_to(d_logprobs, (BLOCK_SIZE_M,))
+     d_logprobs = -1 * d_logprobs
+     entropy_b = tl.load(entropy_b_ptr + offs_am * stride_entropy_b, mask=offs_am < num_tokens, other=0.0)
+--- a/skyrl/backends/skyrl_train/inference_servers/common.py
++++ b/skyrl/backends/skyrl_train/inference_servers/common.py
+@@ -48,7 +48,7 @@
+ 
+     @property
+     def url(self) -> str:
+-        return f"http://{self.ip}:{self.port}"
++        return f"http://{_sk_hosthdr(self.ip)}:{self.port}"
+ 
+ 
+ def get_node_ip() -> str:
+@@ -114,9 +114,9 @@
+     sock: socket.socket | None = None
+     while port < end_port:
+         try:
+-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
++            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+-            sock.bind(("", port))
++            sock.bind(("::", port))
+             sock.listen(1)
+             return port, sock
+         except OSError:
+@@ -178,3 +178,11 @@
+     """Ports vLLM will probe for the TCPStore, given a ``VLLM_DP_MASTER_PORT``."""
+     window_start = dp_master_port + DP_TCPSTORE_PROBE_OFFSET
+     return range(window_start, window_start + DP_TCPSTORE_WINDOW)
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
+--- a/skyrl/backends/skyrl_train/inference_servers/render_server.py
++++ b/skyrl/backends/skyrl_train/inference_servers/render_server.py
+@@ -89,7 +89,7 @@
+         # to "auto" (platform inference).
+         parser = make_arg_parser(FlexibleArgumentParser())
+         args = parser.parse_args(
+-            ["--model", model_path, "--host", _RENDER_HOST, "--port", str(port), "--trust-remote-code"]
++            ["--model", model_path, "--host", _RENDER_HOST, "--port", str(port), "--trust-remote-code", "--allowed-local-media-path", "/tmp"]
+         )
+ 
+         listen_address, sock = setup_server(args, reuse_port=False)
+@@ -263,3 +263,11 @@
+             await self._client.aclose()
+         self._client = None
+         self._client_loop = None
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
+--- a/skyrl/backends/skyrl_train/inference_servers/utils.py
++++ b/skyrl/backends/skyrl_train/inference_servers/utils.py
+@@ -255,7 +255,7 @@
+     port = get_open_port()
+ 
+     kwargs: Dict[str, Any] = dict(
+-        host="0.0.0.0",
++        host="::",
+         port=port,
+         policy="consistent_hash",
+     )
+--- a/skyrl/backends/skyrl_train/inference_servers/vllm_router.py
++++ b/skyrl/backends/skyrl_train/inference_servers/vllm_router.py
+@@ -121,7 +121,7 @@
+         self._process.start()
+ 
+         ip = get_node_ip()
+-        router_url = f"http://{ip}:{self._router_args.port}"
++        router_url = f"http://{_sk_hosthdr(ip)}:{self._router_args.port}"
+         self._wait_until_healthy(router_url)
+ 
+         is_pd = self._router_args.vllm_pd_disaggregation or self._router_args.pd_disaggregation
+@@ -173,3 +173,11 @@
+             logger.warning("VLLMRouter did not exit after SIGTERM, sending SIGKILL")
+             self._process.kill()
+             self._process.join()
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
+--- a/skyrl/backends/skyrl_train/inference_servers/vllm_server_actor.py
++++ b/skyrl/backends/skyrl_train/inference_servers/vllm_server_actor.py
+@@ -166,7 +166,7 @@
+         self._cli_args.distributed_executor_backend = distributed_executor_backend
+ 
+         # Update args with our assigned host/port
+-        self._cli_args.host = "0.0.0.0"
++        self._cli_args.host = "::"
+         self._cli_args.port = self._port
+ 
+         # PD disaggregation: setup NIXL side channel for KV transfer
+@@ -295,7 +295,7 @@
+ 
+     async def _wait_until_healthy(self, timeout: float = SKYRL_WAIT_UNTIL_INFERENCE_SERVER_HEALTHY_TIMEOUT_S) -> None:
+         """Poll the /health endpoint until it responds OK."""
+-        url = f"http://{self._ip}:{self._port}/health"
++        url = f"http://{_sk_hosthdr(self._ip)}:{self._port}/health"
+         start_time = time.time()
+ 
+         async with httpx.AsyncClient() as client:
+@@ -628,7 +628,7 @@
+ 
+     cli_args = _build_standalone_cli_args(argv)
+     if not cli_args.host:
+-        cli_args.host = "0.0.0.0"
++        cli_args.host = "::"
+     set_ulimit()
+     logger.info(f"Starting standalone SkyRL vLLM server on {cli_args.host}:{cli_args.port}")
+     asyncio.run(_build_and_serve_vllm_server(cli_args, enable_ray_prometheus_stats=False))
+@@ -636,3 +636,27 @@
+ 
+ if __name__ == "__main__":
+     main()
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
+--- a/skyrl/backends/skyrl_train/training_batch.py
++++ b/skyrl/backends/skyrl_train/training_batch.py
+@@ -526,7 +526,8 @@
+ 
+         if isinstance(tensor, TensorList):
+             assert len(tensor) > 0, f"Cannot pad empty TensorList field {key!r}"
+-            padding = TensorList([tensor[0].clone() for _ in range(pad_size)])
++            padding = TensorList([tensor[0].new_empty((0, 2)) if key == "ocrl_spans"
++                                  else tensor[0].clone() for _ in range(pad_size)])
+             new_tensors[key] = TensorList.cat([tensor, padding])
+         elif key == "loss_mask":
+             # Ensures that padding tensors don't count towards the loss
+@@ -568,3 +569,5 @@
+     new_batch.metadata = new_metadata
+ 
+     return new_batch
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/backends/skyrl_train/utils/off_policy_correction_utils.py
++++ b/skyrl/backends/skyrl_train/utils/off_policy_correction_utils.py
+@@ -306,10 +306,20 @@
+ 
+     is_ratio = safe_exp_delta(old_log_probs - rollout_logprobs, clip=20.0, out_dtype=old_log_probs.dtype)
+     metrics = {}
+-    metrics["is_ratio_mean"] = masked_mean(is_ratio, loss_mask).mean().detach().item()
+-    metrics["is_ratio_std"] = (is_ratio * loss_mask).std().detach().item()
+-    metrics["is_ratio_max"] = (is_ratio * loss_mask).max().detach().item()
+-    metrics["is_ratio_min"] = (is_ratio * loss_mask).min().detach().item()
++    # S12_OFFPOLICY_ACTIVE_TOKEN_METRICS: multiplying by the mask inserts
++    # padding zeros, which forces min=0 and distorts std.  Select active tokens
++    # exactly; these are diagnostics only and do not change the correction.
++    active_is_ratio = is_ratio[loss_mask.bool()]
++    if active_is_ratio.numel() > 0:
++        metrics["is_ratio_mean"] = active_is_ratio.mean().detach().item()
++        metrics["is_ratio_std"] = active_is_ratio.std(unbiased=False).detach().item()
++        metrics["is_ratio_max"] = active_is_ratio.max().detach().item()
++        metrics["is_ratio_min"] = active_is_ratio.min().detach().item()
++    else:
++        metrics["is_ratio_mean"] = 0.0
++        metrics["is_ratio_std"] = 0.0
++        metrics["is_ratio_max"] = 0.0
++        metrics["is_ratio_min"] = 0.0
+ 
+     # Optionally apply outlier token mask if enabled
+     if apply_outlier_token_mask:
+--- a/skyrl/backends/skyrl_train/utils/ppo_utils.py
++++ b/skyrl/backends/skyrl_train/utils/ppo_utils.py
+@@ -1347,6 +1347,7 @@
+     index: np.ndarray,
+     epsilon: float = 1e-6,
+     grpo_norm_by_std: bool = True,
++    loss_mask: Optional[torch.Tensor] = None,
+     **kwargs,
+ ) -> tuple[torch.Tensor, torch.Tensor]:
+     """
+@@ -1371,20 +1372,35 @@
+     id2std = {}
+ 
+     with torch.no_grad():
++        # S12_GRPO_MASKED_ADVANTAGE: all-zero loss-mask rows are persisted
++        # diagnostics, not members of the GRPO comparison population.
+         bsz = scores.shape[0]
++        live_sequences = (
++            torch.ones(bsz, dtype=torch.bool, device=scores.device)
++            if loss_mask is None
++            else loss_mask.to(scores.device).sum(dim=-1) > 0
++        )
+         for i in range(bsz):
+-            id2score[index[i]].append(scores[i])
+-        for idx in id2score:
+-            if len(id2score[idx]) == 1:
+-                id2mean[idx] = torch.tensor(0.0)
+-                id2std[idx] = torch.tensor(1.0)
+-            elif len(id2score[idx]) > 1:
+-                id2mean[idx] = torch.mean(torch.tensor(id2score[idx]))
+-                id2std[idx] = torch.std(torch.tensor([id2score[idx]]))
++            if bool(live_sequences[i].item()):
++                id2score[index[i]].append(scores[i])
++        all_indices = index.tolist() if hasattr(index, "tolist") else list(index)
++        for idx in set(all_indices):
++            live_scores = id2score.get(idx, [])
++            if len(live_scores) == 0:
++                id2mean[idx] = scores.new_tensor(0.0)
++                id2std[idx] = scores.new_tensor(1.0)
++            elif len(live_scores) == 1:
++                # A singleton has no group-relative signal.
++                id2mean[idx] = live_scores[0]
++                id2std[idx] = scores.new_tensor(1.0)
+             else:
+-                raise ValueError(f"no score in prompt index: {idx}")
++                stacked = torch.stack(live_scores)
++                id2mean[idx] = torch.mean(stacked)
++                id2std[idx] = torch.std(stacked)
+         for i in range(bsz):
+-            if grpo_norm_by_std:
++            if not bool(live_sequences[i].item()):
++                scores[i] = 0.0
++            elif grpo_norm_by_std:
+                 scores[i] = (scores[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
+             else:
+                 scores[i] = scores[i] - id2mean[index[i]]
+--- a/skyrl/backends/skyrl_train/weight_sync/broadcast_strategy.py
++++ b/skyrl/backends/skyrl_train/weight_sync/broadcast_strategy.py
+@@ -156,31 +156,88 @@
+         # TODO: switch back to update_named_weights once the upstream vLLM
+         # patch lands (vllm-project/vllm weight-sync-fix).
+         # https://github.com/vllm-project/vllm/pull/42577
+-        if torch.distributed.get_rank() == 0:
+-            from vllm.distributed.weight_transfer.nccl_engine import (
+-                NCCLWeightTransferEngine,
+-            )
+-
+-            await self._inference_client.start_weight_update(is_checkpoint_format=True)
+-
+-            update_info = {**weight_metadata, "packed": True}
+-            update_task = asyncio.create_task(self._inference_client.update_weights_nccl(update_info))
+-
+-            # Run in thread so the HTTP update_task can progress concurrently
+-            await asyncio.to_thread(
+-                NCCLWeightTransferEngine.trainer_send_weights,
+-                iterator=weight_iterator(),
+-                trainer_args={"group": self._model_update_group, "packed": True},
+-            )
+-            await update_task
+-
+-            await self._inference_client.finish_weight_update()
+-        else:
+-            # Non-rank-0 still needs to participate in the all-gather
+-            for _ in weight_iterator():
+-                pass
+-
+-        torch.distributed.barrier()
++        # S12_WEIGHT_SYNC_FAILURE_PROPAGATION: use the training process
++        # group as a small control plane around the separate vLLM NCCL group.
++        rank = torch.distributed.get_rank()
++        control_device = torch.device("cuda", torch.cuda.current_device())
++
++        start_error = None
++        if rank == 0:
++            try:
++                await self._inference_client.start_weight_update(is_checkpoint_format=True)
++            except BaseException as exc:
++                start_error = exc
++        start_ok = torch.tensor(
++            [0 if start_error is not None else 1],
++            dtype=torch.int32,
++            device=control_device,
++        )
++        torch.distributed.broadcast(start_ok, src=0)
++        if int(start_ok.item()) == 0:
++            if start_error is not None:
++                raise start_error
++            raise RuntimeError("vLLM weight-sync start failed on training rank 0")
++
++        transfer_error = None
++        update_task = None
++        rank0_iterator = None
++        try:
++            if rank == 0:
++                from vllm.distributed.weight_transfer.nccl_engine import (
++                    NCCLWeightTransferEngine,
++                )
++
++                update_info = {**weight_metadata, "packed": True}
++                update_task = asyncio.create_task(
++                    self._inference_client.update_weights_nccl(update_info)
++                )
++                rank0_iterator = iter(weight_iterator())
++
++                # Run in thread so the HTTP update_task can progress concurrently.
++                await asyncio.to_thread(
++                    NCCLWeightTransferEngine.trainer_send_weights,
++                    iterator=rank0_iterator,
++                    trainer_args={"group": self._model_update_group, "packed": True},
++                )
++                await update_task
++                await self._inference_client.finish_weight_update()
++            else:
++                # Non-rank-0 still needs to participate in every FSDP all-gather.
++                for _ in weight_iterator():
++                    pass
++        except BaseException as exc:
++            transfer_error = exc
++            # If the transport aborted after consuming only part of rank 0's
++            # iterator, finish the remaining FSDP collectives so peer ranks can
++            # reach the coordinated status reduction instead of hanging.
++            if rank == 0 and rank0_iterator is not None:
++                try:
++                    for _ in rank0_iterator:
++                        pass
++                except BaseException:
++                    pass
++        finally:
++            if (
++                rank == 0
++                and transfer_error is not None
++                and update_task is not None
++                and not update_task.done()
++            ):
++                update_task.cancel()
++                await asyncio.gather(update_task, return_exceptions=True)
++
++        transfer_ok = torch.tensor(
++            [0 if transfer_error is not None else 1],
++            dtype=torch.int32,
++            device=control_device,
++        )
++        torch.distributed.all_reduce(
++            transfer_ok, op=torch.distributed.ReduceOp.MIN
++        )
++        if int(transfer_ok.item()) == 0:
++            if transfer_error is not None:
++                raise transfer_error
++            raise RuntimeError("vLLM weight sync failed on a peer training rank")
+ 
+     def teardown(self) -> None:
+         """Destroy the process group used for weight transfer."""
+@@ -219,7 +276,7 @@
+         world_size = inference_world_size + 1
+ 
+         master_addr = ray._private.services.get_node_ip_address()
+-        with socket.socket() as sock:
++        with socket.socket(socket.AF_INET6) as sock:
+             sock.bind(("", 0))
+             master_port = sock.getsockname()[1]
+ 
+@@ -281,3 +338,11 @@
+         )
+ 
+         return NCCLWeightTransferEngine
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip
+--- a/skyrl/backends/skyrl_train/workers/fsdp/fsdp_worker.py
++++ b/skyrl/backends/skyrl_train/workers/fsdp/fsdp_worker.py
+@@ -179,6 +179,12 @@
+             language_model_only=self.cfg.policy.language_model_only,
+             logprobs_chunk_size=self.cfg.logprobs_chunk_size,
+         )
++        # S12_VISION_FREEZE_SOURCE_PATCH
++        if os.environ.get('SKYRL_FREEZE_VISION', '0') == '1':
++            from freeze_vision import freeze_wrapper
++            _n_v, _e_v = freeze_wrapper(wrapped_model)
++            if _n_v <= 0 or _e_v <= 0:
++                raise RuntimeError('SKYRL_FREEZE_VISION=1 but no visual parameters found')
+         self._seq_parallel_monkey_patch(model=wrapped_model.model)
+ 
+         if self.cfg.gradient_checkpointing:
+--- a/skyrl/backends/skyrl_train/workers/megatron/megatron_worker.py
++++ b/skyrl/backends/skyrl_train/workers/megatron/megatron_worker.py
+@@ -858,7 +858,7 @@
+             torch.cuda.set_device(local_rank)
+             # Default torch dist pg init timeout is 10 minutes (600 seconds)
+             torch.distributed.init_process_group(
+-                backend="cpu:gloo,cuda:nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
++                backend="nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
+             )
+ 
+         # Explicitly wrap torch.distributed.broadcast in torch.no_grad() to avoid a warning in Megatron training where the
+@@ -1635,7 +1635,7 @@
+             torch.cuda.set_device(local_rank)
+             # Default torch dist pg init timeout is 10 minutes (600 seconds)
+             torch.distributed.init_process_group(
+-                backend="cpu:gloo,cuda:nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
++                backend="nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
+             )
+ 
+         self.strategy = MegatronStrategy(
+--- a/skyrl/backends/skyrl_train/workers/model_wrapper.py
++++ b/skyrl/backends/skyrl_train/workers/model_wrapper.py
+@@ -82,6 +82,8 @@
+         **kwargs,
+     ) -> None:
+         super().__init__()
++        from opencode_rl.forward_guard import configure_numerics
++        configure_numerics()
+         self.temperature = temperature
+         self.sequence_parallel_size = sequence_parallel_size
+         self.attn_implementation = "flash_attention_2" if use_flash_attention_2 else "sdpa"
+@@ -252,6 +254,8 @@
+         mm_token_type_ids: Optional[torch.Tensor] = None,
+     ) -> torch.Tensor:
+         """Returns action log probs"""
++        from opencode_rl.forward_guard import check_forward
++        check_forward(sequences, attention_mask, mm_token_type_ids, temperature)
+         has_image_inputs = pixel_values is not None or image_grid_thw is not None
+         if self.is_vlm:
+             # VLMs use model specific 3D positional IDs, meaning sequence packing can not be supported.
+@@ -268,6 +272,12 @@
+                     pixel_values = torch.cat(pixel_values.tensors, dim=0)
+                 if isinstance(image_grid_thw, TensorList):
+                     image_grid_thw = torch.cat(image_grid_thw.tensors, dim=0)
++                # S12_QWEN35_TEXT_POSITION_IDS: an all-text microbatch is
++                # represented by empty multimodal tensors.  Normalize it to
++                # None so the model skips the visual tower and uses the text
++                # positions already computed from attention_mask below.
++                if image_grid_thw is not None and image_grid_thw.numel() == 0:
++                    pixel_values, image_grid_thw = None, None
+ 
+         position_ids = attention_mask.long().cumsum(-1) - 1
+         position_ids.masked_fill_(attention_mask == 0, 1)
+@@ -319,7 +329,10 @@
+             output = self.model(
+                 sequences_fwd,
+                 attention_mask=attention_mask_fwd,
+-                position_ids=None,
++                # Qwen3.5 needs model-specific M-RoPE for image batches.  For
++                # pure text, passing None falls back to arange(seq_len) and
++                # incorrectly counts SkyRL's left PAD columns.
++                position_ids=(position_ids_fwd if image_grid_thw is None else None),
+                 **vlm_kwargs,
+             )
+         # NOTE (sumanthrh): Once we have position_ids, we don't need attention mask with flash attention.
+@@ -633,3 +646,5 @@
+         value_head.weight.data.normal_(mean=0.0, std=1 / (config.hidden_size + 1))
+ 
+     return model
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/backends/skyrl_train/workers/worker.py
++++ b/skyrl/backends/skyrl_train/workers/worker.py
+@@ -119,7 +119,7 @@
+         if not torch.distributed.is_initialized():
+             # Default torch dist pg init timeout is 10 minutes (600 seconds)
+             torch.distributed.init_process_group(
+-                backend="cpu:gloo,cuda:nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
++                backend="nccl", timeout=timedelta(seconds=SKYRL_WORKER_NCCL_TIMEOUT_IN_S)
+             )
+ 
+         # setup device mesh
+@@ -899,6 +899,9 @@
+             :class:`WorkerOutput` with per-sample ``loss_fn_outputs`` and scalar
+             ``metrics`` (all-reduced across DP).
+         """
++        if data.get("ocrl_spans") is not None:
++            from opencode_rl.prefix_backward import prefix_forward_backward
++            return prefix_forward_backward(self, data, loss_fn, loss_fn_config, return_per_token_outputs)
+         microbatch_iterator = get_microbatch_iterator(
+             data,
+             micro_batch_size=self.cfg.micro_train_batch_size_per_gpu,
+@@ -1016,6 +1019,7 @@
+                 entropy_requires_grad=self.cfg.algorithm.use_entropy_loss,
+                 pixel_values=experience.pixel_values,
+                 image_grid_thw=experience.image_grid_thw,
++                mm_token_type_ids=experience.mm_token_type_ids,
+             )
+             # loss function
+             # TODO: recompute advantages
+@@ -1123,25 +1127,33 @@
+             unscaled_loss = loss / grad_sum_correction_factor
+             self.strategy.backward(loss, self.model, self.optimizer)
+ 
+-            # Build per-sequence loss_fn_outputs with logprobs.
+-            batch_size = action_log_probs.shape[0]
+-            seq_len = action_log_probs.shape[1]
+-
+-            if response_mask is not None:
+-                valid_lens = response_mask.sum(dim=1).int().tolist()
+-            elif loss_mask is not None:
+-                valid_lens = (loss_mask > 0).sum(dim=1).int().tolist()
++            # The public/Tinker path needs per-token logprobs, but the
++            # internal PPO trainer consumes scalar metrics only.  Honour the
++            # documented flag so long trajectories are not converted into
++            # millions of Python floats and returned through Ray unnecessarily.
++            if return_per_token_outputs:
++                batch_size = action_log_probs.shape[0]
++                seq_len = action_log_probs.shape[1]
++
++                if response_mask is not None:
++                    valid_lens = response_mask.sum(dim=1).int().tolist()
++                elif loss_mask is not None:
++                    valid_lens = (loss_mask > 0).sum(dim=1).int().tolist()
++                else:
++                    valid_lens = [seq_len] * batch_size
++
++                detached_log_probs = action_log_probs.detach().cpu()
++                loss_fn_outputs = []
++                for i, valid_len in enumerate(valid_lens):
++                    loss_fn_outputs.append(
++                        {
++                            "logprobs": detached_log_probs[i, -valid_len:].tolist()
++                            if valid_len > 0
++                            else [],
++                        }
++                    )
+             else:
+-                valid_lens = [seq_len] * batch_size
+-
+-            detached_log_probs = action_log_probs.detach().cpu()
+-            loss_fn_outputs = []
+-            for i, valid_len in enumerate(valid_lens):
+-                loss_fn_outputs.append(
+-                    {
+-                        "logprobs": detached_log_probs[i, -valid_len:].tolist() if valid_len > 0 else [],
+-                    }
+-                )
++                loss_fn_outputs = [{} for _ in range(action_log_probs.shape[0])]
+ 
+             status = {
+                 "final_loss": unscaled_loss.item(),
+@@ -1291,6 +1303,7 @@
+                 entropy_requires_grad=False,
+                 pixel_values=experience.pixel_values,
+                 image_grid_thw=experience.image_grid_thw,
++                mm_token_type_ids=experience.mm_token_type_ids,
+             )
+             policy_loss, _ = current_loss_fn(
+                 action_log_probs,
+@@ -1352,6 +1365,7 @@
+         attention_mask = micro_batch["attention_mask"]
+         pixel_values = micro_batch.get("pixel_values", None)
+         image_grid_thw = micro_batch.get("image_grid_thw", None)
++        mm_token_type_ids = micro_batch["mm_token_type_ids"]
+ 
+         with torch.no_grad(), torch.autocast(dtype=torch.bfloat16, device_type="cuda"):
+             policy_logprob = self.model(
+@@ -1362,6 +1376,7 @@
+                 temperature=self.cfg.algorithm.temperature,
+                 pixel_values=pixel_values,
+                 image_grid_thw=image_grid_thw,
++                mm_token_type_ids=mm_token_type_ids,
+             )
+         policy_logprob = policy_logprob.to("cpu")
+         output = TrainingOutputBatch(
+@@ -1655,6 +1670,7 @@
+         attention_mask = micro_batch["attention_mask"]
+         pixel_values = micro_batch.get("pixel_values", None)
+         image_grid_thw = micro_batch.get("image_grid_thw", None)
++        mm_token_type_ids = micro_batch["mm_token_type_ids"]
+         with torch.no_grad(), torch.autocast(dtype=torch.bfloat16, device_type="cuda"):
+             log_probs = self.model(
+                 sequences,
+@@ -1663,6 +1679,7 @@
+                 return_output=False,
+                 pixel_values=pixel_values,
+                 image_grid_thw=image_grid_thw,
++                mm_token_type_ids=mm_token_type_ids,
+             )
+         log_probs = log_probs.to("cpu")
+         output = TrainingOutputBatch(
+@@ -1670,3 +1687,5 @@
+         )
+         output.metadata = micro_batch.metadata
+         return output
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/backends/skyrl_train/workers/worker_dispatch.py
++++ b/skyrl/backends/skyrl_train/workers/worker_dispatch.py
+@@ -9,6 +9,7 @@
+ """
+ 
+ import time
++import asyncio
+ from dataclasses import dataclass
+ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+ 
+@@ -647,6 +648,7 @@
+             return
+         self._offload("policy", offload_optimizer=True, offload_model=True)
+ 
++    @__import__("opencode_rl.weight_sync", fromlist=["weight_transaction"]).weight_transaction
+     async def save_weights_for_sampler(self, model_id: Optional[str] = None) -> None:
+         """
+         Tinker API method to prepare updated parameters for sampling.
+@@ -682,7 +684,7 @@
+         self.ensure_active_adapter("policy", model_id)
+         if self.colocate_all:
+             await self._inference_engine_client.wake_up(tags=["weights"])
+-            _broadcast_and_finish()
++            await asyncio.to_thread(_broadcast_and_finish)
+             await self._inference_engine_client.wake_up(tags=["kv_cache"])
+         else:
+             strategy = self.cfg.trainer.strategy
+@@ -691,7 +693,7 @@
+                 strategy == "megatron" and self.cfg.trainer.policy.megatron_config.lora_config.merge_lora
+             ):
+                 # in-place lora case (mostly for multi-tenant training) - no need to pause - can just rely on load_lora_adapter to swap adapter in place
+-                _broadcast_and_finish()
++                await asyncio.to_thread(_broadcast_and_finish)
+             elif self.cfg.generator.inference_engine.offload_kv_for_weight_sync:
+                 # Sleep the engine to free GPU memory during the sync (wake weights,
+                 # broadcast, wake KV cache) so gpu_memory_utilization can run higher.
+@@ -706,7 +708,7 @@
+                     try:
+                         await self._inference_engine_client.sleep_for_weight_sync(offload_kv=offload_kv)
+                         await self._inference_engine_client.wake_for_weight_sync(tags=["weights"])
+-                        _broadcast_and_finish()
++                        await asyncio.to_thread(_broadcast_and_finish)
+                         await self._inference_engine_client.wake_for_weight_sync(tags=["kv_cache"])
+                     finally:
+                         await self._inference_engine_client.resume_generation()
+@@ -717,7 +719,7 @@
+                     await self._inference_engine_client.sleep()
+                     try:
+                         await self._inference_engine_client.wake_up(tags=["weights"])
+-                        _broadcast_and_finish()
++                        await asyncio.to_thread(_broadcast_and_finish)
+                     finally:
+                         await self._inference_engine_client.wake_up(tags=["kv_cache"])
+             else:
+@@ -726,14 +728,16 @@
+                 if self.cfg.generator.inference_engine.weight_sync_backend == "delta":
+                     # Delta disk sync performs publish/fetch before pausing and
+                     # pauses internally only around the final reload.
+-                    _broadcast_and_finish()
++                    await asyncio.to_thread(_broadcast_and_finish)
+                 else:
+                     await self._inference_engine_client.pause_generation()
+                     try:
+-                        _broadcast_and_finish()
++                        await asyncio.to_thread(_broadcast_and_finish)
+                     finally:
+                         await self._inference_engine_client.resume_generation()
+ 
+         # Advance the policy version so prefix-cache salting isolates blocks from the previous weights
+         # (see `GeneratorConfig.use_cache_salt`).
+         self._inference_engine_client.increment_weight_version()
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/backends/skyrl_train/workers/worker_utils.py
++++ b/skyrl/backends/skyrl_train/workers/worker_utils.py
+@@ -172,6 +172,10 @@
+             # Multi-modal vision fields (may be absent for text-only)
+             pixel_values=batch.get("pixel_values"),
+             image_grid_thw=batch.get("image_grid_thw"),
++            mm_token_type_ids=batch["mm_token_type_ids"],
++            ocrl_spans=batch.get("ocrl_spans"),
++            ocrl_packet_length=batch.get("ocrl_packet_length"),
++            ocrl_original_count=batch.get("ocrl_original_count"),
+             # Per-row sub-sequence lengths for sequence packing (None otherwise);
+             # chunked per micro-batch by ``TensorBatch.chunk`` like any other field.
+             sub_seq_lengths=batch.get("sub_seq_lengths"),
+@@ -337,6 +341,12 @@
+         data.metadata = {}
+         if self.data.metadata:
+             data.metadata.update(self.data.metadata)
++        data["mm_token_type_ids"] = torch.zeros_like(data["sequences"])
++        if self.data.get("ocrl_spans") is not None:
++            from skyrl.backends.skyrl_train.training_batch import TensorList
++            data["ocrl_spans"] = TensorList([torch.empty((0, 2), dtype=torch.long, device=device)])
++            data["ocrl_packet_length"] = torch.zeros((1, 1), dtype=torch.long, device=device)
++            data["ocrl_original_count"] = self.data["ocrl_original_count"][:1].clone()
+         data.metadata["is_padding_batch"] = True
+         return data
+ 
+@@ -442,3 +452,5 @@
+         return TokenBasedBatchIterator(data, max_tokens_per_microbatch=max_tokens_per_microbatch)
+     else:
+         return SampleBasedBatchIterator(data, sample_batch_size=micro_batch_size, drop_last=False)
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/train/dataset/preprocess.py
++++ b/skyrl/train/dataset/preprocess.py
+@@ -163,6 +163,25 @@
+     """
+     _verify_inputs(prompts, responses, rewards, loss_masks)
+ 
++    # S12_RESPONSE_ALIGNMENT_GUARD: these tensors are right-aligned below.
++    # A one-token length mismatch would otherwise silently shift supervision
++    # and behavior logprobs instead of failing at the producer boundary.
++    response_fields = {
++        "rewards": rewards,
++        "loss_masks": loss_masks,
++    }
++    if logprobs is not None:
++        response_fields["rollout_logprobs"] = logprobs
++    for sample_index, response in enumerate(responses):
++        expected = len(response)
++        for field_name, field_values in response_fields.items():
++            actual = len(field_values[sample_index])
++            if actual != expected:
++                raise ValueError(
++                    f"Response alignment mismatch at sample {sample_index}: "
++                    f"len(response_ids)={expected}, len({field_name})={actual}"
++                )
++
+     prompt_token_lens = [len(p) for p in prompts]
+     response_token_lens = [len(r) for r in responses]
+ 
+--- a/skyrl/train/dataset/replay_buffer.py
++++ b/skyrl/train/dataset/replay_buffer.py
+@@ -75,6 +75,10 @@
+     metadata: Optional[Dict[str, Any]] = None
+     pixel_values: Optional[TensorList] = None
+     image_grid_thw: Optional[TensorList] = None
++    mm_token_type_ids: Optional[torch.Tensor] = None
++    ocrl_spans: Optional[TensorList] = None
++    ocrl_packet_length: Optional[torch.Tensor] = None
++    ocrl_original_count: Optional[torch.Tensor] = None
+     # Per-row sub-sequence lengths for sequence packing (one 1-D int tensor per
+     # packed row); ``None`` when packing is off.
+     sub_seq_lengths: Optional[TensorList] = None
+@@ -82,6 +86,12 @@
+     @torch.no_grad()
+     def to_device(self, device: torch.device) -> None:
+         self.sequences = to(self.sequences, device)
++        if self.mm_token_type_ids is not None:
++            self.mm_token_type_ids = self.mm_token_type_ids.to(device)
++        for key in ("ocrl_spans", "ocrl_packet_length", "ocrl_original_count"):
++            value = getattr(self, key)
++            if value is not None:
++                setattr(self, key, value.to(device))
+         if self.action_log_probs is not None:
+             self.action_log_probs = to(self.action_log_probs, device)
+         if self.base_action_log_probs is not None:
+@@ -113,6 +123,14 @@
+ 
+     def pin_memory(self):
+         self.sequences = pin_memory(self.sequences)
++        if self.mm_token_type_ids is not None:
++            self.mm_token_type_ids = pin_memory(self.mm_token_type_ids)
++        for key in ("ocrl_packet_length", "ocrl_original_count"):
++            value = getattr(self, key)
++            if value is not None:
++                setattr(self, key, pin_memory(value))
++        if self.ocrl_spans is not None:
++            self.ocrl_spans = TensorList([pin_memory(t) for t in self.ocrl_spans.tensors])
+         if self.action_log_probs is not None:
+             self.action_log_probs = pin_memory(self.action_log_probs)
+         if self.base_action_log_probs is not None:
+@@ -388,3 +406,5 @@
+     def collate_fn(self, batch) -> Experience:
+         experience = make_experience_batch(batch)
+         return experience
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/train/fully_async_trainer.py
++++ b/skyrl/train/fully_async_trainer.py
+@@ -213,6 +213,13 @@
+         """
+         async with self._cond:
+             self._stat.accepted -= 1
++            self._stat.filtered += 1
++            self._cond.notify_all()
++
++    async def on_rollout_grade_discarded(self) -> None:
++        async with self._cond:
++            assert self._stat.running > 0
++            self._stat.running -= 1
+             self._stat.filtered += 1
+             self._cond.notify_all()
+ 
+@@ -503,6 +510,9 @@
+                 generation_output_group_buffer = asyncio.Queue[GeneratedOutputGroup](maxsize=self._gen_buffer_maxsize)
+ 
+                 # Maintain self.num_parallel_generation_workers concurrent group-generation workers
++                # S12_ASYNC_FAILURE_PROPAGATION: reset the per-epoch
++                # failure channel before starting producer tasks.
++                self._generator_worker_error = None
+                 generator_tasks = [
+                     asyncio.create_task(self._run_generate_for_a_group_loop(generation_output_group_buffer))
+                     for _ in range(self.num_parallel_generation_workers)
+@@ -516,8 +526,24 @@
+                 if self.sample_full_batch:
+ 
+                     async def _watch_generators_done(tasks=generator_tasks, event=all_generators_done):
+-                        await asyncio.gather(*tasks, return_exceptions=True)
+-                        event.set()
++                        try:
++                            done, pending = await asyncio.wait(
++                                tasks, return_when=asyncio.FIRST_EXCEPTION
++                            )
++                            failure = None
++                            for task in done:
++                                if not task.cancelled():
++                                    exc = task.exception()
++                                    if exc is not None:
++                                        failure = exc
++                                        break
++                            if failure is not None:
++                                self._generator_worker_error = failure
++                                for task in pending:
++                                    task.cancel()
++                            await asyncio.gather(*pending, return_exceptions=True)
++                        finally:
++                            event.set()
+ 
+                     generators_done_watcher = asyncio.create_task(_watch_generators_done())
+ 
+@@ -525,7 +551,15 @@
+                 # end an epoch early, drifting global_step out of epoch alignment). On resume the dataloader
+                 # already reflects this epoch's trained steps. The range below is just an upper bound.
+                 trained_steps_this_epoch = self.async_train_dataloader.num_trained() // self.mini_batch_size
+-                for _step_idx in range(self.global_step, (1 + epoch) * self.num_steps_per_epoch + 1):
++                # S12_ASYNC_MAX_STEP_RANGE: cap the loop itself, not only
++                # after an optimizer step.  Resuming a checkpoint already at
++                # max_training_steps must not execute one extra update.
++                epoch_last_step = (1 + epoch) * self.num_steps_per_epoch
++                if self.cfg.trainer.max_training_steps is not None:
++                    epoch_last_step = min(
++                        epoch_last_step, int(self.cfg.trainer.max_training_steps)
++                    )
++                for _step_idx in range(self.global_step, epoch_last_step + 1):
+                     with Timer("step", self.all_timings):
+                         self._loop_gauges.set(
+                             "skyrl_gen_buffer_qsize",
+@@ -715,6 +749,12 @@
+             # does not redo the last epoch (whose consumed UIDs were cleared at its epoch end).
+             self.epoch = self.cfg.trainer.epochs
+ 
++        # ``global_step`` is the next step to work on here, while checkpoint
++        # names/state represent completed optimizer steps.  Keep the final safety
++        # save aligned with periodic saves and resume bookkeeping.
++        # S12_ASYNC_FINAL_CHECKPOINT_STEP
++        self.global_step = max(0, int(self.global_step) - 1)
++
+         # safety net: always save final checkpoint at end of training.
+         if self.cfg.trainer.ckpt_interval > 0:
+             with self._phase_gauge.timed_phase("save_checkpoints", self.all_timings):
+@@ -746,6 +786,11 @@
+         mini-batch and a plain blocking ``buffer.get()`` would hang forever.
+         """
+         while True:
++            failure = getattr(self, "_generator_worker_error", None)
++            if failure is not None:
++                raise RuntimeError(
++                    "Fully-async generation worker failed; aborting before training buffered data."
++                ) from failure
+             if not buffer.empty():
+                 return buffer.get_nowait()
+             if all_generators_done.is_set():
+@@ -773,6 +818,32 @@
+         Token-level rewards (``List[List[float]]``) are collapsed to a per-trajectory sum, like the rest
+         of the trainer. Groups with <=1 live trajectory (singletons / mostly masked) are always kept.
+         """
++        # S12_HARD_STALENESS_DROP: the upstream capacity controller is
++        # aggregate-only.  Never let a pathological long-running group cross
++        # the configured policy-version boundary into an optimizer step.
++        cur_staleness = int(self.global_step) - int(group.global_step_when_scheduled)
++        if cur_staleness > int(self.max_staleness_steps):
++            logger.warning(
++                "Hard-dropping stale rollout group before training: "
++                f"uid={group.uid}, cur_staleness={cur_staleness}, "
++                f"max_staleness_steps={self.max_staleness_steps}."
++            )
++            return False
++
++        # Fatal-isolation trajectories intentionally carry an all-zero loss
++        # mask. GRPO needs at least two live samples to define a group-relative
++        # advantage; do not let an all-dead/singleton group consume a training
++        # slot merely because the stock zero-variance helper keeps <=1 live row.
++        # S12_DEAD_GROUP_DROP
++        loss_masks = group.generator_output["loss_masks"]
++        live_count = sum(1 for mask in loss_masks if sum(mask) > 0)
++        if live_count <= 1:
++            logger.warning(
++                "Dropping rollout group with insufficient live trajectories: "
++                f"uid={group.uid}, live_count={live_count}."
++            )
++            return False
++
+         rewards = group.generator_output["rewards"]
+         if rewards and isinstance(rewards[0], list):
+             # Token-level rewards: collapse each trajectory to a scalar sequence reward.
+@@ -916,18 +987,37 @@
+                 await self._staleness_manager.acquire_submission_slot()
+                 slot_acquired = True
+ 
+-                # 3. Generate one rollout group
+-                global_step_at_start = self.global_step  # for staleness control
++                # 3. Generate one rollout group.  Preparation happens before
++                # acquire_submission_slot() and may wait across a completed train/sync
++                # step.  Refresh the persisted batch metadata from the same atomic
++                # post-acquire snapshot used by staleness accounting.
++                # S12_ASYNC_SCHEDULE_METADATA
++                global_step_at_start = int(self.global_step)
++                batch_metadata = generator_input.get("batch_metadata")
++                if batch_metadata is None:
++                    raise RuntimeError("Fully-async generation requires BatchMetadata")
++                batch_metadata.global_step = global_step_at_start
+ 
+                 group_start_time = time.monotonic()
+-                if "disable_tqdm" in inspect.signature(self.generator.generate).parameters:
+-                    # A workaround to disable tqdm for the SkyRLGymGenerator.generate method which will
+-                    # blast the console with each worker's progress bar.
+-                    cur_generator_output: GeneratorOutput = await self.generator.generate(
+-                        generator_input, disable_tqdm=True
+-                    )
+-                else:
+-                    cur_generator_output: GeneratorOutput = await self.generator.generate(generator_input)
++                from opencode_rl.grading_client import GradeRetriesExhausted
++                try:
++                    if "disable_tqdm" in inspect.signature(self.generator.generate).parameters:
++                        # A workaround to disable tqdm for the SkyRLGymGenerator.generate method which will
++                        # blast the console with each worker's progress bar.
++                        cur_generator_output: GeneratorOutput = await self.generator.generate(
++                            generator_input, disable_tqdm=True
++                        )
++                    else:
++                        cur_generator_output: GeneratorOutput = await self.generator.generate(generator_input)
++                except GradeRetriesExhausted as exc:
++                    await self._staleness_manager.on_rollout_grade_discarded()
++                    slot_acquired = False
++                    await self.async_train_dataloader.mark_filtered_uids([uids[0]])
++                    key = "ocrl/grading_discarded_groups_total"
++                    self._ocrl_grading_discarded_total = getattr(self, "_ocrl_grading_discarded_total", 0) + 1
++                    self.all_metrics[key] = self._ocrl_grading_discarded_total
++                    logger.warning(f"Ocrl grading exhausted; archived group {uids[0]}, resampling: {exc}")
++                    continue
+                 group_completion_time_s = time.monotonic() - group_start_time
+ 
+                 # 4. Enqueue the completed group and mark accepted to free capacity slot.
+@@ -958,8 +1048,11 @@
+         except Exception as e:
+             logger.error(f"Generator worker errored out with exception: {e}")
+             logger.error(f"Traceback: \n{traceback.format_exc()}")
+-            sys.stderr.flush()  # flush before os._exit, which otherwise drops buffered output
+-            os._exit(1)
++            sys.stderr.flush()
++            # S12_ASYNC_FAILURE_PROPAGATION: the watcher records this exception,
++            # cancels sibling producers, wakes the consumer, and re-raises there.
++            # Never terminate the whole Ray driver from an asyncio child task.
++            raise
+ 
+     @staticmethod
+     def _reprefix_metrics(metrics: dict, suffix: str) -> dict:
+@@ -1205,3 +1298,5 @@
+             f"({len(filtered_data_uids_set)} filtered), epoch={epoch}"
+         )
+         return global_step, checkpoint_path, consumed_data_uids_set, filtered_data_uids_set, epoch
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/train/trainer.py
++++ b/skyrl/train/trainer.py
+@@ -1194,6 +1194,9 @@
+                 gamma=self.cfg.trainer.algorithm.gamma,
+                 lambd=self.cfg.trainer.algorithm.lambd,
+                 grpo_norm_by_std=self.cfg.trainer.algorithm.grpo_norm_by_std,
++                # S12_GRPO_MASKED_ADVANTAGE: fatal-isolation rows have
++                # loss_mask=0 and must not alter healthy siblings' group stats.
++                loss_mask=data["loss_mask"],
+             )
+         data["returns"] = returns
+         data["advantages"] = advantages
+@@ -1328,7 +1331,7 @@
+             - `["action_log_probs"]`: Float[torch.Tensor, "batch_size response_len"]
+             - `["values"]`: Float[torch.Tensor, "batch_size response_len"]
+         """
+-        fwd_keys = ["sequences", "attention_mask"]
++        fwd_keys = ["sequences", "attention_mask", "mm_token_type_ids", "response_mask"]
+         if training_input.get("rollout_expert_indices") is not None:
+             fwd_keys.append("rollout_expert_indices")
+         if training_input.get("router_padding_mask") is not None:
+@@ -1544,7 +1547,14 @@
+         # Training loop over epochs and mini-batches
+         for _epoch in range(self.cfg.trainer.update_epochs_per_batch):
+             for chunk_refs in all_chunk_refs:
+-                status = self.dispatch.forward_backward_from_staged(model, chunk_refs)
++                if model == "policy":
++                    # The internal PPO trainer consumes scalar metrics only.  Avoid
++                    # returning per-token Python lists through Ray after backward.
++                    status = self.dispatch.forward_backward_from_staged(
++                        model, chunk_refs, return_per_token_outputs=False
++                    )
++                else:
++                    status = self.dispatch.forward_backward_from_staged(model, chunk_refs)
+                 for k, v in status.metrics.items():
+                     all_metrics[k].append(v)
+ 
+@@ -1876,3 +1886,5 @@
+             logger.warning(f"Failed to clean up temporary policy export directory {policy_export_dir}: {e}")
+ 
+         logger.info("Successfully updated ref model with policy model, training continues.")
++
++# OCRL_EXACT_MEDIA_V7
+--- a/skyrl/train/utils/vllm_metrics_scraper.py
++++ b/skyrl/train/utils/vllm_metrics_scraper.py
+@@ -161,9 +161,9 @@
+             continue
+         ip = node.get("NodeManagerAddress")
+         port = node.get("MetricsExportPort")
+-        if not ip or not port:
+-            continue
+-        urls.append(f"http://{ip}:{port}/metrics")
++        if not ip or not port or int(port) <= 0:
++            continue
++        urls.append(f"http://{_sk_hosthdr(ip)}:{port}/metrics")
+     return urls
+ 
+ 
+@@ -434,3 +434,11 @@
+                 out[f"{prefix}draft_acceptance_rate_pos_{pos + 1}"] = pos_d / drafts_d
+ 
+         return out
++
++
++def _sk_hosthdr(ip):
++    """IPv6 地址在 URL 里要用方括号包起来（RFC 3986）。IPv4 原样返回。"""
++    ip = str(ip)
++    if ":" in ip and not ip.startswith("["):
++        return "[" + ip + "]"
++    return ip

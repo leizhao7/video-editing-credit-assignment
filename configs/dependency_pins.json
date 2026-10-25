@@ -4,5 +4,7 @@
   "vllm_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
   "opencode_commit": "d7a6e1daaf2271bcd0b611fbb27d4956806e475a",
   "model": "Qwen/Qwen3.5-9B",
-  "note": "Historical identities; modified source and runtime build manifest are also required. This is not an install lockfile."
+  "note": "Pinned identities and recovered build sources are included; successful source recovery does not establish GPU qualification.",
+  "recovered_training_lock": "training/environment/uv.lock",
+  "recovered_installed_versions": "training/environment/installed-packages.txt"
 }

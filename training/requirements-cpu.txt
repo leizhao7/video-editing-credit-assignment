@@ -5,3 +5,5 @@ aiohttp
 pytest
 torch
 scipy
+httpx==0.28.1
+jsonschema==4.26.0

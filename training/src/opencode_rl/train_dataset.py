@@ -18,17 +18,18 @@ def sha_file(path):
         return hashlib.file_digest(handle, 'sha256').hexdigest()
 
 
-def freeze_prepared(release, bundles, destination, split='train'):
+def freeze_prepared(release, bundles, destination, split='train', *, expected_release_sha256=None):
     """Called only by trusted preparation, never by a policy sandbox."""
     if split not in ('train', 'val'):
         raise ParityError('Unknown prepared split')
-    rows = release_tasks(release, split)
+    release_sha256 = RELEASE_SHA256 if expected_release_sha256 is None else expected_release_sha256
+    rows = release_tasks(release, split, expected_sha256=release_sha256)
     records = []
     for row in rows:
         root = Path(bundles) / row['task']
         meta = json.loads((root / 'bundle.json').read_bytes())
         if (meta['task'] != row['task'] or meta['stage'] != row['stage'] or
-                meta['source_root'] != '_tt_' + split or meta['release_sha256'] != RELEASE_SHA256 or
+                meta['source_root'] != '_tt_' + split or meta['release_sha256'] != release_sha256 or
                 meta.get('private_files_staged') is not False):
             raise ParityError('Training bundle identity/leakage mismatch')
         validate_bundle_prompt(root, meta)
@@ -36,7 +37,7 @@ def freeze_prepared(release, bundles, destination, split='train'):
         records.append({'task': row['task'], 'stage': row['stage'],
             'files': {name: sha_file(root / name) for name in BUNDLE_FILES},
             'source_hashes': {name: row['files'][name]['sha256'] for name in SOURCE_FILES if name in row['files']}})
-    record = {'format': f'ocrl-prepared-{split}-v1', 'release_sha256': RELEASE_SHA256, 'tasks': records}
+    record = {'format': f'ocrl-prepared-{split}-v1', 'release_sha256': release_sha256, 'tasks': records}
     path = Path(destination)
     body = canonical(record)
     if path.exists() and path.read_bytes() != body:
@@ -46,17 +47,18 @@ def freeze_prepared(release, bundles, destination, split='train'):
 
 
 class PreparedDataset:
-    def __init__(self, manifest, bundles, release, split='train'):
+    def __init__(self, manifest, bundles, release, split='train', *, expected_release_sha256=None):
         if split not in ('train', 'val'):
             raise ParityError('Unknown prepared split')
         self.split, self.source_root = split, '_tt_' + split
+        self.release_sha256 = RELEASE_SHA256 if expected_release_sha256 is None else expected_release_sha256
         self.bundles = Path(bundles)
         self.manifest = json.loads(Path(manifest).read_bytes())
         self.sha256 = digest(self.manifest)
-        expected = release_tasks(release, split)
+        expected = release_tasks(release, split, expected_sha256=self.release_sha256)
         self.rows = self.manifest['tasks']
         if (self.manifest.get('format') != f'ocrl-prepared-{split}-v1' or
-                self.manifest.get('release_sha256') != RELEASE_SHA256 or
+                self.manifest.get('release_sha256') != self.release_sha256 or
                 [r['task'] for r in self.rows] != [r['task'] for r in expected]):
             raise ParityError('Prepared release/order changed or includes the other split')
         for actual, source in zip(self.rows, expected):
@@ -82,7 +84,7 @@ class PreparedDataset:
             meta = json.loads((root / 'bundle.json').read_bytes())
             validate_bundle_prompt(root, meta)
             if (meta['task'] != task or meta['source_root'] != self.source_root or meta['stage'] != row['stage'] or
-                    meta.get('private_files_staged') is not False or meta.get('release_sha256') != RELEASE_SHA256):
+                    meta.get('private_files_staged') is not False or meta.get('release_sha256') != self.release_sha256):
                 raise ParityError('Prepared task identity changed')
             self.verified.add(task)
         return {**row, 'source_root': self.source_root}

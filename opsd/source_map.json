@@ -1,6 +1,6 @@
 {
   "format": "opsd-public-source-map-v1",
-  "status": "portable_algorithm_and_cpu_test_draft_not_end_to_end_launcher",
+  "status": "recovered_reference_and_turn_suggestion_recipes_with_public_source_profile_launcher_gpu_unqualified",
   "upstream_pins": {
     "skyrl_commit": "59d4daedee24c7b1a79d857bbf322a6d195c3792",
     "vllm_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
@@ -11,7 +11,7 @@
       "httpx": "0.28.1",
       "jsonschema": "4.23.0"
     },
-    "training_dependency_versions": "Requires retrieval of actual frozen training image build/install manifest; not inferred from current workstation."
+    "training_dependency_versions": "Recovered training/environment/uv.lock and installed-packages.txt; full SkyRL source patch and dependency patches included."
   },
   "historical_recipe_sha256": {
     "reference_answers": "43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018",
@@ -125,10 +125,12 @@
       "staging_relative_path": "examples/train/answer_self_distillation/supervisor.py",
       "source_relative_path": "skyrl_answer_opsd/examples/train/answer_self_distillation/supervisor.py",
       "source_sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
-      "public_sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
-      "unchanged": true,
+      "public_sha256": "28f57539e57c9868f80d47cff374a52c4739de2fa1efe24555e6957a1e192f14",
+      "unchanged": false,
       "category": "recipe",
-      "changes": []
+      "changes": [
+        "Public source-profile supervisor accepts the recovered coherent OPSD harness; frozen profile checks retained."
+      ]
     },
     {
       "public_relative_path": "examples/train/answer_self_distillation/teacher_inputs.py",
@@ -431,6 +433,152 @@
       "unchanged": true,
       "category": "support_test",
       "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/__init__.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/__init__.py",
+      "source_sha256": "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9",
+      "public_sha256": "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/answers.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/answers.py",
+      "source_sha256": "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8",
+      "public_sha256": "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/configuration.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/configuration.py",
+      "source_sha256": "bd63fa8b145359d2fa8567d3f9aa2549df351a5af1e64b6dabeadfc93cebb193",
+      "public_sha256": "bd63fa8b145359d2fa8567d3f9aa2549df351a5af1e64b6dabeadfc93cebb193",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/frozen_runtime.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/frozen_runtime.py",
+      "source_sha256": "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61",
+      "public_sha256": "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/generator.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/generator.py",
+      "source_sha256": "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9",
+      "public_sha256": "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/install.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/install.py",
+      "source_sha256": "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc",
+      "public_sha256": "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/launch.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/launch.py",
+      "source_sha256": "9d5f16fc30fbc0b2d81850ddec4d80f00bfbf79101f0025b961d9896a59b04c9",
+      "public_sha256": "9d5f16fc30fbc0b2d81850ddec4d80f00bfbf79101f0025b961d9896a59b04c9",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/main_answer_opsd.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/main_answer_opsd.py",
+      "source_sha256": "74465959b5718b64a41d66290536cc690fd94105d0241feca7b84ec557d41d6d",
+      "public_sha256": "74465959b5718b64a41d66290536cc690fd94105d0241feca7b84ec557d41d6d",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/objective.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/objective.py",
+      "source_sha256": "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118",
+      "public_sha256": "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/supervisor.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/supervisor.py",
+      "source_sha256": "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c",
+      "public_sha256": "28f57539e57c9868f80d47cff374a52c4739de2fa1efe24555e6957a1e192f14",
+      "unchanged": false,
+      "category": "recovered_reference_recipe",
+      "changes": [
+        "Allow source-profile supervisor; retain frozen-profile checks."
+      ]
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/teacher_inputs.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/teacher_inputs.py",
+      "source_sha256": "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440",
+      "public_sha256": "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/topk.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/topk.py",
+      "source_sha256": "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99",
+      "public_sha256": "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/topk_install.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/topk_install.py",
+      "source_sha256": "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a",
+      "public_sha256": "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/topk_trainer.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/topk_trainer.py",
+      "source_sha256": "438416a49824f225f04c969f2d8153b19267d96b7968c579c6ca8aaf701c164e",
+      "public_sha256": "438416a49824f225f04c969f2d8153b19267d96b7968c579c6ca8aaf701c164e",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/topk_worker.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/topk_worker.py",
+      "source_sha256": "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400",
+      "public_sha256": "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
+    },
+    {
+      "public_relative_path": "recipes/reference_answers/trainer.py",
+      "source_relative_path": "reference-image/examples/train/answer_self_distillation/trainer.py",
+      "source_sha256": "5af5be5f82330fd42fc45d881547f6e7857710e18a123b55c12ef4a38e099572",
+      "public_sha256": "5af5be5f82330fd42fc45d881547f6e7857710e18a123b55c12ef4a38e099572",
+      "unchanged": true,
+      "category": "recovered_reference_recipe",
+      "changes": []
     }
   ],
   "excluded": [
@@ -531,5 +679,15 @@
   "documentation": {
     "path": "../docs/opsd.md",
     "sha256": "c86bb46d0bbdad0ed00716f7ea691ec8a299d76ba3be8a3efd5f70e153a550c6"
+  },
+  "reference_recovery": {
+    "historical_17_file_aggregate_verified": true,
+    "historical_aggregate": "43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018",
+    "public_note": "Private deployment.py is replaced by training/launcher.py and modal_train.py; public recipe bytes have a new identity."
+  },
+  "public_service_dependencies": {
+    "httpx": "0.28.1",
+    "jsonschema": "4.26.0",
+    "note": "New public service adapter; historical declared demonstrator pins are retained separately."
   }
 }

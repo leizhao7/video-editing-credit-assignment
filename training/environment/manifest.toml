@@ -1,0 +1,333 @@
+schema_version = 1
+skyrl_commit = "59d4daedee24c7b1a79d857bbf322a6d195c3792"
+patch_sha256 = "e404d1fa7065fdc3d15161311cf7995f5b60d9bb832e559cb5f922fdd754cf7e"
+reference_recipe_historical_sha256 = "43262b0844c3b778d3d9b76607c1ec0f1e298ca02781a16bcfa05a4258f45018"
+scope = "Source and environment recovery; GPU execution requires separate qualification."
+
+[skyrl_files."skyrl/backends/skyrl_train/distributed/fsdp_utils.py"]
+before_sha256 = "68fa165b08a6341430468ffa7961bab76f2c87cbb250df800a68a5e1505cb726"
+after_sha256 = "45da8215947879c606e078bccfc3c8e563b131561c8dcc1f687e8e46b17d841e"
+
+[skyrl_files."skyrl/backends/skyrl_train/distributed/megatron/fused_linear_logprob_triton.py"]
+before_sha256 = "d840b7f1e623b785f4a7eba196642937b29da5635f16e05e6f446c51ec015e60"
+after_sha256 = "20724d147fb81c3d42ff46d02b592009383e9a4e8f06df29a4569568f3642338"
+
+[skyrl_files."skyrl/backends/skyrl_train/inference_servers/common.py"]
+before_sha256 = "6006da9a491c13294f80c74cd341f697f5e86d47482b13413d9349066563610d"
+after_sha256 = "a1331e157303b6ab73c97f90959fe05c80be48632c10b564b24555a8416fc488"
+
+[skyrl_files."skyrl/backends/skyrl_train/inference_servers/render_server.py"]
+before_sha256 = "e5f13990aa6851a5869732c21a649f45e4f05fb10780bd375c889e789c3a2ef1"
+after_sha256 = "26bb3df8e8dbab7cfb4af70d90b9af1ca449047eb6c7cbb579fe4e8c3d455dba"
+
+[skyrl_files."skyrl/backends/skyrl_train/inference_servers/utils.py"]
+before_sha256 = "3ee6f8326b42da0e38957c798a3b6c81e840b57a6bc099aa15a3392dd9466898"
+after_sha256 = "385adcd0aa143254877f87e3d9d9d100d5c7a62d5a9be451be514ec083cead28"
+
+[skyrl_files."skyrl/backends/skyrl_train/inference_servers/vllm_router.py"]
+before_sha256 = "f39f7b00125d670773cf1a461f2bc2e13e32dc40a84936da4d96b2db8e315a34"
+after_sha256 = "e2efaca1f45eaafc9ab47b9a5ec08c5def2437e62e804772501ef8d244e55af0"
+
+[skyrl_files."skyrl/backends/skyrl_train/inference_servers/vllm_server_actor.py"]
+before_sha256 = "8204d5816f8b9448f36377316ca8839b1bf39e34a6ba92d9cfb624fef390ed46"
+after_sha256 = "3dc25c498952ee75ae61406745ec12bceebe17d72ab7ce0abcffaa2cb4d00797"
+
+[skyrl_files."skyrl/backends/skyrl_train/training_batch.py"]
+before_sha256 = "1e37750d01a592f1bd6b55cc6f5517614a6b564107317cb865b9a1074fe5190c"
+after_sha256 = "8a67e6b546ecdd09fe97bb76475a409d9c423efb1b0a6809811263ac764ddb8a"
+
+[skyrl_files."skyrl/backends/skyrl_train/utils/off_policy_correction_utils.py"]
+before_sha256 = "c563bb8d2ff9ea3245275b8beb3d77ab6cf578e8eaeb6e98899ad1755b263f55"
+after_sha256 = "41a62aeb3581fd27e1ee0e3dab54f565071671022ae08307982ac8a8da57b049"
+
+[skyrl_files."skyrl/backends/skyrl_train/utils/ppo_utils.py"]
+before_sha256 = "cb9d86f1ba8c6317ab567cbe4e456aa475e927501341641e3f57cd43a9bb947f"
+after_sha256 = "60bf93b892dbc291a957cd67ad20adf887753fefb431632b3beb8f51e1af9f92"
+
+[skyrl_files."skyrl/backends/skyrl_train/weight_sync/broadcast_strategy.py"]
+before_sha256 = "51e724125ed8f79f92e6d2e656391dc25b6547daa1f059a10323edbcad734e8c"
+after_sha256 = "a75f7192e5bff9e7903598c04ffeb0268d0125b49b2b325cdea456ff46340dc7"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/fsdp/fsdp_worker.py"]
+before_sha256 = "fce1fbc2f4cc2d5250595ce62fa6ecd4731be44b6f6ee4233ccd2c80a8215ea5"
+after_sha256 = "4f019734c7623ea398de59f8d5edc454be31466033fc9a79c5d53106ba37f682"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/megatron/megatron_worker.py"]
+before_sha256 = "48fadeefe2a07aa19fb9fb004c5c43686eccc4bfed5714f9ee17468c61b3b899"
+after_sha256 = "611e14871516f3470da9c8505c1e99a3b31bc0567042e372a2da6ceba6471467"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/model_wrapper.py"]
+before_sha256 = "96157aa6e7635b63b6120eb610d972166a83a8ebb05f5fd704d07f46b231f1b2"
+after_sha256 = "1d233ff4376401f8e0a826fa5cf3731314785a5d0c31debaadceeb06461a2dfd"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/worker.py"]
+before_sha256 = "c41f7a817edaf02dc12a6632736fd72c8e789cea0c0b7364ce4a66b810c34f05"
+after_sha256 = "7d0663ee2a67223578ed8f97699e7bbe435951cd3b36df845a69522f141963bc"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/worker_dispatch.py"]
+before_sha256 = "15d35f6d6a278fc4c3777f6da32dfacd7d948f8337fbc787a56cba77d16bd2f6"
+after_sha256 = "60051fb1b42e333bf546c7bd63851ea9ee4b7195107773cf501da71af030f7c0"
+
+[skyrl_files."skyrl/backends/skyrl_train/workers/worker_utils.py"]
+before_sha256 = "80628743138113a9439de72dfdcb1a95ba5f2aa6a4d225649443e5f6757e6600"
+after_sha256 = "fdf632839333ef5ecd5c07597156e4e9ccc8076c0a2377809fa49b761d971e2d"
+
+[skyrl_files."skyrl/train/dataset/preprocess.py"]
+before_sha256 = "b81d34f4c17502890f95af4090e89666933b4c55517c80ecb445ec61984cd31a"
+after_sha256 = "f061decb137618ede48fa0ff1882c649219a1dd7990d33634ea4cb757ea5d363"
+
+[skyrl_files."skyrl/train/dataset/replay_buffer.py"]
+before_sha256 = "ba0decce16a790df416957b9aaa99a78c1f1bf94b945821fe22fef6e7ef35d5f"
+after_sha256 = "55381a886ec08f3b86b490c119229630d7d578dc394f2c0ddb7cab448eacd595"
+
+[skyrl_files."skyrl/train/fully_async_trainer.py"]
+before_sha256 = "3a47a21b69e6bd9631aecb045a3d8a0c7157814e95d51a3ff70638ae9f982d20"
+after_sha256 = "02eb048cab99921571bc8dbca37c358018c7592c6d030e835c5b3fbfa1be48d6"
+
+[skyrl_files."skyrl/train/trainer.py"]
+before_sha256 = "8037117e7368b29091eca689239672411e60c32b5b641b9af05a82e7378c86d6"
+after_sha256 = "91ef7fde5c2915f2c7d15c0a9c90da782236f40c8ba13ec3333a13b4092563ff"
+
+[skyrl_files."skyrl/train/utils/vllm_metrics_scraper.py"]
+before_sha256 = "b5602cdb32c06222ae59800d0df54d34005107f749a6cb90c6cc88c908bac2e8"
+after_sha256 = "3a4b1e640558b4f2e871fe597240b49986ebef9ee01efde3c3b5faa755fe2745"
+
+[source_files."opsd/recipes/reference_answers/__init__.py"]
+source_sha256 = "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9"
+sha256 = "c147610d21901ae7b7282c93ac4a9c1fa4396b1739e5092bb9dfae9bc41f41f9"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/answers.py"]
+source_sha256 = "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8"
+sha256 = "100e1e3a3d83b61f121407f8d1c22dd4984f55f18c32f3deeea14fc7060eb0d8"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/configuration.py"]
+source_sha256 = "bd63fa8b145359d2fa8567d3f9aa2549df351a5af1e64b6dabeadfc93cebb193"
+sha256 = "bd63fa8b145359d2fa8567d3f9aa2549df351a5af1e64b6dabeadfc93cebb193"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/frozen_runtime.py"]
+source_sha256 = "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61"
+sha256 = "915fd6da2bbd61fbaf0e68bda7f6a9db1f37ded926eafa18d8139efb902a3b61"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/generator.py"]
+source_sha256 = "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9"
+sha256 = "1930e1aa0ce2324340f95a61ca5e892fd82923a14ddf129241063b6e4e6cdbf9"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/install.py"]
+source_sha256 = "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc"
+sha256 = "8f43a6dbc46c8602e26223847b5a45e3f103c64127fad4894e9b009698f2fabc"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/launch.py"]
+source_sha256 = "9d5f16fc30fbc0b2d81850ddec4d80f00bfbf79101f0025b961d9896a59b04c9"
+sha256 = "9d5f16fc30fbc0b2d81850ddec4d80f00bfbf79101f0025b961d9896a59b04c9"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/main_answer_opsd.py"]
+source_sha256 = "74465959b5718b64a41d66290536cc690fd94105d0241feca7b84ec557d41d6d"
+sha256 = "74465959b5718b64a41d66290536cc690fd94105d0241feca7b84ec557d41d6d"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/objective.py"]
+source_sha256 = "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118"
+sha256 = "733f855b7c9a87f11b9ddf25fc29908adfe8637e2b29150d62581cae45a14118"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/supervisor.py"]
+source_sha256 = "b4f96d358d92b75f8450c2660804b48d9380814fc961775e00720b1c7dbbb14c"
+sha256 = "28f57539e57c9868f80d47cff374a52c4739de2fa1efe24555e6957a1e192f14"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/teacher_inputs.py"]
+source_sha256 = "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440"
+sha256 = "d813bea96d4505f445637b6d75eb0e6f40553b6f92e7959f3a0c62b444225440"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/topk.py"]
+source_sha256 = "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99"
+sha256 = "62e273035101f691bf6d4038381b5183352879e9e1eebb0860686e06d94cfc99"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/topk_install.py"]
+source_sha256 = "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a"
+sha256 = "bee323c6cd91e03a4429c857475ed9e0e7f6cd5f21b203a17036a7186f80f39a"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/topk_trainer.py"]
+source_sha256 = "438416a49824f225f04c969f2d8153b19267d96b7968c579c6ca8aaf701c164e"
+sha256 = "438416a49824f225f04c969f2d8153b19267d96b7968c579c6ca8aaf701c164e"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/topk_worker.py"]
+source_sha256 = "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400"
+sha256 = "a63bfbcbf50fdaee6857b23d2de35f74ab5436f8badfc95e9c866ddc98f09400"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."opsd/recipes/reference_answers/trainer.py"]
+source_sha256 = "5af5be5f82330fd42fc45d881547f6e7857710e18a123b55c12ef4a38e099572"
+sha256 = "5af5be5f82330fd42fc45d881547f6e7857710e18a123b55c12ef4a38e099572"
+kind = "recovered_reference_answer_recipe"
+
+[source_files."training/environment/opencode.bun.lock"]
+source_sha256 = "42d49c4b808ffb50ab2793264699988d95109a5c9567b35122648d641e3e45ff"
+sha256 = "42d49c4b808ffb50ab2793264699988d95109a5c9567b35122648d641e3e45ff"
+kind = "recovered dependency lock"
+
+[source_files."training/environment/patches/async_failure_propagation.py"]
+source_sha256 = "873de5651bd8adf0a13ae173aa01645e6022ab24873ba41623276c3a0b4bca1b"
+sha256 = "873de5651bd8adf0a13ae173aa01645e6022ab24873ba41623276c3a0b4bca1b"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/async_final_checkpoint_step.py"]
+source_sha256 = "7ad56eadf2d2abd3ec0f9efc793a29442b529d0040493f9dd1aa6ea2172fd20b"
+sha256 = "7ad56eadf2d2abd3ec0f9efc793a29442b529d0040493f9dd1aa6ea2172fd20b"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/async_schedule_metadata.py"]
+source_sha256 = "2163c1df388c7f196e92fcaf8b7a07c9ba353159b90a16dce1d174453db4826e"
+sha256 = "2163c1df388c7f196e92fcaf8b7a07c9ba353159b90a16dce1d174453db4826e"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/clip_grad_cpu_fix.py"]
+source_sha256 = "c3daea7e3b642a7c71241f38132ea2a2279419301b343441d2dd0180ab9a4722"
+sha256 = "c3daea7e3b642a7c71241f38132ea2a2279419301b343441d2dd0180ab9a4722"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/freeze_vision.py"]
+source_sha256 = "24ea91555012db5e4d860bbbef5e453c37954afd6ffa24e711971e3367c1a368"
+sha256 = "24ea91555012db5e4d860bbbef5e453c37954afd6ffa24e711971e3367c1a368"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/fused_ce.py"]
+source_sha256 = "f964cc9e8ce180393a23a18c509229663b821c90b239d0328e4fbab816ccf3c5"
+sha256 = "f964cc9e8ce180393a23a18c509229663b821c90b239d0328e4fbab816ccf3c5"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/grpo_masked_advantage.py"]
+source_sha256 = "2a52089ce2e8ea8ef95a9d726eb8f9f762ff6e8bc25ce73b38806349df5b8231"
+sha256 = "2a52089ce2e8ea8ef95a9d726eb8f9f762ff6e8bc25ce73b38806349df5b8231"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/hard_staleness.py"]
+source_sha256 = "5993cce0f7f08f17cf761e384ed76a87b772ca57490493ff974b6767b33f5ae2"
+sha256 = "5993cce0f7f08f17cf761e384ed76a87b772ca57490493ff974b6767b33f5ae2"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/ipv6_fix.py"]
+source_sha256 = "64f1279a884c396f879ab9de11d583d836f4474ef7e686aa0fe2bf0108e5dc73"
+sha256 = "64f1279a884c396f879ab9de11d583d836f4474ef7e686aa0fe2bf0108e5dc73"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/microbatch_trim.py"]
+source_sha256 = "6414b1672216387606653d77a1da970374cd2ae05f83ea9c5a4c4d01e5ddfd77"
+sha256 = "6414b1672216387606653d77a1da970374cd2ae05f83ea9c5a4c4d01e5ddfd77"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/mm_cache_miss_fix.py"]
+source_sha256 = "7ebc86850718952ddfd4adca4c9858f8227d500d06c389b7da6e1c3a7929a8be"
+sha256 = "7ebc86850718952ddfd4adca4c9858f8227d500d06c389b7da6e1c3a7929a8be"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/offpolicy_metric_fix.py"]
+source_sha256 = "c001794ff627a903084eddaca9a6eb5915020c349656b3557a74707ef7b77642"
+sha256 = "c001794ff627a903084eddaca9a6eb5915020c349656b3557a74707ef7b77642"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/qwen35_position_ids.py"]
+source_sha256 = "1a33e494e7d1f660d4e053c02f735ce425f3a55df8508f315ac3991ecda7b354"
+sha256 = "1a33e494e7d1f660d4e053c02f735ce425f3a55df8508f315ac3991ecda7b354"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/response_alignment_guard.py"]
+source_sha256 = "538eced61f44a7180fc1e9079fe706f6d5ce049957386f88f171f1de913f42fe"
+sha256 = "538eced61f44a7180fc1e9079fe706f6d5ce049957386f88f171f1de913f42fe"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/rl_fb_output_fix.py"]
+source_sha256 = "d69c33df56ff4d0314c8e2e3cc8288ef8ed02b7dca5002f63ae4906e538adfc9"
+sha256 = "d69c33df56ff4d0314c8e2e3cc8288ef8ed02b7dca5002f63ae4906e538adfc9"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/sitecustomize.py"]
+source_sha256 = "d088eec76bbcc37f4f3303e9fd6648e5923ae1db7fe952e488504b8300bfe5c5"
+sha256 = "d088eec76bbcc37f4f3303e9fd6648e5923ae1db7fe952e488504b8300bfe5c5"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/triton_scalar_fix.py"]
+source_sha256 = "b35db8cb1d7035e0b52632b80937c6fdb636ddf3be17421949ba44a064d9f422"
+sha256 = "b35db8cb1d7035e0b52632b80937c6fdb636ddf3be17421949ba44a064d9f422"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/vl_dummy_fix.py"]
+source_sha256 = "abe623fb1a68fc2ea411d15a96d52456a7ef5b9155796ea462e9e609ec9d0c95"
+sha256 = "abe623fb1a68fc2ea411d15a96d52456a7ef5b9155796ea462e9e609ec9d0c95"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/vllm_nccl_drain_fix.py"]
+source_sha256 = "697d794777ed18efc7c42bfa1628b536127be544145ac0836cc71d9189c49be4"
+sha256 = "697d794777ed18efc7c42bfa1628b536127be544145ac0836cc71d9189c49be4"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/vlm_device_fix.py"]
+source_sha256 = "d14f8e2696253330966c63d7d07d4511406fe43c83ec1706475333e2c14173d6"
+sha256 = "d14f8e2696253330966c63d7d07d4511406fe43c83ec1706475333e2c14173d6"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/patches/weight_sync_failure.py"]
+source_sha256 = "f8279e16fe9f618858196a41620de93d0b74760205ff622aa86dc2073899b549"
+sha256 = "f8279e16fe9f618858196a41620de93d0b74760205ff622aa86dc2073899b549"
+kind = "recovered_runtime_patch"
+
+[source_files."training/environment/skyrl-full.patch"]
+source_sha256 = "e404d1fa7065fdc3d15161311cf7995f5b60d9bb832e559cb5f922fdd754cf7e"
+sha256 = "e404d1fa7065fdc3d15161311cf7995f5b60d9bb832e559cb5f922fdd754cf7e"
+kind = "complete_upstream_skyrl_patch"
+
+[source_files."training/environment/support/command_owner.py"]
+source_sha256 = "9b5d05aee1f07a323e80dc0980a6fe165b8fb8ba613fd9870ce42c1a3e8ceb38"
+sha256 = "9b5d05aee1f07a323e80dc0980a6fe165b8fb8ba613fd9870ce42c1a3e8ceb38"
+kind = "qualified_shell_command_owner"
+
+[source_files."training/environment/support/grader_service.py"]
+source_sha256 = "4961eb85878603bbb8f4c2e77f274f821e9757a9be5c2771566077f5823f48ff"
+sha256 = "c64fae66e741540d679de77e97eb3c66c1677a2a3517425c0081e2328ade456e"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/modal_append_prm_train.py"]
+source_sha256 = "6665163d92f00a65133ddc1210242309a2c51664db80a276e633f4cf053339a2"
+sha256 = "6665163d92f00a65133ddc1210242309a2c51664db80a276e633f4cf053339a2"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/observation_worker.py"]
+source_sha256 = "8e4c2f7fd8653c2be8fb8fdace24df462f5efd2978f5801db33c7511a6bfece1"
+sha256 = "8e4c2f7fd8653c2be8fb8fdace24df462f5efd2978f5801db33c7511a6bfece1"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/opsd_demo_admitted_request.py"]
+source_sha256 = "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4"
+sha256 = "8e7519cfef13aab2bbbe9d3d21fcc3b383db5a0a7c0b96aaa03a6998377c19c4"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/opsd_demo_quota.py"]
+source_sha256 = "8d4fabf834c8f31d0239c101297aefd6b91c365c9728a6f593d70f96c8b208b2"
+sha256 = "78b22d4e6dc5658b01291551a2e6762445db198d636bc8aa7c7b9f814c52285a"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/opsd_demo_retry_after.py"]
+source_sha256 = "44ce9f77084dd3e901cac914ae77665023d11d0c3094ea77c51d8f2a23500f2f"
+sha256 = "44ce9f77084dd3e901cac914ae77665023d11d0c3094ea77c51d8f2a23500f2f"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/support/tool_schema.py"]
+source_sha256 = "22821de3b8a5542b518019d9e42712fd3a819953160569f72504f0a192d7a245"
+sha256 = "22821de3b8a5542b518019d9e42712fd3a819953160569f72504f0a192d7a245"
+kind = "public build/service adapter or recovered tool support"
+
+[source_files."training/environment/uv.lock"]
+source_sha256 = "c029426336f4a2362a6c2a803f05c91b10651f8dfa8e50859fc5ba890ce5a5c3"
+sha256 = "c029426336f4a2362a6c2a803f05c91b10651f8dfa8e50859fc5ba890ce5a5c3"
+kind = "recovered_dependency_lock"

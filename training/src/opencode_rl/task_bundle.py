@@ -3,6 +3,7 @@ from pathlib import Path, PurePosixPath
 import hashlib
 import json
 import os
+import re
 import tarfile
 import tempfile
 from .contract import ParityError, canonical, digest
@@ -36,12 +37,18 @@ def validate_bundle_prompt(bundle, metadata):
         raise ParityError('Stale prepared environment prompt; prepare a new bundle/run, preserving the old evaluation')
 
 
-def release_tasks(path, split):
+def release_tasks(path, split, *, expected_sha256=None):
+    expected_sha256 = RELEASE_SHA256 if expected_sha256 is None else expected_sha256
+    if not isinstance(expected_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', expected_sha256):
+        raise ParityError('An explicit release SHA-256 is required')
+    if split not in ('train', 'val'):
+        raise ParityError('Unknown release split')
     raw = Path(path).read_bytes()
-    if hashlib.sha256(raw).hexdigest() != RELEASE_SHA256:
+    if hashlib.sha256(raw).hexdigest() != expected_sha256:
         raise ParityError('Dataset release changed')
-    rows = [x for x in json.loads(raw)['tasks'] if x['probe']['split'] == split]
-    if len({r['task'] for r in rows}) != len(rows):
+    all_rows = json.loads(raw)['tasks']
+    rows = [x for x in all_rows if x['probe']['split'] == split]
+    if len({r['task'] for r in all_rows}) != len(all_rows):
         raise ParityError('Duplicate task identity')
     return rows
 
@@ -85,7 +92,10 @@ def music_manifest(source):
         'source_sha256': sha, 'public_path': str(rel)}]}
 
 
-def prepare_bundle(source, row, destination):
+def prepare_bundle(source, row, destination, *, release_sha256=None):
+    release_sha256 = RELEASE_SHA256 if release_sha256 is None else release_sha256
+    if not isinstance(release_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', release_sha256):
+        raise ParityError('An explicit release SHA-256 is required')
     import s12_task
     source, destination = Path(source), Path(destination)
     validate_source(source, row)
@@ -108,7 +118,7 @@ def prepare_bundle(source, row, destination):
             'Full original media is in initial_state/. Write the required files under output/.')
         atomic_bytes(destination / 'task.txt', prompt.encode())
         metadata = {'task': row['task'], 'stage': row['stage'], 'source_root': '_tt_' + row['probe']['split'],
-            'release_sha256': RELEASE_SHA256, 'public_files': public, 'frames': made,
+            'release_sha256': release_sha256, 'public_files': public, 'frames': made,
             'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
             'environment_prompt_sha256': hashlib.sha256(task_prompt('').encode()).hexdigest(),
             'private_files_staged': False}
