@@ -22,8 +22,6 @@
 <a href="#task-generation">🎬 Task generation</a> &nbsp;•&nbsp;
 <a href="#agent-rl">🤖 Agent RL</a> &nbsp;•&nbsp;
 <a href="#-findings">🔍 Findings</a> &nbsp;•&nbsp;
-<a href="#-guides">🧭 Guides</a> &nbsp;•&nbsp;
-<a href="#-reproduction-status">🔁 Reproducibility</a> &nbsp;•&nbsp;
 <a href="#-citation">📌 Citation</a>
 </p>
 
@@ -143,26 +141,6 @@ These findings concern the tested methods and tasks. Task complexity, scoring cr
 [Figure sources and reading notes →](docs/experiment_notes.md#illustrations)
 
 </details>
-
-## 🧭 Guides
-
-| Goal | Start here |
-| :--- | :--- |
-| Generate and review tasks from a movie and trailer | [Project workflow](docs/workflow.md) · [Pipeline design](docs/data_construction.md) |
-| Choose and set up an annotation CLI | [Agent setup](docs/agent_setup.md) |
-| Review quality and sample tasks across films | [Quality review and sampling](docs/data_construction.md#quality-review-and-sampling) |
-| Validate and score an agent's edit | [Submission scoring](docs/workflow.md#5-check-and-score-an-agents-edit) · [Evaluation details](docs/evaluation.md) |
-| Inspect GRPO/PRM or token-level distillation | [Training](docs/training.md) · [OPSD](docs/opsd.md) |
-| Find experiment settings and interpretation limits | [Experiment notes](docs/experiment_notes.md) · [Recorded configurations](configs/) |
-| Check what has been verified | [Release status](docs/release_status.md) |
-
-## 🔁 Reproduction status
-
-**Checked:** synthetic CPU tests, local workflow commands, and component-level construction, review, and scoring on real media. The full-film construction check involved debugging and resuming completed stages.
-
-**Still unverified:** a fresh complete-film run through the final unified workflow, full GPU training, and end-to-end reproduction of the paper's benchmark. Training sources, environment records, the reference-answer recipe, task preparation and launch adapters have been restored; the public GPU build and services still need full integration qualification. [Detailed validation record →](docs/release_status.md)
-
-**Data:** we provide code, the paper figure, and the poster banner. The dataset, underlying film media, task instances, reference answers, rollouts, judge caches, and model checkpoints are not distributed.
 
 ## 📌 Citation
 
