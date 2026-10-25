@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "7be2cc83bd8e32b97d5066760a726a61fa423b5ef0e6cde6ad877d76336614f9",
-      "bytes": 14302
+      "sha256": "4fcee1614c7b87782b7d2bafb6559a94d7d1d3837565bb9a58ee37953795f6b1",
+      "bytes": 13237
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -529,8 +529,8 @@
     },
     {
       "path": "docs/experiment_notes.md",
-      "sha256": "d56a6cdf2e9c77b4ac994b6d31bbf90ce2d06265f91ed2d9a685d7b9317b595d",
-      "bytes": 7627
+      "sha256": "38ad6f3e36a8f235bef2a4885d4c22cb8ef09f3ae5ec916a4bd1ad124349b258",
+      "bytes": 9026
     },
     {
       "path": "docs/one_film.md",

@@ -25,6 +25,29 @@ The following settings describe the main Qwen3.5-9B experiments.
 - Main results average four evaluation repetitions of each final checkpoint. These are evaluation repetitions, not independent training runs.
 - The original experimental dataset contained 797 tasks from 49 films, with 716 training tasks and 81 validation tasks. The dataset and its task instances are not distributed.
 
+## Reported validation scores
+
+Main **Qwen3.5-9B** validation results. Scores average four evaluation repetitions of each final checkpoint (**avg@4**); higher is better. Best values in each column are bold.
+
+| Method | CS | NS | RC | FC | Overall |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Base model | 0.657 | 0.303 | 0.205 | 0.152 | 0.284 |
+| Outcome-only GRPO | **0.821** | 0.500 | **0.356** | 0.201 | 0.413 |
+| GRPO+PRM (fixed λ) | 0.482 | 0.457 | 0.276 | 0.239 | 0.334 |
+| GRPO+PRM (decayed λ) | 0.804 | **0.552** | 0.348 | **0.293** | **0.447** |
+| OPSD (reference answers) | 0.606 | 0.267 | 0.219 | 0.162 | 0.277 |
+| OPSD (turn suggestions) | 0.129 | 0.063 | 0.032 | 0.000 | 0.044 |
+
+<details>
+<summary>How to read these scores</summary>
+
+- **avg@4** averages four outcome scores for each task, rather than selecting the best attempt. These are evaluation repetitions, not four independent training seeds.
+- **Overall** averages equally over all 81 validation tasks: 14 CS, 15 NS, 26 RC, and 26 FC. It is not the unweighted mean of the four task-type columns.
+- Task types have different scoring criteria. Their absolute scores are not a shared measure of task difficulty.
+- These are reported paper results, not a benchmark rerun from this repository. See the [experimental conventions](#training-and-evaluation-conventions) and [reproduction status](release_status.md).
+
+</details>
+
 ## Interpreting the findings
 
 The task comparison changes editing demands, evaluation criteria, and interaction horizon together. Larger gains on Fine Cut therefore do not establish that horizon alone determines the value of intermediate feedback, and absolute scores should not be read as a common measure of task difficulty.

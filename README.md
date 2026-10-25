@@ -22,7 +22,6 @@
 <a href="#task-generation">🎬 Task generation</a> &nbsp;•&nbsp;
 <a href="#agent-rl">🤖 Agent RL</a> &nbsp;•&nbsp;
 <a href="#-findings">🔍 Findings</a> &nbsp;•&nbsp;
-<a href="#-results">📊 Results</a> &nbsp;•&nbsp;
 <a href="#-guides">🧭 Guides</a> &nbsp;•&nbsp;
 <a href="#-reproduction-status">🔁 Reproducibility</a> &nbsp;•&nbsp;
 <a href="#-citation">📌 Citation</a>
@@ -89,57 +88,22 @@ Rerunning `run` reuses completed work. It can incur Modal and model usage. [Full
 
 **Paper models:** **Qwen3.5-9B** for the main comparison; **Qwen3.6-35B-A3B** for additional GRPO/PRM experiments. [Experiment settings →](docs/experiment_notes.md)
 
-Implementation and CPU checks: [GRPO/PRM guide](docs/training.md#run-the-offline-cpu-tests) · [OPSD guide](docs/opsd.md#selected-cpu-verification) · [GPU setup status](docs/training.md#what-can-i-run-now).
+**Run the algorithm checks (CPU).** From the repository root, use Python 3.12 to set up an environment and exercise the GRPO/PRM runtime and OPSD objective on synthetic examples. No GPU, model checkpoint, media, or cloud account is needed.
 
-## 🔍 Findings
+```bash
+python3.12 -m venv "$HOME/.venvs/video-editing-training-cpu"
+source "$HOME/.venvs/video-editing-training-cpu/bin/activate"
+python -m pip install -r training/requirements-cpu.txt
 
-**1. Fine-grained feedback helps more complex tasks.** Decaying process rewards yields a **45.4% relative gain** over outcome-only GRPO on the more complex Fine Cut task. On the other three task types, outcome-only GRPO remains competitive, with at most a **10.4%** additional gain.
+# GRPO/PRM: fixed and decayed process rewards
+PYTHONDONTWRITEBYTECODE=1 python training/scripts/run_cpu_tests.py
 
-**2. Process rewards can lead to reward hacking.** With a fixed weight, process reward keeps rising while outcome reward declines after update 30. Decaying the weight to zero mitigates this behavior and reduces validation truncation from **44.1% to 6.2%**.
+# OPSD: the paper's top-64 + tail KL objective
+PYTHONPATH=opsd PYTHONDONTWRITEBYTECODE=1 \
+  python -m pytest -q -p no:cacheprovider opsd/tests/test_paper_top64.py
+```
 
-**3. Finer-grained feedback encourages desirable behaviors.** Compared with outcome-only GRPO, GRPO+PRM with decayed process rewards produces **more visual inspection, longer reasoning, and more frequent self-correction markers**. These changes accompany the highest overall task score in our comparison.
-
-<p align="center">
-<a href="docs/assets/findings-overview.svg"><img src="docs/assets/findings-overview.svg" width="100%" alt="Three findings: decayed process rewards improve Fine Cut by 45.4% over GRPO; fixed process rewards exhibit reward hacking, mitigated by decay; and decayed PRM increases visual inspection, reasoning length, and self-correction markers by 1.54, 1.67, and 1.89 times relative to GRPO."></a>
-</p>
-
-<details>
-<summary>Scope and figure sources</summary>
-
-These findings concern the tested methods and tasks. Task complexity, scoring criteria, and horizon vary together; the comparison does not isolate their individual effects. The process-reward findings concern LLM-judged turn-level rewards in GRPO+PRM; GiGPO and Turn-PPO are not evaluated. Longer reasoning and more self-correction markers do not establish reasoning quality or the correctness of corrections, and desirable behaviors alone do not ensure task completion.
-
-[Figure sources and reading notes →](docs/experiment_notes.md#illustrations)
-
-</details>
-
-## 📊 Results
-
-Main **Qwen3.5-9B** validation results. Scores average four evaluation repetitions of each final checkpoint (**avg@4**); higher is better. Best values in each column are bold.
-
-| Method | CS | NS | RC | FC | Overall |
-| :--- | ---: | ---: | ---: | ---: | ---: |
-| Base model | 0.657 | 0.303 | 0.205 | 0.152 | 0.284 |
-| Outcome-only GRPO | **0.821** | 0.500 | **0.356** | 0.201 | 0.413 |
-| GRPO+PRM (fixed λ) | 0.482 | 0.457 | 0.276 | 0.239 | 0.334 |
-| GRPO+PRM (decayed λ) | 0.804 | **0.552** | 0.348 | **0.293** | **0.447** |
-| OPSD (reference answers) | 0.606 | 0.267 | 0.219 | 0.162 | 0.277 |
-| OPSD (turn suggestions) | 0.129 | 0.063 | 0.032 | 0.000 | 0.044 |
-
-<details>
-<summary>How to read these scores</summary>
-
-- **avg@4** averages four outcome scores for each task, rather than selecting the best attempt. These are evaluation repetitions, not four independent training seeds.
-- **Overall** averages equally over all 81 validation tasks: 14 CS, 15 NS, 26 RC, and 26 FC. It is not the unweighted mean of the four task-type columns.
-- Task types have different scoring criteria. Their absolute scores are not a shared measure of task difficulty.
-- These are reported paper results, not a benchmark rerun from this repository. See the [experimental conventions](docs/experiment_notes.md#training-and-evaluation-conventions) and [reproduction status](#-reproduction-status).
-
-</details>
-
-## 🚀 Quick start
-
-### 🧪 Inspect the training code
-
-The [training guide](docs/training.md#run-the-offline-cpu-tests) covers CPU setup and fixed/decayed PRM tests. [OPSD](docs/opsd.md#selected-cpu-verification) has separate numerical and checkpoint checks. **A portable GPU training launcher is still pending**, and generated tasks need a trainer preparation adapter before they can be used for RL.
+**Full GPU training** still requires the public environment build, deployment launcher, and an adapter from reviewed tasks to trainer inputs. See the [GRPO/PRM setup](docs/training.md#what-can-i-run-now) and [OPSD setup](docs/opsd.md#selected-cpu-verification) for current support and remaining steps.
 
 <details>
 <summary>Source-only checks and repository layout</summary>
@@ -162,6 +126,27 @@ docs/                Setup guides, experiment notes, and paper figure
 scripts/             Source-release verification
 tests/               Offline source and interface regression checks
 ```
+
+</details>
+
+## 🔍 Findings
+
+**1. Fine-grained feedback helps more complex tasks.** Decaying process rewards yields a **45.4% relative gain** over outcome-only GRPO on the more complex Fine Cut task. On the other three task types, outcome-only GRPO remains competitive, with at most a **10.4%** additional gain.
+
+**2. Process rewards can lead to reward hacking.** With a fixed weight, process reward keeps rising while outcome reward declines after update 30. Decaying the weight to zero mitigates this behavior and reduces validation truncation from **44.1% to 6.2%**.
+
+**3. Finer-grained feedback encourages desirable behaviors.** Compared with outcome-only GRPO, GRPO+PRM with decayed process rewards produces **more visual inspection, longer reasoning, and more frequent self-correction markers**. These changes accompany the highest overall task score in our comparison.
+
+<p align="center">
+<a href="docs/assets/findings-overview.svg"><img src="docs/assets/findings-overview.svg" width="100%" alt="Three findings: decayed process rewards improve Fine Cut by 45.4% over GRPO; fixed process rewards exhibit reward hacking, mitigated by decay; and decayed PRM increases visual inspection, reasoning length, and self-correction markers by 1.54, 1.67, and 1.89 times relative to GRPO."></a>
+</p>
+
+<details>
+<summary>Scope and figure sources</summary>
+
+These findings concern the tested methods and tasks. Task complexity, scoring criteria, and horizon vary together; the comparison does not isolate their individual effects. The process-reward findings concern LLM-judged turn-level rewards in GRPO+PRM; GiGPO and Turn-PPO are not evaluated. Longer reasoning and more self-correction markers do not establish reasoning quality or the correctness of corrections, and desirable behaviors alone do not ensure task completion.
+
+[Figure sources and reading notes →](docs/experiment_notes.md#illustrations)
 
 </details>
 
