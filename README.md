@@ -89,46 +89,20 @@ Rerunning `run` reuses completed work. It can incur Modal and model usage. [Full
 
 **Paper models:** **Qwen3.5-9B** for the main comparison; **Qwen3.6-35B-A3B** for additional GRPO/PRM experiments. [Experiment settings →](docs/experiment_notes.md)
 
-**Run the algorithm checks (CPU).** From the repository root, use Python 3.12 to set up an environment and exercise the GRPO/PRM runtime and OPSD objective on synthetic examples. No GPU, model checkpoint, media, or cloud account is needed.
+**Run training.** After completing the [environment and task setup](docs/training.md#configure-and-deploy), select GRPO, GRPO+PRM or OPSD in your configuration:
 
 ```bash
-python3.12 -m venv "$HOME/.venvs/video-editing-training-cpu"
-source "$HOME/.venvs/video-editing-training-cpu/bin/activate"
-python -m pip install -r training/requirements-cpu.txt
-
-# GRPO/PRM: fixed and decayed process rewards
-PYTHONDONTWRITEBYTECODE=1 python training/scripts/run_cpu_tests.py
-
-# OPSD: the paper's top-64 + tail KL objective
-PYTHONPATH=opsd PYTHONDONTWRITEBYTECODE=1 \
-  python -m pytest -q -p no:cacheprovider opsd/tests/test_paper_top64.py
+export EDITING_TRAINING_CONFIG=/path/to/training.toml
+python -m modal run training/modal_train.py --action check
+python -m modal run training/modal_train.py --action smoke --steps 2
 ```
 
-**Prepare and launch training (Modal).** The recovered environment build, reviewed-task adapter and public launcher are included. Configure your own volumes and judge secrets using the [training setup](docs/training.md#configure-and-deploy), then:
-
-```bash
-# Freeze reviewed tasks; keep private material outside the repository.
-python training/prepare.py \
-  --accepted-tasks /path/to/project/accepted_tasks.json \
-  --destination /path/to/private/training-release \
-  --validation-film held-out-film-slug --prepare-inputs
-
-export EDITING_TRAINING_CONFIG=/path/to/private/training.toml
-python training/cloud.py upload --config "$EDITING_TRAINING_CONFIG" \
-  --release-directory /path/to/private/training-release
-python -m modal deploy training/modal_train.py
-python -m modal run training/modal_train.py --action prepare-model
-python -m modal run training/modal_train.py --action check --name smoke-001
-# Explicitly allocates eight H200 GPUs, capped at two optimizer updates:
-python -m modal run training/modal_train.py --action smoke --name smoke-001 --steps 2
-```
-
-Choose `grpo`, `prm_fixed`, `prm_decay`, `opsd_reference`, or `opsd_suggestions` in the TOML; reference-answer OPSD also needs `--reference-answers` during preparation. **The public GPU deployment still needs an optimizer smoke run.** Formal training retains the source, dataset and numerical qualification gates. [Build, hardware and validation details →](docs/training.md)
+The smoke run uses **8 H200 GPUs** and at most two optimizer updates. The public GPU deployment remains unverified. [Full training guide →](docs/training.md) · [Offline CPU checks →](docs/training.md#run-the-offline-cpu-tests)
 
 <details>
 <summary>Source-only checks and repository layout</summary>
 
-The static check uses Python 3.12. The optional real preparation regression also needs FFmpeg/FFprobe and the CPU dependencies above. These commands do not start training or call a model:
+The static check uses Python 3.12. The optional real preparation regression also needs FFmpeg/FFprobe and the [CPU test dependencies](training/requirements-cpu.txt). These commands do not start training or call a model:
 
 ```bash
 python scripts/check_release.py
