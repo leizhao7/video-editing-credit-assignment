@@ -38,15 +38,11 @@ Two selected Fine Cut examples from the released checkpoints. Left: untrained ba
 
 [![Untrained and trained Whiplash edits, shown side by side.](docs/assets/demos/9b-whiplash-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B#selected-editing-example)
 
-[Untrained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B/resolve/main/assets/demos/untrained-hd.mp4) · [Trained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B/resolve/main/assets/demos/trained-hd.mp4) · [Model](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B)
-
 ### 35B · The Drama
 
 [![Untrained and trained The Drama edits, shown side by side.](docs/assets/demos/35b-the-drama-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B#selected-editing-example)
 
-[Untrained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B/resolve/main/assets/demos/untrained-hd.mp4) · [Trained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B/resolve/main/assets/demos/trained-hd.mp4) · [Model](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B)
-
-*Silent four-second previews from HD presentation reconstructions. Open the videos for sound. These selected examples do not estimate average performance.*
+*Silent four-second previews from HD presentation reconstructions. These selected examples do not estimate average performance.*
 
 ## 🎉 News
 
