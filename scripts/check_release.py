@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 IGNORED_DIRS = {'.git'}
 FORBIDDEN_DIRS = {'data', 'datasets', 'checkpoints', 'outputs', 'runs', 'logs', 'wandb',
                   '.venv', '__pycache__', '.pytest_cache', 'node_modules'}
-FORBIDDEN_SUFFIXES = {'.mp4', '.mov', '.mkv', '.wav', '.mp3', '.flac', '.png', '.jpg',
+FORBIDDEN_SUFFIXES = {'.mp4', '.mov', '.mkv', '.wav', '.mp3', '.flac', '.png', '.jpg', '.gif',
                       '.jpeg', '.safetensors', '.pt', '.pth', '.ckpt', '.parquet',
                       '.arrow', '.jsonl', '.zip', '.gz', '.tar', '.pem', '.key', '.pyc',
                       '.csv', '.tsv', '.npy', '.npz', '.pkl', '.pickle', '.h5', '.hdf5',
@@ -42,6 +42,8 @@ APPROVED_METADATA_PATHS = {
 APPROVED_DOCUMENTATION_IMAGES = {
     'docs/assets/paper-teaser.png': '9377e1b3bb536b1bdf251bc77e6907ab8eeece37cac70c47c14e5b763f6cd680',
     'docs/assets/film-poster-collage.png': '242d40baf383e8b07f2ccc5408e9bbd38d0c25f209cdc315491ceb7da5dc492b',
+    'docs/assets/demos/9b-whiplash-comparison.gif': 'c4a5def24540645961b6a316185b539a85edbadf8b17b5fbac23d580d0bff9ee',
+    'docs/assets/demos/35b-the-drama-comparison.gif': '5935d397acccbfca13c55109513f3c95ab80828c342b1cbdcc4bc2f1dbef261d',
 }
 
 
@@ -141,7 +143,8 @@ def check_tree(root):
             except OSError:
                 errors.append(f'{rel}: cannot read documentation image')
                 continue
-            if (not data.startswith(b'\x89PNG\r\n\x1a\n') or
+            signatures = (b'GIF87a', b'GIF89a') if path.suffix.lower() == '.gif' else (b'\x89PNG\r\n\x1a\n',)
+            if (not data.startswith(signatures) or
                     hashlib.sha256(data).hexdigest() != APPROVED_DOCUMENTATION_IMAGES[rel.as_posix()]):
                 errors.append(f'{rel}: documentation image differs from the reviewed figure')
             continue

@@ -15,6 +15,7 @@
 <p>
 <img src="https://img.shields.io/badge/arXiv-Coming_soon-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: coming soon" title="Paper link coming soon">
 <img src="https://img.shields.io/badge/Project_Web-Coming_soon-2563EB?style=for-the-badge" alt="Project Web: coming soon" title="Project website coming soon">
+<a href="https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts"><img src="https://img.shields.io/badge/Models-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="VideoEdit models on Hugging Face"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0A8AA0?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT license"></a>
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
 </p>
@@ -28,6 +29,24 @@
 </div>
 
 **Teaching AI to Edit Video with 49 Real Films.** We turn movies and their trailers into video-editing tasks, then train multimodal agents to inspect footage, reason about editing decisions, and use editing tools. Evaluation on held-out films shows when finer-grained feedback helps or hurts task performance. This repository includes our scalable task-generation pipeline, RL training code, and outcome graders.
+
+## 🎞️ Before & After RL
+
+Two selected Fine Cut examples from the released checkpoints. Left: untrained base. Right: VideoEdit.
+
+### 9B · Whiplash
+
+[![Untrained and trained Whiplash edits, shown side by side.](docs/assets/demos/9b-whiplash-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B#selected-editing-example)
+
+[Untrained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B/resolve/main/assets/demos/untrained-hd.mp4) · [Trained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B/resolve/main/assets/demos/trained-hd.mp4) · [Model](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B)
+
+### 35B · The Drama
+
+[![Untrained and trained The Drama edits, shown side by side.](docs/assets/demos/35b-the-drama-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B#selected-editing-example)
+
+[Untrained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B/resolve/main/assets/demos/untrained-hd.mp4) · [Trained video](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B/resolve/main/assets/demos/trained-hd.mp4) · [Model](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B)
+
+*Silent four-second previews from HD presentation reconstructions. Open the videos for sound. These selected examples do not estimate average performance.*
 
 ## 🎉 News
 

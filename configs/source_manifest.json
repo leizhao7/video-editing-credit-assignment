@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-24",
-  "scope": "Release-draft source and documentation identities, including the reviewed paper figure and poster banner; historical source hashes remain separate. No runtime data or verification reports are included.",
+  "date": "2026-10-26",
+  "scope": "Source and documentation identities, including reviewed figures, the poster banner, and two explicitly selected presentation GIFs. Historical source hashes remain separate. No task instances, dataset exports, or private verification reports are included.",
   "files": [
     {
       "path": ".env.example",
@@ -29,8 +29,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "816540d7bfd7910cec08c3e645dedbe9f432143b3c44ce0572eddcf131ee77c6",
-      "bytes": 11319
+      "sha256": "fb853b337a35849e0aa88d6a87ad9cbc515c6a8a3951e4f33f8dbb54c1ab234c",
+      "bytes": 12912
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -496,6 +496,21 @@
       "path": "docs/agent_setup.md",
       "sha256": "890c1dc8e3af7c25d4b13ff33fba63753195ddef017f660c8c6d1805b82d171b",
       "bytes": 8637
+    },
+    {
+      "path": "docs/assets/demos/35b-the-drama-comparison.gif",
+      "sha256": "5935d397acccbfca13c55109513f3c95ab80828c342b1cbdcc4bc2f1dbef261d",
+      "bytes": 3916107
+    },
+    {
+      "path": "docs/assets/demos/9b-whiplash-comparison.gif",
+      "sha256": "c4a5def24540645961b6a316185b539a85edbadf8b17b5fbac23d580d0bff9ee",
+      "bytes": 906446
+    },
+    {
+      "path": "docs/assets/demos/README.md",
+      "sha256": "1d86cd7b9af03a7dabd3b8f09e2c20e6cbffb9561477bdfdf6991012f9e1d516",
+      "bytes": 959
     },
     {
       "path": "docs/assets/editing-tasks.svg",
@@ -1029,8 +1044,8 @@
     },
     {
       "path": "scripts/check_release.py",
-      "sha256": "96983b6c6c64b9fecc12bce16cfec563fdf46a9e8a874f9f5c2ec016fdcf4e54",
-      "bytes": 8572
+      "sha256": "e6d7c41a93cc96fad88c15c7b0956edbaf4e2c353e5ca542796d9fdc9f1eb772",
+      "bytes": 8922
     },
     {
       "path": "tests/test_grading_refusal_compatibility.py",
@@ -1044,8 +1059,8 @@
     },
     {
       "path": "tests/test_release_tools.py",
-      "sha256": "dbea208a0704c5f0c1d2db3674b39764e1d7d8315a9536978f3dbb768388bacb",
-      "bytes": 14157
+      "sha256": "3d948f3633f3aa4bc4db6994b08d2eaa55d9efb1bf40aba8c8d7418b871de7ca",
+      "bytes": 14815
     },
     {
       "path": "tests/test_training_release.py",
