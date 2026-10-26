@@ -298,17 +298,6 @@ class DocumentationImageTests(TemporaryTree):
         self.assertTrue(any('another.png: generated/private artifact type' in e
                             for e in check_release.check_tree(self.root).errors))
 
-    def test_only_the_reviewed_gif_is_allowed(self):
-        self.name = 'docs/assets/demos/reviewed.gif'
-        self.image = b'GIF89a synthetic reviewed preview'
-        with patch.dict(check_release.APPROVED_DOCUMENTATION_IMAGES,
-                        {self.name: digest(self.image)}, clear=True):
-            self.add_image()
-            self.assertEqual(check_release.check_tree(self.root).errors, [])
-            self.add_image('docs/assets/demos/unreviewed.gif', self.image)
-            self.assertTrue(any('unreviewed.gif: generated/private artifact type' in e
-                                for e in check_release.check_tree(self.root).errors))
-
     def test_reviewed_image_still_requires_manifest_coverage(self):
         put(self.root, self.name, self.image)
         self.assertTrue(any(self.name + ': not listed' in e

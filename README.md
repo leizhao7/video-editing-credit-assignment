@@ -30,20 +30,6 @@
 
 **Teaching AI to Edit Video with 49 Real Films.** We turn movies and their trailers into video-editing tasks, then train multimodal agents to inspect footage, reason about editing decisions, and use editing tools. Evaluation on held-out films shows when finer-grained feedback helps or hurts task performance. This repository includes our scalable task-generation pipeline, RL training code, and outcome graders.
 
-## 🎞️ Before & After RL
-
-Two selected Fine Cut examples from the released checkpoints. Left: untrained base. Right: VideoEdit.
-
-### 9B · Whiplash
-
-[![Untrained and trained Whiplash edits, shown side by side.](docs/assets/demos/9b-whiplash-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.5-9B#selected-editing-example)
-
-### 35B · The Drama
-
-[![Untrained and trained The Drama edits, shown side by side.](docs/assets/demos/35b-the-drama-comparison.gif)](https://huggingface.co/leizhao7/VideoEdit-Qwen3.6-35B-A3B#selected-editing-example)
-
-*Silent four-second previews from HD presentation reconstructions. These selected examples do not estimate average performance.*
-
 ## 🎉 News
 
 - **[2026-10-24]** Recovered the complete training source patch and environment records, both OPSD recipes, reviewed-task preparation and public Modal launch adapters.
