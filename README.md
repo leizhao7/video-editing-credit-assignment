@@ -14,7 +14,7 @@
 </p>
 <p>
 <img src="https://img.shields.io/badge/arXiv-Coming_soon-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: coming soon" title="Paper link coming soon">
-<img src="https://img.shields.io/badge/Project_Web-Coming_soon-2563EB?style=for-the-badge" alt="Project Web: coming soon" title="Project website coming soon">
+<a href="https://github.com/leizhao7/videoedit"><img src="https://img.shields.io/badge/Website_Source-GitHub-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Project website source (private preview)" title="Website source; hosted page pending"></a>
 <a href="https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts"><img src="https://img.shields.io/badge/Models-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="VideoEdit models on Hugging Face"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0A8AA0?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT license"></a>
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
