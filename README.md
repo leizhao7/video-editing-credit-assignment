@@ -13,9 +13,9 @@
 <a href="https://www.upenn.edu/"><img src="https://www.google.com/s2/favicons?domain=www.upenn.edu&sz=64" height="18" alt="Penn logo"></a> <sup>1</sup>University of Pennsylvania &nbsp;&nbsp; <a href="https://philolabs.ai/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://philolabs.ai/brand/philo_icon_cream.svg"><img src="https://philolabs.ai/brand/philo_icon_black.svg" height="18" alt="Philo Labs logo"></picture></a> <sup>2</sup>Philo Labs
 </p>
 <p>
-<img src="https://img.shields.io/badge/arXiv-Coming_soon-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: coming soon" title="Paper link coming soon">
-<a href="https://github.com/leizhao7/videoedit"><img src="https://img.shields.io/badge/Website_Source-GitHub-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Project website source (private preview)" title="Website source; hosted page pending"></a>
-<a href="https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts"><img src="https://img.shields.io/badge/Models-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="VideoEdit models on Hugging Face"></a>
+<a href="https://arxiv.org/abs/2610.35497"><img src="https://img.shields.io/badge/arXiv-2610.35497-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white" alt="Paper: arXiv:2610.35497"></a>
+<a href="https://leizhao7.github.io/videoedit/"><img src="https://img.shields.io/badge/Project-Website-2563EB?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Project website"></a>
+<a href="https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts-6ade523a0c5ce62251623b0d"><img src="https://img.shields.io/badge/Models-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="VideoEdit models on Hugging Face"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0A8AA0?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT license"></a>
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
 </p>
@@ -31,6 +31,8 @@
 **Teaching AI to Edit Video with 49 Real Films.** We turn movies and their trailers into video-editing tasks, then train multimodal agents to inspect footage, reason about editing decisions, and use editing tools. Evaluation on held-out films shows when finer-grained feedback helps or hurts task performance. This repository includes our scalable task-generation pipeline, RL training code, and outcome graders.
 
 ## 🎉 News
+
+- **[2026-10-28]** Our [paper](https://arxiv.org/abs/2610.35497), [project website](https://leizhao7.github.io/videoedit/), code, and [VideoEdit models](https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts-6ade523a0c5ce62251623b0d) are publicly available.
 
 - **[2026-10-24]** Recovered the complete training source patch and environment records, both OPSD recipes, reviewed-task preparation and public Modal launch adapters.
 - **[2026-10-21]** English task-generation and scoring interfaces, refreshed training setup documentation, and additional CPU checks.
@@ -145,18 +147,21 @@ These findings concern the tested methods and tasks. Task complexity, scoring cr
 
 ## 📌 Citation
 
-To cite the software:
+If you use this work, please cite our [paper](https://arxiv.org/abs/2610.35497):
 
 ```bibtex
-@software{zhao2026videoediting,
-  title  = {When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing},
-  author = {Zhao, Lei and Cao, Zongheng and Hu, Xinyu},
-  year   = {2026},
-  url    = {https://github.com/leizhao7/video-editing-credit-assignment}
+@misc{zhao2026finegrained,
+  title         = {When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing},
+  author        = {Lei Zhao and Zongheng Cao and Xinyu Hu},
+  year          = {2026},
+  eprint        = {2610.35497},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2610.35497}
 }
 ```
 
-Repository metadata is also available in [`CITATION.cff`](CITATION.cff). A verified paper link and formal paper citation will be added when available.
+Machine-readable paper and software metadata are available in [`CITATION.cff`](CITATION.cff).
 
 ## 🙏 Acknowledgments and license
 

@@ -63,7 +63,7 @@ These checks do not establish a fresh GPU environment build, all-rank numerical 
 1. Complete the public CUDA image build and service integration, then run the explicit bounded eight-GPU smoke and retain actual token/image/logprob/gradient, synchronization and checkpoint evidence. CPU/source/native-build checks cannot satisfy the formal training gate.
 2. Verify the full scoring-version and aggregation history against recorded outputs before regenerating paper tables. The new service is source-bound but has not replayed the original benchmark.
 3. The deterministic 925-to-797 sampling is recovered, but the earlier semantic audit and task-by-task author repair history is not an automated replay. A fresh model audit is not expected to recreate the historical candidate set.
-4. Add the formal paper link when available. Project-authored code is MIT; third-party components retain their original licenses.
+4. The paper is available at [arXiv:2610.35497](https://arxiv.org/abs/2610.35497). Project-authored code is MIT; third-party components retain their original licenses.
 
 ## Publication boundary
 

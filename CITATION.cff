@@ -1,5 +1,5 @@
 cff-version: "1.2.0"
-message: "If you use this software, please cite it using the metadata in this file."
+message: "If you use this work, please cite the paper in preferred-citation."
 type: software
 license: MIT
 title: "When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing"
@@ -17,3 +17,20 @@ authors:
     email: christine@philolabs.ai
     affiliation: Philo Labs
 repository-code: "https://github.com/leizhao7/video-editing-credit-assignment"
+url: "https://leizhao7.github.io/videoedit/"
+preferred-citation:
+  type: article
+  title: "When Fine-Grained Credit Assignment Helps and Hurts: Multimodal Agentic Reinforcement Learning through Video Editing"
+  authors:
+    - given-names: Lei
+      family-names: Zhao
+    - given-names: Zongheng
+      family-names: Cao
+    - given-names: Xinyu
+      family-names: Hu
+  year: 2026
+  journal: arXiv
+  url: "https://arxiv.org/abs/2610.35497"
+  identifiers:
+    - type: other
+      value: "arXiv:2610.35497"

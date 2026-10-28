@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-26",
+  "date": "2026-10-28",
   "scope": "Source and documentation identities, including reviewed figures and the poster banner. Historical source hashes remain separate. No task instances, dataset exports, or private verification reports are included.",
   "files": [
     {
@@ -19,8 +19,8 @@
     },
     {
       "path": "CITATION.cff",
-      "sha256": "4919912f120aa6dcac852a3161c9838baa26346bb0a1c270d1066ee5a8ef5f42",
-      "bytes": 676
+      "sha256": "d6dfa370f2ead065cbcddf0ca2d8ca37aecf597105630a486d7112c8570aa739",
+      "bytes": 1174
     },
     {
       "path": "LICENSE",
@@ -29,8 +29,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "cb227d4ce0ff5285bc8fb4b1f41a8f4654ae4147dbf8871282b480175c9a104e",
-      "bytes": 11691
+      "sha256": "3cf944816fbaaea751e8bd9a28b4b8450aee46d14a0f9a39316cd40267b8b2f0",
+      "bytes": 12048
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -554,8 +554,8 @@
     },
     {
       "path": "docs/release_status.md",
-      "sha256": "4eb9c5ba34993c8beae882d2e22fd76c80b389eee8eba3f3de69a6a2d8ba03d2",
-      "bytes": 14751
+      "sha256": "79e76304963602c369c6f4b9c35941013bfc2d74b1d070a25750ac0dc6cd103d",
+      "bytes": 14789
     },
     {
       "path": "docs/training.md",
