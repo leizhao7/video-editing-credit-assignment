@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-28",
+  "date": "2026-10-29",
   "scope": "Source and documentation identities, including reviewed figures and the poster banner. Historical source hashes remain separate. No task instances, dataset exports, or private verification reports are included.",
   "files": [
     {
@@ -29,8 +29,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "3cf944816fbaaea751e8bd9a28b4b8450aee46d14a0f9a39316cd40267b8b2f0",
-      "bytes": 12048
+      "sha256": "3557cfb2bef551dae2c50fcee64e442aa4dead862f55c7638a351334eb24c02e",
+      "bytes": 11590
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",

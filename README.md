@@ -34,10 +34,6 @@
 
 - **[2026-10-28]** Our [paper](https://arxiv.org/abs/2610.35497), [project website](https://leizhao7.github.io/videoedit/), code, and [VideoEdit models](https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts-6ade523a0c5ce62251623b0d) are publicly available.
 
-- **[2026-10-24]** Recovered the complete training source patch and environment records, both OPSD recipes, reviewed-task preparation and public Modal launch adapters.
-- **[2026-10-21]** English task-generation and scoring interfaces, refreshed training setup documentation, and additional CPU checks.
-- **[2026-10-20]** Added a resumable project workflow for generating tasks from a movie and trailer, reviewing their quality, and scoring submitted edits.
-
 <a id="task-generation"></a>
 
 ## 🎬 Turn Any Movie–Trailer Pair into RL Tasks
