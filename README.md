@@ -30,6 +30,11 @@
 
 **Teaching AI to Edit Video with 49 Real Films.** We turn movies and their trailers into video-editing tasks, then train multimodal agents to inspect footage, reason about editing decisions, and use editing tools. Evaluation on held-out films shows when finer-grained feedback helps or hurts task performance. This repository includes our scalable task-generation pipeline, RL training code, and outcome graders.
 
+<div align="center">
+  <a href="https://leizhao7.github.io/videoedit/film.html"><img src="https://leizhao7.github.io/videoedit/assets/media/videoedit-project-film.jpg" width="720" alt="Watch the 53-second VideoEdit project film"></a>
+  <p><a href="https://leizhao7.github.io/videoedit/film.html">▶ Watch the project film with sound</a> · <a href="https://github.com/leizhao7/video-editing-credit-assignment/releases/download/project-film/videoedit-project-film.mp4">Download 1080p MP4 from GitHub</a></p>
+</div>
+
 ## 🎉 News
 
 - **[2026-10-28]** Our [paper](https://arxiv.org/abs/2610.35497), [project website](https://leizhao7.github.io/videoedit/), code, and [VideoEdit models](https://huggingface.co/collections/leizhao7/when-fine-grained-credit-assignment-helps-and-hurts-6ade523a0c5ce62251623b0d) are publicly available.
